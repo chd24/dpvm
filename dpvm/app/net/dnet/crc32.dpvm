@@ -1,0 +1,10 @@
+/* compute crc32 of substr; T17.578-T19.640; $DVS:time$ */
+
+#include "../../math/crypto/crc32/crc32.dpvmake"
+#include "dnet.dpvmake"
+
+(const stateful dnet_data d, const stateful char data[], int begin, int end) -> (int crc) {
+	int crc = crc32_addsubstr(d.crc32_ctx, data, begin, end, d.crc32_ini);
+
+	return crc32_finalize(d.crc32_ctx, crc);
+}

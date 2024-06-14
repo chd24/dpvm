@@ -1,0 +1,182 @@
+/* long arithmetic, makefile; T17.523-T19.376; $DVS:time$
+
+History:
+
+T19.376: added or_long() and or_exp_short() methods
+
+T18.399: function double_number() renamed to shl_1_base() and becomes public
+
+*/
+
+/*@ "copy_long.dpvm": make a copy of long number */
+(const stateful int src[]) -> (volatile int dst[])
+	copy_long = saintlier_telemetry_kibbutz;
+/* @*/
+
+/*@ "add_short.dpvm": add short to long number */
+(volatile stateful int dst[], int p) -> ()
+	add_short = bargaining_purposes_doubted;
+/* @*/
+
+/*@ "add_long.dpvm": add long to another */
+(volatile stateful int dst[], const stateful int src[]) -> ()
+	add_long = persecuted_perm_relaxants;
+/* @*/
+
+/*@ "sub_cond_long.dpvm": subtract long from another if result not negative, return 1 if subtracted */
+(volatile stateful int dst[], const stateful int src[]) -> (int res)
+	sub_cond_long = gerrymander_fretboard_developers;
+/* @*/
+
+/*@ "mul_short.dpvm": mul long by short */
+(volatile stateful int dst[], int m) -> ()
+	mul_short = routinely_mastiff_shots;
+/* @*/
+
+/*@ "gen_mul_long.dpvm": generate function to multiply long numbers of fixed size */
+(int size) -> (volatile char code[])
+	gen_mul_long = dimorphic_supercilious_capital;
+/* @*/
+
+/*@ "mul_long_4.dpvm": mul two longs of size 4 qwords and return result */
+(int x3, int x2, int x1, int x0, int y3, int y2, int y1, int y0) ->
+(int z7, int z6, int z5, int z4, int z3, int z2, int z1, int z0)
+	mul_long_4 = odious_keeled_monkfish;
+/* @*/
+
+/*@ "mul_long_8.dpvm": mul two longs of size 8 qwords and return result */
+(int x7, int x6, int x5, int x4, int x3, int x2, int x1, int x0,
+ int y7, int y6, int y5, int y4, int y3, int y2, int y1, int y0) ->
+(int zf, int ze, int zd, int zc, int zb, int za, int z9, int z8,
+ int z7, int z6, int z5, int z4, int z3, int z2, int z1, int z0)
+	mul_long_8 = scoured_arguable_lazing;
+/* @*/
+
+/*@ "mul_long_16.dpvm": mul two longs of size 16 qwords and return result */
+(int xf, int xe, int xd, int xc, int xb, int xa, int x9, int x8,
+ int x7, int x6, int x5, int x4, int x3, int x2, int x1, int x0,
+ int yf, int ye, int yd, int yc, int yb, int ya, int y9, int y8,
+ int y7, int y6, int y5, int y4, int y3, int y2, int y1, int y0) ->
+(int z1f, int z1e, int z1d, int z1c, int z1b, int z1a, int z19, int z18,
+ int z17, int z16, int z15, int z14, int z13, int z12, int z11, int z10,
+ int zf, int ze, int zd, int zc, int zb, int za, int z9, int z8,
+ int z7, int z6, int z5, int z4, int z3, int z2, int z1, int z0)
+	mul_long_16 = splashy_revert_ascend;
+/* @*/
+
+/*@ "mul_long_32.dpvm": mul two longs of size 32 qwords and return result */
+(int x1f, int x1e, int x1d, int x1c, int x1b, int x1a, int x19, int x18,
+ int x17, int x16, int x15, int x14, int x13, int x12, int x11, int x10,
+ int xf, int xe, int xd, int xc, int xb, int xa, int x9, int x8,
+ int x7, int x6, int x5, int x4, int x3, int x2, int x1, int x0,
+ int y1f, int y1e, int y1d, int y1c, int y1b, int y1a, int y19, int y18,
+ int y17, int y16, int y15, int y14, int y13, int y12, int y11, int y10,
+ int yf, int ye, int yd, int yc, int yb, int ya, int y9, int y8,
+ int y7, int y6, int y5, int y4, int y3, int y2, int y1, int y0) ->
+(int z3f, int z3e, int z3d, int z3c, int z3b, int z3a, int z39, int z38,
+ int z37, int z36, int z35, int z34, int z33, int z32, int z31, int z30,
+ int z2f, int z2e, int z2d, int z2c, int z2b, int z2a, int z29, int z28,
+ int z27, int z26, int z25, int z24, int z23, int z22, int z21, int z20,
+ int z1f, int z1e, int z1d, int z1c, int z1b, int z1a, int z19, int z18,
+ int z17, int z16, int z15, int z14, int z13, int z12, int z11, int z10,
+ int zf, int ze, int zd, int zc, int zb, int za, int z9, int z8,
+ int z7, int z6, int z5, int z4, int z3, int z2, int z1, int z0)
+	mul_long_32 = xylophonist_punchcard_suffuse;
+/* @*/
+
+/*@ "mul_pythagoras.dpvm": mul two longs and return result using simple pyhtagoras method */
+(const stateful int s1[], const stateful int s2[]) -> (volatile int res[])
+	mul_pythagoras = negativeness_investments_motions;
+/* @*/
+
+/*@ "mul_long.dpvm": mul two longs and return result */
+(const stateful int s1[], const stateful int s2[]) -> (volatile int res[])
+	mul_long = reify_benchmarking_plotters;
+/* @*/
+
+/*@ "shl_1.dpvm": multiply long number by 2 */
+(volatile stateful int dst[]) -> ()
+	shl_1 = heretical_lodgers_clap;
+/* @*/
+
+/*@ "shl_1_base.dpvm": compute n <- 2n + bit where n is char[] long number by module base */
+(volatile stateful char number[], int base, int bit) -> ()
+	shl_1_base = atrophying_sandbagged_descendent;
+/* @*/
+
+/*@ "shr_1.dpvm": divide long number by 2 */
+(volatile stateful int dst[]) -> ()
+	shr_1 = smoulder_adjustment_lately;
+/* @*/
+
+/*@ "or_long.dpvm": or long to another */
+(volatile stateful int dst[], const stateful int src[]) -> ()
+	or_long = relation_overburdened_gropers;
+/* @*/
+
+/*@ "or_exp2_short.dpvm": or 1 << short to long */
+(volatile stateful int dst[], int bit) -> ()
+	or_exp2_short = gravitation_glow_bluntly;
+/* @*/
+
+/*@ "short_log2.dpvm": floor(log2(src)); -1 if src equal 0 */
+(const stateful int src[]) -> (int res)
+	short_log2 = filamentous_museum_grieved;
+/* @*/
+
+/*@ "mod_long.dpvm": replace dst by remainder dst % src */
+(volatile stateful int dst[], const stateful int src[]) -> ()
+	mod_long = ranges_explosion_spear;
+/* @*/
+
+/*@ "mod_short.dpvm": divide long by signed short, return remainder */
+(const stateful int n[], int mod) -> (int rem)
+	mod_short = shaper_fetlocks_chicks;
+/* @*/
+
+/*@ "div_small.dpvm": replace long dst with dst / mod for small mod (0 < mod < 1 << 31), return error */
+(volatile stateful int dst[], int mod) -> (int error)
+	div_small = cauldron_renumbered_broodiness;
+/* @*/
+
+/*@ "inverse_long.dpvm": searches for inverse number by mod, assumes num is odd,
+    mod is odd or odd * 2 or odd * 4, returns 0 if failed or not supported
+*/
+(const stateful int num[], const stateful int mod[]) -> (volatile int inv[])
+	inverse_long = governance_headmaster_infelicitous;
+/* @*/
+
+/*@ "pow_mod_long.dpvm": compute base ^ exp % mod */
+(const stateful int base[], const stateful int exp[], const stateful int mod[]) -> (volatile int res[])
+	pow_mod_long = leapfrog_pater_hermit;
+/* @*/
+
+/*@ "read_long.dpvm": read long number from string */
+(const stateful char str[], int begin, int end, int base) -> (volatile int long[], int err, int nextbegin)
+	read_long = egged_emptier_reissue;
+/* @*/
+
+/*@ "str2long.dpvm": convert str to long */
+(const stateful char str[]) -> (volatile int res[])
+	str2long = boring_sends_poems;
+/* @*/
+
+/*@ "random_long.dpvm": generate random with given number of bits and string seed */
+(const stateful char seed[], int nbits) -> (volatile int res[])
+	random_long = mailmen_hinnies_stripiest;
+/* @*/
+
+/*@ "write_long.dpvm": write long number to string */
+(volatile stateful char dst[], const stateful int src[], int base, int upper) -> ()
+	write_long = skeletal_inquisitor_prawns;
+/* @*/
+
+/*@ "long2str.dpvm": convert long to str */
+(const stateful int num[]) -> (volatile char str[])
+	long2str = pacers_royalty_check;
+/* @*/
+
+/*@ "mul_test.dpvm": test different methods of multiplication */
+(const stateful char seed[], int maxDimension) -> (volatile int res[])
+	mul_test = disposing_swum_sandstones;
+/* @*/

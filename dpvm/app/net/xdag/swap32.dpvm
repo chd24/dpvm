@@ -1,0 +1,8 @@
+/* swap bytes in int32; T16.514-T16.514; $DVS:time$ */
+
+(int x) -> (int swapx) {
+	x = x >> 24 & 0xff     | x >>  8 & 0xff00 
+	  | x <<  8 & 0xff0000 | x << 24 & 0xff000000;
+
+	return (x);
+}

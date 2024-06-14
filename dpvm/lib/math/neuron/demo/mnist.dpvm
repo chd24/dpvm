@@ -1,0 +1,283 @@
+/* neuron class, minst demo, T19.390-T19.744; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/sysParams.dpvmh"
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../rand/rand.dpvmake"
+#include "../neuron.dpvmake"
+
+char imagesFiles[][] = {"train-images-idx3-ubyte", "t10k-images-idx3-ubyte"};
+char labelsFiles[][] = {"train-labels-idx1-ubyte", "t10k-labels-idx1-ubyte"};
+int imageX = 28;
+int imageY = 28;
+int nImages[] = {0xEA60, 0x2710};
+int startImagesPos = 0x10;
+int startLabelsPos = 8;
+
+int OUT_STEP	= 0x10000;
+int OUT_DIGIT	= 0x20000;
+
+struct mnistData {
+	volatile neuronClass neuronObj;
+	const char mnistPath[];
+	const trainingParams params[2..];
+	volatile char images[][2..];
+	volatile char labels[][2..];
+	volatile char mess[];
+	volatile int successCount[2..];
+	volatile int roundCount[2..];
+	volatile float resultSum[2..];
+	int flags;
+	int targetLabel;
+	int nRounds;
+	int roundNo;
+	int sampleFileNo;
+	int sampleNo;
+	int sampleEnd;
+	int stage;
+	int success10kCount;
+	int lastTime;
+	float result10kSum;
+	float beta1powt;
+	float beta2powt;
+};
+
+(volatile stateful any obj, int n, float value) -> () setFloat = {
+	obj.f[n] = value;
+	return;
+};
+
+(volatile stateful mnistData data, const int values[]) -> () timeCallback = {
+	trainingParams paramsArr[];
+	float inputs[], outputs[];
+	char error[], out[];
+	strcat(out, data.mess);
+	{
+		trainingParams params;
+		paramsArr.lpush(params);
+	}
+
+	if (out.csize) {
+		printf(out, ", time: %ds\r\n", {(values[0] - data.lastTime)/1000000000});
+		outputp("", "", out);
+	}
+	data.lastTime = values[0];
+
+	while (data.roundNo < data.nRounds) {
+		inputs.fpop(inputs.fsize);
+		outputs.fpop(outputs.fsize);
+		asm { unfix };
+		out.cpop(out.csize);
+
+		if (data.sampleNo >= data.sampleEnd) {
+			data.sampleFileNo ^= 1;
+			data.sampleNo = 0;
+			data.sampleEnd = nImages[data.sampleFileNo];
+		}
+
+		int outDigit = data.flags & OUT_DIGIT, outStep = data.flags & OUT_STEP, i, j,
+			n = data.sampleFileNo, imagesPos = data.sampleNo * imageX * imageY,
+			label = data.labels[n][data.sampleNo];
+
+		if (outDigit) {
+			for (i = 0; i < imageY; i += 1) {
+				for (j = 0; j < imageX; j += 1, imagesPos += 1) {
+					int pixel = data.images[n][imagesPos];
+					inputs.fpush(pixel / 255.0);
+					out.cpush(" .,:;-+*=^!#&%$@"[pixel >> 4]);
+				}
+				out.cpush('\r');
+				out.cpush('\n');
+			}
+		} else {
+			int size = imageX * imageY;
+			for (i = 0; i < size; i += 1, imagesPos += 1)
+				inputs.fpush(data.images[n][imagesPos] / 255.0);
+		}
+
+		if (data.targetLabel == 10) {
+			for (i = 0; i < 10; i += 1)
+				outputs.fpush(label == i);
+		} else
+			outputs.fpush(label == data.targetLabel);
+
+		printf(out, "Round %d, file %d, sample %d, ", {data.roundNo, data.sampleFileNo, data.sampleNo});
+
+		if (outStep)
+			printf(out, "label %d, ", {label});
+
+		float res;
+		{
+			trainingParams params = paramsArr[0];
+			paramsArr.lpop(1);
+			asm { unfix };
+			params.speed = data.params[n].speed;
+			params.beta1 = data.params[n].beta1;
+			params.beta2 = data.params[n].beta2;
+			params.epsilon = data.params[n].epsilon;
+
+			if (!n) {
+				data.beta1powt *= params.beta1;
+				data.beta2powt *= params.beta2;
+				float beta1bias = 1 - data.beta1powt;
+				float beta2bias = fsqrt(1 - data.beta2powt);
+				params.speed *= beta2bias / beta1bias;
+				params.epsilon *= beta2bias;
+			}
+
+			(error, res) = data.neuronObj.methods.training(data.neuronObj, inputs, outputs, params);
+			paramsArr.lpush(params);
+		}
+		if (error.csize) {
+			printf(out, "Error: %s\r\n", {error});
+			outputp("", "", out);
+			return;
+		}
+		asm { unfix };
+
+		data.resultSum[n] += res;
+		data.result10kSum += res;
+		int match;
+		if (data.targetLabel == 10) {
+			for (i = 1; i < 10; i += 1)
+				if (outputs[i] > outputs[match])
+					match = i;
+			match = (match == label);
+		} else
+			match = (outputs[0] < 0.5) ^ (label == data.targetLabel);
+		data.successCount[n] += match;
+		data.success10kCount += match;
+		data.roundCount[n] += 1;
+
+		if (outStep) {
+			printf(out, "result = %f, averageResult = %f, successRate = %f%%\r\n",
+				{res, data.resultSum[n] / data.roundCount[n],
+				data.successCount[n] * 100.0 / data.roundCount[n]});
+			outputp("", "", out);
+		}
+		asm { unfix };
+		out.cpop(out.csize);
+
+		data.roundNo += 1;
+		data.sampleNo += 1;
+
+		if (data.roundNo % 10000 == 0) {
+			printf(out, "Rounds %d, file %d, samples %d, last 10k: averageResult = %f, successRate = %f%%, total: averageResult = %f, successRate = %f%%",
+				{data.roundNo, n, data.sampleNo, data.result10kSum / 10000, data.success10kCount * 100.0 / 10000,
+				 data.resultSum[n] / data.roundCount[n], data.successCount[n] * 100.0 / data.roundCount[n]});
+			data.mess = out;
+			data.result10kSum = 0;
+			data.success10kCount = 0;
+			const int vars[] = {DPVM_SYS_PARAM_TIME};
+			getsys(code, data, vars);
+			return;
+		}
+	}
+
+	outputp("", "", "Training finished.\r\n");
+	return;
+};
+
+(volatile stateful mnistData data, const char file[], int status) -> () readCallback = {
+	if (file.csize) {
+		if (data.stage & 2)
+			strcat(data.labels[data.stage & 1], file);
+		else
+			strcat(data.images[data.stage & 1], file);
+	} else if (!status) {
+		int size = nImages[data.stage & 1], fsize;
+		if (data.stage & 2)
+			fsize = data.labels[data.stage & 1].csize;
+		else
+			size *= imageX * imageY,
+			fsize = data.images[data.stage & 1].csize;
+		if (size != fsize) {
+			outputp("", "", "Loading files error.\r\n");
+			return;
+		}
+
+		data.stage += 1;
+		if (data.stage == 4) {
+			outputp("", "", "Loading files finished.\r\n");
+			const int vars[] = {DPVM_SYS_PARAM_TIME};
+			getsys(timeCallback, data, vars);
+			return;
+		}
+	}
+
+	char path[];
+	int fpos;
+	if (data.stage & 2)
+		printf(path, "%s/%s", {data.mnistPath, labelsFiles[data.stage & 1]}),
+		fpos = data.labels[data.stage & 1].csize + startLabelsPos;
+	else
+		printf(path, "%s/%s", {data.mnistPath, imagesFiles[data.stage & 1]}),
+		fpos = data.images[data.stage & 1].csize + startImagesPos;
+
+	read(code, data, path, fpos, 0x100000);
+	return;
+};
+
+(const stateful any registry, const char mnistPath[], const char seed[], const char netDescription[],
+		any training_params, int nRounds, int targetLabel, int flags) -> (const char error[]) mnist = {
+	neuronClass neuronObj = neuronCreate();
+
+	char error[] = neuronObj.methods.setFlags(neuronObj, flags);
+	if (error.csize) return error;
+
+	error = neuronObj.methods.setRandomSeed(neuronObj, seed);
+	if (error.csize) return error;
+
+	error = neuronObj.methods.setRegistry(neuronObj, registry);
+	if (error.csize) return error;
+
+	outputp("", "", "Net construction...\r\n");
+
+	error = neuronObj.methods.construct(neuronObj, netDescription);
+	if (error.csize) return error;
+
+	outputp("", "", "Net constructed.\r\n");
+
+	if (flags & NEURON_DEBUG) {
+		char out[];
+		error = neuronObj.methods.dump(out, neuronObj);
+		if (error.csize) return error;
+		outputp("", "", out);
+	}
+
+	int nInputs, nOutputs;
+	(error, nInputs) = neuronObj.methods.getNInputs(neuronObj);
+	if (error.csize) return error;
+	(error, nOutputs) = neuronObj.methods.getNOutputs(neuronObj);
+	if (error.csize) return error;
+
+	if (nInputs != imageX * imageY)
+		return "Error: illegal number of inputs";
+	if (nOutputs != 1 && nOutputs != 10)
+		return "Error: illegal number of outputs";
+	if (nOutputs == 10)
+		targetLabel = 10;
+	else if (targetLabel < 0 || targetLabel > 9)
+		return "Error: illegal target label";		
+
+	trainingParams p0;
+	int i;
+	for (i = 0; i < training_params.fsize && i < trainingParams.i[10]; i += 1)
+		setFloat(p0, i, training_params.f[i]);
+	trainingParams p1 = {0, 1, 1, 1}, params[2..] = {p0, p1};
+
+	mnistData data = {neuronObj, mnistPath, params};
+	data.nRounds = nRounds;
+	data.targetLabel = targetLabel;
+	data.flags = flags;
+	data.sampleFileNo = 1;
+
+	if ((flags & NEURON_METHOD_ADAM) == NEURON_METHOD_ADAM)
+		data.beta1powt = 1,
+		data.beta2powt = 1;
+
+	outputp("", "", "Loading files...\r\n");
+	readCallback(data, "", 1);
+	return "";
+};

@@ -1,0 +1,116 @@
+/* input class, queryHistory demo, T20.212-T20.218; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../../config/config.dpvmake"
+#include "../input.dpvmake"
+
+type demoData = {
+	const configClass configObj;
+	volatile inputClass inputObj;
+	const any inputCallback;
+	volatile historyLine lines[];
+};
+
+(const char error[]) -> () printError = {
+	outputp("", "", error);
+	outputp("", "", "\r\n");
+	return;
+};
+
+(volatile stateful any d, const char error[]) -> () queryCallback = {
+	demoData arr[];
+	pushObject(d, arr);
+	demoData data = arr[0];
+
+	if (error.csize)
+		printError(error);
+	int i;
+	for (i = 0; i < data.lines.lsize; i++) {
+		char mess[];
+		printf(mess, "[%d] '%s'", {data.lines.l[i].text, data.lines.l[i].posInFile});
+		printError(mess);
+	}
+
+	outputp("", "", "last, prev, next, end, <text>: ");
+	input(data.inputCallback, data, 256, -1);
+	return;
+};
+
+(volatile demoData data, const char text[], int status) -> () inputCallback = {
+	if (status < 0)
+		return printError("Input error");
+
+	int begin, end;
+	(begin, end) = strtostr(text, 0, text.csize);
+	char cmd[];
+	substrcat(cmd, text, begin, end);
+
+	if (cmd == "end") {
+		char error[] = data.configObj.methods.endInput(data.configObj);
+		if (error.csize) return printError(error);
+		printError("Demo finished.");
+
+	} else if (cmd == "last") {
+		data.inputObj.methods.queryHistory(data.lines, data.inputObj, queryCallback, data, HISTORY_QUERY_LAST);
+
+	} else if (cmd == "prev") {
+		data.inputObj.methods.queryHistory(data.lines, data.inputObj, queryCallback, data, HISTORY_QUERY_PREV);
+
+	} else if (cmd == "next") {
+		data.inputObj.methods.queryHistory(data.lines, data.inputObj, queryCallback, data, HISTORY_QUERY_NEXT);
+
+	} else {
+		historyLine line = {cmd, 0};
+		data.lines.lpop(data.lines.lsize);
+		data.lines.lpush(line);
+		data.inputObj.methods.queryHistory(data.lines, data.inputObj, queryCallback, data, HISTORY_QUERY_ADD);
+
+	}
+
+	return;
+};
+
+(const any cfg, const char error[]) -> () loadpCallback = {
+	if (error.csize)
+		return printError(error);
+
+	const type inputConfig = {
+		const any configObj;
+		int flags;
+	};
+
+	inputConfig configs[];
+	pushObject(cfg, configs);
+	inputConfig config = configs[0];
+
+	configClass configObjs[];
+	pushObject(config.configObj, configObjs);
+	configClass configObj = configObjs[0];
+
+	demoData data = {configObj, inputCreate(), inputCallback};
+	error = data.inputObj.methods.setFlags(data.inputObj, config.flags);
+	if (error.csize) return printError(error);
+
+	outputp("", "", "Demo for input.queryHistory() method.\r\n");
+	outputp("", "", "last, prev, next, end, <text>: ");
+
+	input(inputCallback, data, 256, -1);
+	return;
+};
+
+(const any registry, int flags) -> () queryHistory = {
+	configClass configObj = configCreate();
+
+	char error[] = configObj.methods.setFlags(configObj, CONFIG_FLAG_INPUT);
+	if (!error.csize) error = configObj.methods.setRegistry(configObj, registry);
+	if (!error.csize) error = configObj.methods.addHeaderFile(configObj, "[defaultHeader]",
+			"type inputConfig = {const any configObj; int flags;};");
+	char config[];
+	printf(config, "configObj = __CONFIG__\r\nflags = %d", {flags});
+	if (!error.csize) error = configObj.methods.addConfigFile(configObj, "[defaultConfig]", config);
+
+	if (error.csize) return printError(error);
+
+	return configObj.methods.loadp(configObj, loadpCallback, "inputConfig");
+};

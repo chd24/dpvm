@@ -1,0 +1,25 @@
+/* dnet node, print host name by crc or host position in array; T17.582-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful char out[], const stateful dnet_context ctx, int n, int crc) -> () {
+	if (n < 0) {
+		int i;
+		int size = ctx.hosts.lsize;
+		for (i = 0; i < size; i += 1) {
+			if (ctx.hosts[i].crc == crc) {
+				n = i;
+				i = size;
+			}
+		}
+	} else
+		crc = ctx.hosts[n].crc;
+
+	if (n >= 0 && ctx.hosts[n].name.csize)
+		strcat(out, ctx.hosts[n].name);
+	else
+		printhex(out, crc, 8, 1);
+
+	return;
+}

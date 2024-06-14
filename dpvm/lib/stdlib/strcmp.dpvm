@@ -1,0 +1,21 @@
+/* compare strings; T15.554-T17.574; $DVS:time$ */
+	
+(const stateful char a[], const stateful char b[]) -> (int res) {
+	int as = a.csize;
+	int bs = b.csize;
+	int ms;
+	int i;
+
+	if (as > bs)
+		ms = bs;
+	else
+		ms = as;
+
+	for (i = 0; i < ms; i += 1) {
+		int diff = a[i] - b[i];
+		if (diff)
+			return diff;
+	}
+
+	return as - bs;
+}

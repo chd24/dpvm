@@ -1,0 +1,15 @@
+/* return version of newslog */
+	
+char version[] = "newslog version 0.4.3, T15.588-T19.591"; /* $DVS:time$
+
+History:
+
+T19.591 ver 0.4.4: added support for t.me (telegram) channels
+
+...
+
+*/
+
+() -> (const char version[]) {
+	return version;
+}

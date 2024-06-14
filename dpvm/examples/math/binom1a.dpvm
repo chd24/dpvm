@@ -1,0 +1,9 @@
+/* C_n^m via factorials; T15.500-T20.069; $DVS:time$ */
+
+#include "math.dpvmake"
+
+(int n, int m) -> (int res) binom1a = {
+	return factorial2(n) / (factorial2(m) * factorial2(n - m));
+};
+
+

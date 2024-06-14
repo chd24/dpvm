@@ -1,0 +1,78 @@
+/* dpvm: get string as char[] object or char; T15.540-T17.350; $DVS:time$ */
+
+/* "characters" or 'c' (status = 0 if string, 3 if char) */
+
+#include "compiler.dpvmake"
+
+int quotes[] = resurfacing_dresses_putsch; /* lexem list: " ' */
+
+(const stateful char src[], int pos, int end) -> (volatile char str[], int new_pos, int status, char c) {
+	int list[];
+	char str[];
+	int newpos;
+	int status;
+	int tmp;
+	int tmp0;
+	char c;
+	int n;
+	int n0;
+
+	/* read next lexem */
+	(newpos, end, status) = getlexem(src, quotes, pos, end);
+	if (status >> 1)
+		return (str, pos, -1, c);
+
+	n0 = 34;
+	if (status) n0 = 39;
+
+	do {
+		tmp = newpos == end;
+		if (tmp) {
+			return (str, pos, -1, c);
+		}
+		c = src[newpos];
+		newpos = newpos + 1;
+		n = c;
+		tmp0 = n != n0;
+		if (tmp0) {
+			tmp = n == 92;	/* \ */
+			if (tmp) {
+				tmp = newpos == end;
+				if (tmp) {
+					return (str, pos, -1, c);
+				}
+				c = src[newpos];
+				newpos = newpos + 1;
+				n = c;
+				tmp = n ==  98; if (tmp) { n =  8; } /* \b */
+				tmp = n == 110; if (tmp) { n = 10; } /* \n */
+				tmp = n == 114; if (tmp) { n = 13; } /* \r */
+				tmp = n == 116; if (tmp) { n =  9; } /* \t */
+				c = n;
+			}
+			str.push(c);
+		}
+	} while (tmp0);
+
+	/* 'c' */
+	if (status) { 
+		tmp = str.csize;
+		tmp = tmp != 1;
+		if (tmp) {
+			return (str, pos, -1, c);
+		}
+		c = str[0];
+		n = c;
+		n = n >> 7;
+		if (n) {
+			return (str, pos, -1, c);
+		}
+		status = 3;
+
+		return (str,newpos,status,c);
+	}
+
+	status = 0;
+
+	return (str,newpos,status,c);
+}

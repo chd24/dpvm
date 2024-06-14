@@ -1,0 +1,64 @@
+/* main function of xdag miner; T16.508-T19.572; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../math/crypto/crc32/crc32.dpvmake"
+#include "xdag.dpvmake"
+
+int dbparams[] = {DPVM_SYS_PARAM_ERROR, DPVM_SYS_PARAM_CODE, DPVM_SYS_PARAM_POS, DPVM_SYS_PARAM_FUNC_SHORT, DPVM_SYS_PARAM_TIME};
+int idparams[] = {DPVM_SYS_PARAM_ID};
+
+(const stateful xdagdata data, const int values[]) -> () init {
+	xdagdata d = xdagcopy(data);
+	data = d;	
+
+	data.addr.version = version_xdag();
+	data.addr.taskid = values[0];
+	data.addr.threadid = -2;
+
+	getsysp(handler_xdag, data, dbparams);
+
+	char mess[];
+	strcat(mess, "Starting ");
+	strcat(mess, data.addr.version);
+
+	write_log(data, mess, 6);
+
+	if ((data.cdata.method & 0xff) >= 8)
+		read_block(data, data.cdata.blockfile, data.cdata.blockfile.csize);
+	else
+		readp(read_block, data, data.cdata.blockfile, 0, 0x400);
+	return;
+}
+
+(const char logfile[], const char address[], const char workername[], const char pool[], int port,
+		int nminers, int niter, int method, int timezone, int debuglevel) -> () {
+	xdagdata data;
+	xdagcdata cdata;
+
+	cdata.logfile = logfile;
+	cdata.blockfile = address;
+	cdata.pooladdr = pool;
+	cdata.workername = workername;
+
+	if ((method & 0xff) >= 16)
+		cdata.json = jsonCreate();
+
+	cdata.poolport = port;
+	cdata.nminers = nminers;
+	cdata.timezone = timezone;
+	cdata.debuglevel = debuglevel;
+	cdata.niter = niter;
+	cdata.method = method;
+
+	cdata.dfsctx = crypt_init();
+	cdata.crcinit = crc32_init(cdata.crcctx);
+
+	cdata.receiver = receiver;
+
+	data.cdata = cdata;
+
+	getsysp(init, data, idparams);
+	return;
+}

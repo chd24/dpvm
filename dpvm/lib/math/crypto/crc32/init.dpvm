@@ -1,0 +1,19 @@
+/* initialize crc32 context, return init crc; T16.508-T16.954; $DVS:time$ */
+
+(volatile stateful int ctx[]) -> (int crc) {
+	if (ctx.isize != 0x100) {
+		ctx.ipop(ctx.isize);
+		const int p = 0xEDB88320;
+		int i;
+
+		for (i = 0; i < 0x100; i = i + 1) {
+			int c = i;
+			int j;
+			for (j = 0; j < 8; j = j + 1) 
+				c = c >> 1 ^ -(c & 1) & p;
+			ctx.ipush(c);
+		}
+	}
+
+	return 0xffffffff;
+}

@@ -1,0 +1,56 @@
+/* dpvmb class, new demo, T20.132-T20.141; $DVS:time$ */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../lib/utils/utils.dpvmake"
+#include "../dpvmb.dpvmake"
+
+(const stateful any registry, const char fileName[]) -> (const char error[]) new = {
+	dpvmbClass dpvmbObj = dpvmbCreate();
+
+	char error[] = dpvmbObj.methods.setRegistry(dpvmbObj, registry);
+	if (error.csize) return error;
+
+	error = dpvmbObj.methods.setFileName(dpvmbObj, fileName);
+	if (error.csize) return error;
+
+	error = dpvmbObj.methods.new(dpvmbObj);
+	if (error.csize) return error;
+
+	error = dpvmbObj.methods.verify(dpvmbObj);
+	if (error.csize) return error;
+
+	any obj;
+	error = dpvmbObj.methods.makeFirstObj(obj, dpvmbObj);
+	if (error.csize) return error;
+
+	int h0, h1, h2, h3;
+	(h0, h1, h2, h3) = getfullhash(obj);
+
+	char out[];
+	error = dpvmbObj.methods.find(out, dpvmbObj, h0, h1, h2, h3);
+	if (error.csize) {
+		char mess[];
+		printf(mess, "%s, hash of object = (%x, %x, %x, %x)", {error, h0, h1, h2, h3});
+		return mess;
+	}
+
+	int h[] = {32, 8, 8, 1, 0, 0, 0, obj.csize, 0, 0, 0, 0};
+	(h[8], h[9], h[10], h[11]) = getfullhash(obj.type);
+
+	if (h != chars2ints(out, 0, 96))
+		return "Error: first object header not matched.";
+
+	any obj1;
+	int i, size = out.csize;
+	for (i = 96; i < size; i++)
+		obj1.cpush(out[i]);
+
+	if (obj != obj1)
+		return "Error: first object not matched.";
+
+	error = dpvmbObj.methods.save(dpvmbObj);
+	if (error.csize) return error;
+
+	outputp("", "", "Database saved.\r\n");
+	return "";
+};

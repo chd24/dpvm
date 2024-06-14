@@ -1,0 +1,75 @@
+/* aiAlphabet class, internal header, T18.379-T18.385"; $DVS:time$ */
+
+#include "../../alphabet.dpvmh"
+
+type aiAlphabetLookupTree = {
+	volatile this x00; volatile this x01; volatile this x02; volatile this x03; volatile this x04; volatile this x05; volatile this x06; volatile this x07;
+	volatile this x08; volatile this x09; volatile this x0A; volatile this x0B; volatile this x0C; volatile this x0D; volatile this x0E; volatile this x0F;
+	volatile this x10; volatile this x11; volatile this x12; volatile this x13; volatile this x14; volatile this x15; volatile this x16; volatile this x17;
+	volatile this x18; volatile this x19; volatile this x1A; volatile this x1B; volatile this x1C; volatile this x1D; volatile this x1E; volatile this x1F;
+	volatile this x20; volatile this x21; volatile this x22; volatile this x23; volatile this x24; volatile this x25; volatile this x26; volatile this x27;
+	volatile this x28; volatile this x29; volatile this x2A; volatile this x2B; volatile this x2C; volatile this x2D; volatile this x2E; volatile this x2F;
+	volatile this x30; volatile this x31; volatile this x32; volatile this x33; volatile this x34; volatile this x35; volatile this x36; volatile this x37;
+	volatile this x38; volatile this x39; volatile this x3A; volatile this x3B; volatile this x3C; volatile this x3D; volatile this x3E; volatile this x3F;
+	volatile this x40; volatile this x41; volatile this x42; volatile this x43; volatile this x44; volatile this x45; volatile this x46; volatile this x47;
+	volatile this x48; volatile this x49; volatile this x4A; volatile this x4B; volatile this x4C; volatile this x4D; volatile this x4E; volatile this x4F;
+	volatile this x50; volatile this x51; volatile this x52; volatile this x53; volatile this x54; volatile this x55; volatile this x56; volatile this x57;
+	volatile this x58; volatile this x59; volatile this x5A; volatile this x5B; volatile this x5C; volatile this x5D; volatile this x5E; volatile this x5F;
+	volatile this x60; volatile this x61; volatile this x62; volatile this x63; volatile this x64; volatile this x65; volatile this x66; volatile this x67;
+	volatile this x68; volatile this x69; volatile this x6A; volatile this x6B; volatile this x6C; volatile this x6D; volatile this x6E; volatile this x6F;
+	volatile this x70; volatile this x71; volatile this x72; volatile this x73; volatile this x74; volatile this x75; volatile this x76; volatile this x77;
+	volatile this x78; volatile this x79; volatile this x7A; volatile this x7B; volatile this x7C; volatile this x7D; volatile this x7E; volatile this x7F;
+	volatile this x80; volatile this x81; volatile this x82; volatile this x83; volatile this x84; volatile this x85; volatile this x86; volatile this x87;
+	volatile this x88; volatile this x89; volatile this x8A; volatile this x8B; volatile this x8C; volatile this x8D; volatile this x8E; volatile this x8F;
+	volatile this x90; volatile this x91; volatile this x92; volatile this x93; volatile this x94; volatile this x95; volatile this x96; volatile this x97;
+	volatile this x98; volatile this x99; volatile this x9A; volatile this x9B; volatile this x9C; volatile this x9D; volatile this x9E; volatile this x9F;
+	volatile this xA0; volatile this xA1; volatile this xA2; volatile this xA3; volatile this xA4; volatile this xA5; volatile this xA6; volatile this xA7;
+	volatile this xA8; volatile this xA9; volatile this xAA; volatile this xAB; volatile this xAC; volatile this xAD; volatile this xAE; volatile this xAF;
+	volatile this xB0; volatile this xB1; volatile this xB2; volatile this xB3; volatile this xB4; volatile this xB5; volatile this xB6; volatile this xB7;
+	volatile this xB8; volatile this xB9; volatile this xBA; volatile this xBB; volatile this xBC; volatile this xBD; volatile this xBE; volatile this xBF;
+	volatile this xC0; volatile this xC1; volatile this xC2; volatile this xC3; volatile this xC4; volatile this xC5; volatile this xC6; volatile this xC7;
+	volatile this xC8; volatile this xC9; volatile this xCA; volatile this xCB; volatile this xCC; volatile this xCD; volatile this xCE; volatile this xCF;
+	volatile this xD0; volatile this xD1; volatile this xD2; volatile this xD3; volatile this xD4; volatile this xD5; volatile this xD6; volatile this xD7;
+	volatile this xD8; volatile this xD9; volatile this xDA; volatile this xDB; volatile this xDC; volatile this xDD; volatile this xDE; volatile this xDF;
+	volatile this xE0; volatile this xE1; volatile this xE2; volatile this xE3; volatile this xE4; volatile this xE5; volatile this xE6; volatile this xE7;
+	volatile this xE8; volatile this xE9; volatile this xEA; volatile this xEB; volatile this xEC; volatile this xED; volatile this xEE; volatile this xEF;
+	volatile this xF0; volatile this xF1; volatile this xF2; volatile this xF3; volatile this xF4; volatile this xF5; volatile this xF6; volatile this xF7;
+	volatile this xF8; volatile this xF9; volatile this xFA; volatile this xFB; volatile this xFC; volatile this xFD; volatile this xFE; volatile this xFF;
+
+	int mask0; int mask1; int mask2; int mask3;
+
+	char c00; char c01; char c02; char c03; char c04; char c05; char c06; char c07; char c08; char c09; char c0A; char c0B; char c0C; char c0D; char c0E; char c0F;
+	char c10; char c11; char c12; char c13; char c14; char c15; char c16; char c17; char c18; char c19; char c1A; char c1B; char c1C; char c1D; char c1E; char c1F;
+	char c20; char c21; char c22; char c23; char c24; char c25; char c26; char c27; char c28; char c29; char c2A; char c2B; char c2C; char c2D; char c2E; char c2F;
+	char c30; char c31; char c32; char c33; char c34; char c35; char c36; char c37; char c38; char c39; char c3A; char c3B; char c3C; char c3D; char c3E; char c3F;
+	char c40; char c41; char c42; char c43; char c44; char c45; char c46; char c47; char c48; char c49; char c4A; char c4B; char c4C; char c4D; char c4E; char c4F;
+	char c50; char c51; char c52; char c53; char c54; char c55; char c56; char c57; char c58; char c59; char c5A; char c5B; char c5C; char c5D; char c5E; char c5F;
+	char c60; char c61; char c62; char c63; char c64; char c65; char c66; char c67; char c68; char c69; char c6A; char c6B; char c6C; char c6D; char c6E; char c6F;
+	char c70; char c71; char c72; char c73; char c74; char c75; char c76; char c77; char c78; char c79; char c7A; char c7B; char c7C; char c7D; char c7E; char c7F;
+	char c80; char c81; char c82; char c83; char c84; char c85; char c86; char c87; char c88; char c89; char c8A; char c8B; char c8C; char c8D; char c8E; char c8F;
+	char c90; char c91; char c92; char c93; char c94; char c95; char c96; char c97; char c98; char c99; char c9A; char c9B; char c9C; char c9D; char c9E; char c9F;
+	char cA0; char cA1; char cA2; char cA3; char cA4; char cA5; char cA6; char cA7; char cA8; char cA9; char cAA; char cAB; char cAC; char cAD; char cAE; char cAF;
+	char cB0; char cB1; char cB2; char cB3; char cB4; char cB5; char cB6; char cB7; char cB8; char cB9; char cBA; char cBB; char cBC; char cBD; char cBE; char cBF;
+	char cC0; char cC1; char cC2; char cC3; char cC4; char cC5; char cC6; char cC7; char cC8; char cC9; char cCA; char cCB; char cCC; char cCD; char cCE; char cCF;
+	char cD0; char cD1; char cD2; char cD3; char cD4; char cD5; char cD6; char cD7; char cD8; char cD9; char cDA; char cDB; char cDC; char cDD; char cDE; char cDF;
+	char cE0; char cE1; char cE2; char cE3; char cE4; char cE5; char cE6; char cE7; char cE8; char cE9; char cEA; char cEB; char cEC; char cED; char cEE; char cEF;
+	char cF0; char cF1; char cF2; char cF3; char cF4; char cF5; char cF6; char cF7; char cF8; char cF9; char cFA; char cFB; char cFC; char cFD; char cFE; char cFF;
+};
+
+type aiAlphabetCodeTable = {
+        const char name[];
+	volatile aiAlphabetLookupTree root;
+	volatile char smallLetters[][];
+	volatile char bigLetters[][];
+	volatile int statistics[];
+	int nLetters;
+};
+
+type aiAlphabetData = {
+        volatile aiAlphabetCodeTable tables[];
+};
+
+type aiAlphabetImpl = {
+        volatile aiAlphabetData data;
+	const aiAlphabetMethods methods;
+};

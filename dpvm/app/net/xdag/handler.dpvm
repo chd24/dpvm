@@ -1,0 +1,46 @@
+/* xdag miner: error handler; T16.481-T19.553; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "xdag.dpvmake"
+
+(const stateful xdagdata data, const int values[]) -> () kill {
+	/* kill work task */
+	const int vars1[] = {0x200};
+	const int values1[] = {-1};
+	setsys("", "", vars1, values1);
+	return;
+}
+
+(const stateful xdagdata data, const int values[]) -> () {
+	char str[];
+	int cod;
+	int res;
+
+	strcat(str, "Program crashed with error ");
+	cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+
+	write_log(data, str, 1);
+
+	const int vars1[] = {0};
+	int values1[];
+	values1.ipush(values[4] + KILL_DELAY);
+	setsys(kill, data, vars1, values1);
+	return;
+}

@@ -1,0 +1,52 @@
+/* make projects utility, called after file read; T16.601-T19.640; $DVS:time$ */
+
+#include "../../lib/utils/utils.dpvmake"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+
+#include "maker.dpvmake"
+
+int MLOAD_TIMEOUT = 10000000000; /* 10s */
+
+(volatile stateful makedata data, const char text[], int status) -> () {
+	makedata data0;
+	objcopyto(data0, data);
+	data = data0;
+
+	compsrc files0[];
+	objcopyto(files0, data.files);
+	data.files = files0;
+
+	compsrc allfiles0[];
+	objcopyto(allfiles0, data.allfiles);
+	data.allfiles = allfiles0;
+
+	int eqfiles;
+	if (data.files.lsize) {
+		if (data.files[data.files.lsize - 1] 
+				== data.allfiles[data.allfiles.lsize - 1])
+			eqfiles = 1;
+	}
+
+	compsrc file;
+	objcopyto(file, data.allfiles[data.allfiles.lsize - 1]);
+	data.allfiles[data.allfiles.lsize - 1] = file;
+
+	if (eqfiles) data.files[data.files.lsize - 1] = file;
+
+	if (status > 0) {
+		char newtext[];
+		strcat(newtext, file.file);
+		strcat(newtext, text);
+		file.file = newtext;
+
+		if (status == 0x100000) {
+			read(code, data, file.name, file.file.csize, 0x100000);
+			return;
+		}
+	}
+
+	int hashes[] = text2hashes(file.file);
+        mload_p2p(loaded, data, hashes, MLOAD_TIMEOUT);
+	return;
+}

@@ -1,0 +1,6 @@
+/* creates array of ints of given size; T18.974-T18.974; $DVS:time$ */
+
+(int size) -> (volatile int array[]) intsArray = {
+	int array[];
+	asm { info 8 iload 2 istore new ret }
+};

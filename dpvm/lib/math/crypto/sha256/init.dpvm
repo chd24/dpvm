@@ -1,0 +1,19 @@
+/* init sha256 computation; T16.492-T17.608; $DVS:time$ */
+
+(volatile stateful int ctx[]) -> () {
+	int i;
+
+	ctx.ipop(ctx.isize);
+
+	do {
+		ctx.push(category_deportations_incoherence.i[i]);
+		i = i + 1;
+	} while (i < 8);
+
+	do {
+		ctx.push(0);
+		i = i + 1;
+	} while (i < 73);
+
+	return;
+}

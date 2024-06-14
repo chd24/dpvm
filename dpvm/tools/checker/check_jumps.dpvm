@@ -1,0 +1,48 @@
+/* jumps checker; T16.013-T20.132; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "checker.dpvmh"
+
+(const stateful any func) -> (volatile int map[], int flags) {
+	int st[], map[], flags = CHECKER_ILLEGAL;
+	if (!func.csize) return (map, flags);
+
+	int i;
+	for (i = 0; i < func.csize; i++) {
+		int j = i, c = func.c[i];
+
+		if (c >= DPVM_CODE_LB && c <= DPVM_CODE_JNZF) {
+			if (c == DPVM_CODE_LB) {
+				st.ipush(i);
+
+			} else if (c >= DPVM_CODE_JB && c <= DPVM_CODE_JNZB) {
+				if (!st.isize) return (map, flags);
+				j = st.i[st.isize - 1];
+				st.ipop(1);
+				if (j < 0) return (map, flags);
+				map[j] = i;
+
+			} else if (c == DPVM_CODE_LF) {
+				if (!st.isize) return (map, flags);
+				j = st.i[st.isize - 1];
+				st.ipop(1);
+				if (j >= 0) return (map, flags);
+				j = ~j;
+				map[j] = i;
+
+			} else {
+				st.ipush(~i);
+			}
+		}
+
+		map.ipush(j);
+
+		if (c == DPVM_CODE_RET && !st.isize)
+			return (map, 0);
+	}
+
+	if (!st.isize) flags = 0;
+	
+	return (map, flags);
+}

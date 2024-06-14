@@ -1,0 +1,111 @@
+/* monitor, makefile; T16.604-T19.649; $DVS:time$ */
+
+#include "../registry/registry.dpvmh"
+#include "registry.dpvmh"
+
+/* internal monitor structure */
+type mondata = {
+        const any command;		/* command() function */
+        const any recv_mess;		/* recv_mess() function */
+        const any address;		/* mailbox address for that thread */
+        const any objs;                 /* objects for compiler/interpreter */
+        const debuggerClass debugger;   /* data specific for debugging */
+        const char name[];		/* name of file to download */
+        volatile char text[];		/* contents of downloaded file */
+        volatile int ids[];		/* IDs of tasks for tasks command */
+        volatile char strings[][];      /* strings to output in tasks command */
+        const (const any data, const char text[]) -> ()
+                out_func;               /* custom function used instead of out_result */
+        const any out_data;             /* data for custom output function */
+        volatile registryData registry;	/* system registry */
+        int mode;                       /* 0 for load file/print,
+					   1 for compile/save,
+					   2 for debug
+                                          -1 for  */
+        int task;                       /* id of new task */
+        int flags;                      /* flags for new task */
+        int time;                       /* timestamp for task */
+};
+
+int MLOAD_TIMEOUT = 10000000000; /* 10s */
+
+/*@ "strtolink.dpvm": converts string to link */
+(const char str[], const any obj, const any objs, int begin, int end)
+		-> (const any link, int error, int nextbegin)
+	strtolink = SXwH7RnsS74_h8DYCtgw433_gfShVoRhv6p_diMPVHwUheh /* diffidence_unilateral_handfuls */;
+/* @*/
+
+/*@ "strtoc.dpvm": converts string to char */
+(const stateful char str[], int begin, int end, int status)
+		-> (int error, int nextbegin, int status, char c)
+	strtoc = XdgmZwGxL6o_pvroh8ZBLt9_Pns1Lxue1a4_C57v2sMbyEa /* goaded_seethe_cerise */;
+/* @*/
+
+/*@ "registry.dpvm": registry functions used by monitor */
+monitorRegistryClass monitorRegistryObj = spiQ7i2Qz2B_g8Q9xjcsAGX_jm8UGeZAbuU_bT2bo6bLQrD /* consensus_governmental_capillaries */;
+/* @*/
+
+/*@ "input_cmd.dpvm": inputs next command */
+(volatile stateful mondata data, int status) -> ()
+	input_cmd = UWjo9CcfezY_LhXDjByuZSe_g3tDoc49Hwv_N6V9f2y18N2 /* loins_dejectedly_employable */;
+/* @*/
+
+/*@ "out_result.dpvm": output command's result and go to input next command */
+(volatile stateful mondata data, const char text[]) -> ()
+	out_result = t5zg5SQ6QUw_q1mfnYh2DLa_MSLALmPsE7b_Ku6jgo8pjNA /* misplacing_deifies_mammary */;
+/* @*/
+
+/*@ "save_object.dpvm": called after result of expression was saved to database */
+(volatile stateful mondata data, const stateful any objs) -> ()
+	save_object = hWxGmK21RVW_kgxwE339dTF_DY2mFcxTpss_Hsy3tdMm15H /* outwards_airtight_dribbled */;
+/* @*/
+
+/*@ "handler.dpvm": called after program crashes */
+(const stateful mondata data, const stateful int values[]) -> ()
+	handler = LyWAYHYpWbA_gnpCbZgbbSk_fm5FYjM1LqF_abewc1Kfnwq /* gallium_subjects_independent */;
+/* @*/
+
+/*@ "stats.dpvm": output statistics */
+(volatile stateful mondata data) -> ()
+	outStats = jP9m2jQj3PU_Q251EQqj5dR_hsHe92ztuMM_m58M6jckV1W /* sonorities_gestured_montage */;
+/* @*/
+
+/*@ "tasks.dpvm": output task list */
+(volatile stateful mondata data, const int values[]) -> ()
+	tasks = oiY588nTQiJ_WcNPMo4zaYn_M83kdqeKgEi_dE82fYgDJBP /* curtsy_hiving_septet */;
+/* @*/
+
+/*@ "type_cmd.dpvm": construct and save type */
+(volatile stateful mondata arg, const any objs) -> ()
+	type_cmd = K2z9cqDPhBy_LRmiEh8BVzS_e5jQxVgpZjZ_Tw3aEe6iq6c /* zoological_glowing_conurbation */;
+/* @*/
+
+/*@ "object.dpvm": construct and save object */
+(volatile stateful mondata arg, const any objs) -> ()
+	object = UjHD4acc7DG_M637yPdQ33Z_mrtQVfRzHWn_FAPTYvZhjbw /* hanging_reapply_crunchier */;
+/* @*/
+
+/*@ "compile.dpvm": compile file using compiler */
+(volatile stateful mondata arg, const any objs) -> ()
+	compile = b2X9dkzekWw_Au5XHbU88Pe_AFmEkE4UGgh_KK6raijTGmK /* adduced_gall_fritters */;
+/* @*/
+
+/*@ "read_file.dpvm": called after file read to save it or compile */
+(volatile stateful mondata arg, const stateful char text[], int status) -> ()
+	read_file_m = TGFNvBbycvc_UYz5chawX9D_RNUMjhDVeqT_k763WkZibUj /* smoking_slain_judiciary */;
+/* @*/
+
+/*@ "interpret.dpvm": interpret expression */
+(volatile stateful mondata arg, const any objs) -> ()
+	interpret = ReWYbWmVsqW_LzrRUGKYDua_sZVdseNnTev_pSVBAKWn146 /* tweaking_cracking_epidemic */;
+/* @*/
+
+/*@ "debug.dpvm": prepare debugger class */
+(volatile stateful mondata data) -> (const char err[])
+	prepareDebugger = EhF7qGc2GFJ_ZwvFnwPtu5r_bfrjZQ3tFmh_J73P7YKM5bY /* grotesquely_termites_blunders */;
+/* @*/
+
+/*@ "command.dpvm": performs commands */
+(volatile stateful mondata data, const char text[], int status) -> ()
+	command = ewPvRaTHiLa_Fe97kBuUW36_UAEXJVj7ewh_H41zwGcdVKW /* dorsal_pulsated_canvasser */;
+/* @*/

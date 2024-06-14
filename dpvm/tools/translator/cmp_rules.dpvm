@@ -1,0 +1,32 @@
+/* compre two rules; T17.662-T17.662; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+(const stateful asm_instr l[], const stateful asm_instr r[]) -> (int res) {
+	int il;
+	int ir;
+	int fl;
+	int fr;
+
+	do {
+		il = l[il].next;
+		ir = r[ir].next;
+
+		fl = il && !l[il].hex.csize;
+		fr = ir && !r[ir].hex.csize;
+
+	} while (fl && fr && l[il].mnem == r[ir].mnem 
+		&& l[il].param0 == r[ir].param0
+		&& l[il].param2 == r[ir].param2);
+
+	if (!fl || !fr)
+		return (fl > fr) - (fl < fr);	
+
+	if (l[il].mnem != r[ir].mnem)
+		return (l[il].mnem > r[ir].mnem) - (l[il].mnem < r[ir].mnem);
+
+	if (l[il].param0 != r[ir].param0)
+		return (l[il].param0 > r[ir].param0) - (l[il].param0 < r[ir].param0);
+
+	return (l[il].param2 > r[ir].param2) - (l[il].param2 < r[ir].param2);
+}

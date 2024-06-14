@@ -1,0 +1,268 @@
+/* overcats client/server, main routine; T17.457-T18.054; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "overcats.dpvmake"
+
+(volatile stateful overcats_data data, const char text[], int status) -> () in {
+	if (status <= 0) {
+		char m[];
+		strcat(m, "Outcoming receiver stopped, error = ");
+		printint(m, status, 1);
+		write_log(data, m, 5);
+
+		overcats_mess mess;
+		mess.request = OVERCATS_REQUEST_DISCONNECT;
+
+		overcats_addr a1;
+		a1.version = data.version;
+		a1.task_id = data.task_id;
+		a1.conn_id = data.conn_id;
+		a1.service = OVERCATS_SERVICE_IN;
+
+		msendp("", "", a1, mess);
+
+		overcats_addr a2;
+		a2.version = data.version;
+		a2.task_id = data.task_id;
+		a2.conn_id = data.conn_id;
+		a2.service = OVERCATS_SERVICE_OUT;
+
+		msendp("", "", a2, mess);
+		
+		return;
+	}
+
+	log_packet(data, "Outcoming packet received", text);
+	
+	if (data.mode == OVERCATS_SERVER) {
+                char txt[];
+                out_decode(data, txt, text);
+                log_packet(data, "Outcoming packet decoded", txt);
+                text = txt;
+        }
+
+        overcats_mess mess;
+        mess.data = text;
+
+	if (mess.data.csize) {
+		overcats_addr addr;
+		addr.version = data.version;
+		addr.task_id = data.task_id;
+		addr.conn_id = data.conn_id;
+		addr.service = OVERCATS_SERVICE_OUT;
+
+		mess.request = OVERCATS_REQUEST_SEND;
+
+		msendp("", "", addr, mess);
+	}
+
+	input(code, data, data.out_limit, TIMEOUT);
+	return;
+}
+
+(const stateful overcats_data d, const int values[]) -> () in_start {
+	overcats_data data;
+	objcopyto(data, d);
+	in(data, "", 1);
+	return;
+}
+
+(volatile stateful overcats_data data) -> () out_finish {
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.conn_id = data.conn_id;
+	addr.service = OVERCATS_SERVICE_IN;
+	mrecvp("", "", addr, 1 << 63);
+
+	outputp("", "", "");
+	return;
+}
+
+(volatile stateful overcats_data data, const stateful any objs, int status) -> () out {
+	if (status) {
+		char m[];
+		strcat(m, "Incoming transmitter stopped, error = ");
+		printint(m, status, 1);
+		write_log(data, m, 4);
+		out_finish(data);
+		return;
+	}
+
+	char n[];
+	strcat(n, "Batch of incoming messages arrives to transmitter, size = ");
+	printint(n, objs.lsize, 1);
+	write_log(data, n, 9);
+
+	int i;
+	char dst[];
+	for (i = 0; i < objs.lsize; i += 1) {
+		overcats_mess m;
+		if (objs.l[i].type == m.type) {
+			objcopyto(m, objs.l[i]);
+
+			if (m.request == OVERCATS_REQUEST_SEND) {
+				strcat(dst, m.data);
+			} else if (m.request == OVERCATS_REQUEST_DISCONNECT) {
+				write_log(data, "Incoming disconnect request received", 8);
+				out_finish(data);
+				return;
+			}
+		}
+	}
+
+	if (dst.csize) {
+		if (data.mode == OVERCATS_SERVER) {
+			char encoded[];
+			log_packet(data, "Incoming packet before encoding", dst);
+			in_encode(data, encoded, dst);
+			dst = encoded;
+		}
+
+		if (dst.csize) {
+			outputp("", "", dst);
+			log_packet(data, "Incoming packet transmitted", dst);
+		}
+	}
+
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.conn_id = data.conn_id;
+	addr.service = OVERCATS_SERVICE_IN;
+
+	mrecv(code, data, addr, -1);
+	return;	
+}
+
+(volatile stateful overcats_data data, const int values[]) -> () timed {
+	int id[2];
+	id[0] = data.conn_id;
+	id[1] = values[0];
+	data.conn_id = id;
+
+	overcats_addr addr0;
+	addr0.version = data.version;
+	addr0.task_id = data.task_id;
+	addr0.conn_id = data.conn_id;
+	addr0.service = OVERCATS_SERVICE_IN;
+	mrecvp("", "", addr0, 0);
+
+	overcats_addr addr1;
+	addr1.version = data.version;
+	addr1.task_id = data.task_id;
+	addr1.conn_id = data.conn_id;
+	addr1.service = OVERCATS_SERVICE_OUT;
+	mrecvp("", "", addr1, 0);
+
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.service = OVERCATS_SERVICE_CONNECT;
+
+	overcats_mess mess;
+	mess.request = OVERCATS_REQUEST_CONNECT;
+	mess.thread_id = data.conn_id;
+
+	msendp("", "", addr, mess);
+
+	overcats_data d;
+	objcopyto(d, data);
+	d.thread_id = 1;
+	int vars[];
+	getsysp(in_start, d, vars);
+
+	data.thread_id = 4;
+	out(data, "", 0);
+	return;
+}
+
+(const stateful overcats_data data, int proto, int ip0, int ip1) -> () connected {
+	char m[];
+	strcat(m, "Incoming connection from ");
+	printip(m, ip0, ip1);
+	strcat(m, ":");
+	printint(m, proto & 0xffff, 1);
+	write_log(data, m, 7);
+
+	int id[3];
+	id[0] = ip0;
+	id[1] = ip1;
+	id[2] = proto;
+
+	overcats_data d;
+	objcopyto(d, data);
+	d.conn_id = id;
+
+	const int vars[] = {0};
+	getsys(timed, d, vars);
+	return;
+}
+
+(const stateful overcats_data d, const int values[]) -> () init {
+	overcats_data hdata;
+	objcopyto(hdata, d);
+
+	hdata.task_id = values[1];
+	hdata.out_limit = 0x100000;
+	hdata.in_limit = 0x100000;
+	
+	const int hvars[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler, hdata, hvars);
+
+	overcats_data data;
+	objcopyto(data, hdata);
+
+	data.thread_id = 7;
+
+	/* allocate mailbox address for logger */
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.service = OVERCATS_SERVICE_LOG;
+	mrecvp("", "", addr, 0);
+
+	/* allocate mailbox address for connector */
+	overcats_addr addr1;
+	addr1.version = data.version;
+	addr1.task_id = data.task_id;
+	addr1.service = OVERCATS_SERVICE_CONNECT;
+	mrecvp("", "", addr1, 0);
+
+	char mess[];
+	strcat(mess, "Starting ");
+	strcat(mess, data.version);
+	strcat(mess, " (");
+	if (data.mode == OVERCATS_PROXY) strcat(mess, "proxy, ");
+	else if (data.mode == OVERCATS_CLIENT) strcat(mess, "client, ");
+	else if (data.mode == OVERCATS_SERVER) strcat(mess, "server, ");
+	printobjname(mess, data.func);
+	strcat(mess, ")");
+	write_log(data, mess, 6);
+	
+	int vars[];
+	getsysp(logger, data, vars);
+	getsysp(out_connect, data, vars);
+
+	bindp(connected, data, 0x4060000 | data.in_port, 0, 0);
+	return;
+}
+
+(const char log_file[], const char out_host[], int out_port, int in_port, 
+	int mode, int timezone, int log_level) -> (const char out[]) {
+	overcats_data data;
+
+	data.version	= version();
+	data.log_file	= log_file;
+	data.out_host	= out_host;
+	data.out_port	= out_port;
+	data.in_port	= in_port;
+	data.mode	= mode;
+	data.timezone	= timezone;
+	data.log_level	= log_level;
+	data.func	= code;
+
+	const int vars[] = {0, 0x201};
+	getsysp(init, data, vars);
+	return (data.version);
+}

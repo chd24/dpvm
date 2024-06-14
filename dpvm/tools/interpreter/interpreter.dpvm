@@ -1,0 +1,142 @@
+/* dpvm command line interpreter */
+
+char version[] = "Interpreter 0.4.3 T15.519-T19.646"; /* $DVS:time$
+
+history:
+
+T19.646 ver 0.4.3: special mode for debugger: if expression starts with word 'debug', then program not executed
+		   and the function returned instead of result
+
+T19.640 ver 0.4.2: compile with new registry
+
+T18.355 ver 0.4.1: fixed bug if 'registry' keyword used in command line
+
+T18.347 ver 0.4.0: integration with registry
+
+*/
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "interpreter.dpvmake"
+
+(char c) -> (int n) isalnum {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_';
+}
+
+(const stateful any registry, const char src[], const any links) -> (const any obj, const char out[]) {
+	registryData registryCopy;
+	char prog[];
+	char out[];
+	char err[];
+	int status;
+	char mess[];
+
+	(registryCopy, mess) = registryPrepare(registry);
+	if (mess.csize) {
+		any x;
+		strcat(err, version);
+		strcat(err, ": error while preparing registry: ");
+		strcat(err, mess);
+		return (x.type, err);
+	}
+
+	int debugMode, begin, end;
+	(begin, end) = strtostr(src, 0, src.csize);
+	if (end - begin == "debug".csize) {
+		char word[];
+		substrcat(word, src, begin, end);
+		if (word == "debug") {
+			char rest[];
+			substrcat(rest, src, end, src.csize);
+			src = rest;
+			debugMode = 1;
+		}
+	}
+
+	begin = 0;
+	end = src.csize;
+	int pushed;
+	while (begin < end) {
+		int pos = substrstr(src, "registry", begin, end);
+		if (pos < 0) {
+			begin = end;
+		} else if ((!pos || !isalnum(src[pos - 1])) && (pos + 8 == end || !isalnum(src[pos + 8]))){
+			char txt[];
+			substrcat(txt, src, 0, pos);
+			printobjname(txt, registry);
+			begin = txt.csize;
+			substrcat(txt, src, pos + 8, end);
+			end = txt.csize;
+			src = txt;
+			if (!pushed) {
+				any lnks;
+				objcopyto(lnks, links);
+				lnks.lpush(registry);
+				links = lnks;
+				pushed = 1;
+			}
+		} else {
+			begin = pos + 8;
+		}
+	}
+
+	/* compose program */
+	(prog, status) = makeprogram(registryCopy, src, links);
+	if (status) {
+		any x;
+		strcat(err, version);
+		strcat(err, ": ");
+		strcat(err, prog);
+		return (x.type, err);
+	}
+
+	/* compile program */
+	compsrc srcs[];
+	compsrc src0;
+	src0.name = "[expr]";
+	src0.file = prog;
+	src0.links = links;
+	srcs.lpush(src0);
+	any func = registryCopy.compiler.compile(registry, srcs);
+
+	if (func.type == "".type) {
+		any x;
+		char funcerr[][];
+		pushObject(func, funcerr);
+		strcat(err, funcerr[0]);
+		strcat(err, "\n");
+		strcat(err, version);
+		strcat(err, ": the error occurs while compiling the program:\n");
+		strcat(err, prog);
+		return (x.type, err);
+	}
+
+	/* copy program to typed_program */
+	(volatile any)->(const any) typed_func, typed_arr[];
+	pushObject(func, typed_arr);
+	typed_func = typed_arr[0];
+
+	/* check program */
+	any data;
+	any funcs;
+	(funcs, data, err, status) = registryCopy.checker(typed_func);
+	if (status & 1) {
+		any x;
+		return (x.type, err);
+	}
+
+	any obj;
+
+	if (debugMode)
+		obj = typed_func;
+	else {
+		/* run program */
+		obj = typed_func(obj);
+	
+		/* print result */
+		printobj(out, obj);
+	}
+
+	/* return */
+	return (obj, out);
+}

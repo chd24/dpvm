@@ -1,0 +1,26 @@
+/* read matrix from string; T17.917-T17.917; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "matrix.dpvmake"
+
+(const stateful char str[], int pos, int end) -> (volatile matrix m, int error, int nextbegin) {
+    matrix m;
+    int error;
+
+    (m.rows, error, pos) = strtoi(str, pos, end, 0);
+    if (error) return (m, error, pos);
+    (m.columns, error, pos) = strtoi(str, pos, end, 0);
+    if (error) return (m, error, pos);
+
+    int n = m.rows * m.columns;
+    int i;
+    float v;
+    float values[] = m.elements;
+    for (i = 0; i < n; i += 1) {
+        (error, pos, v) = strtof(str, pos, end);
+        if (error) return (m, error, pos);
+        values.fpush(v);
+    }
+
+    return (m, 0, pos);
+}

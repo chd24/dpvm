@@ -1,0 +1,85 @@
+/* form amd64 optimization rules array; T16.083-T18.018; $DVS:time$ */
+
+#include "rules.dpvmake"
+
+(volatile stateful asm_instr list[], 
+		const stateful char mnem[], const stateful char hex[], 
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	a = asm_add;
+
+() -> (volatile asm_instr list[][]) {
+	asm_instr list[][];
+	asm_instr r[];
+
+	r = new_rule();
+	a(r, "mov [rsi+b],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,[rsi+b]", "", 0, 0xC1040000, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+d],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,[rsi+d]", "", 0, 0xC1040000, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+b],rax", "", 0, 0, 0, 0, 0);
+	a(r, "cp rax,[rsi+b]", "", 0, 0xC1040000, 0, 0, 0);
+	a(r, "cp [rsi+b],rax", "48 89 46 111", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+d],rax", "", 0, 0, 0, 0, 0);
+	a(r, "cp rax,[rsi+d]", "", 0, 0xC1040000, 0, 0, 0);
+	a(r, "cp [rsi+d],rax", "48 89 86 114", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "uop rax", "", 0xC100D0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "48 C7 C0 124", 0, 0, 0xCF4200, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "uop rax", "", 0xC100D8, 0, 0, 0, 0);
+	a(r, "mov rax,d", "48 C7 C0 124", 0, 0, 0x9B4200, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov rcx,d", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,rcx", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,d", "48 101 124", 0xC04402, 0, 0x4200, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,rcx", "", 0, 0, 0, 0, 0);
+	a(r, "bcp rax,[rsi+b]", "48 101 46 111", 0x4400, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,rcx", "", 0, 0, 0, 0, 0);
+	a(r, "bcp rax,[rsi+d]", "48 101 86 114", 0x4400, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "mul rax,rcx", "", 0, 0, 0, 0, 0);
+	a(r, "mcp rax,[rsi+b]", "48 0F AF 46 111", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "mul rax,rcx", "", 0, 0, 0, 0, 0);
+	a(r, "mcp rax,[rsi+d]", "48 0F AF 86 114", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	rules_reg(list);
+	rules_movconst(list);
+	rules_cpop(list);
+	rules_cpocp(list);
+	rules_cpopconst(list);
+
+	return list;
+}

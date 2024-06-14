@@ -1,0 +1,11 @@
+/* convert long number to string in decimal format; T17.925-T17.925; $DVS:time$ */
+
+#include "long.dpvmake"
+
+(const stateful int num[]) -> (volatile char str[]) {
+    char str[];
+
+    write_long(str, num, 10, 0);
+
+    return str;
+}

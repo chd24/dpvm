@@ -1,0 +1,23 @@
+/* find cookie in src, output it to dst; T15.922-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(volatile stateful char dst[], const char src[]) -> () {
+	char tmp[];
+	getheader(tmp, src, "\nCookie: ");
+
+	int begin = strstr(tmp, "__udch=");
+	if (begin < 0) {
+		dst.push('-');
+		return;
+	}
+	begin = begin + 7;
+
+	int end = substrstr(tmp, ";", begin, tmp.csize);
+	if (end < 0)
+		end = tmp.csize;
+	
+	substrcat(dst, tmp, begin, end);
+	return;
+}

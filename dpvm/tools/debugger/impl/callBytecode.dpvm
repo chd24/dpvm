@@ -1,0 +1,62 @@
+/* call bytecode manual implementation; T16.503-T20.133; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../../common/errors.dpvmh"
+#include "../../../common/sysParams.dpvmh"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../lib/algorithms/hashtable/hash.dpvmake"
+#include "debugger.dpvmake"
+
+(volatile stateful thread t, const int values0[]) -> () callHandler = {
+	int values[] = {values0[0], DPVM_ERROR_NOT_CHECKED, DPVM_CODE_CALL, t.pointer - 1, +t.function, values0[1]};
+	handler(t, values);
+	return;
+};
+
+(volatile stateful thread t) -> () callBytecode = {
+	debuggerImpl implArr[];
+	pushObject(t.debugger, implArr);
+	debuggerImpl impl = implArr[0];
+
+	any stack = t.stack;
+	any func = stack.l[stack.lsize - 1], value;
+	type stackType = func.type.l[0];
+
+	checker_data data;
+	int found;
+	(value, found) = hashObj.findGetValue(t.hash, func);
+	if (found) {
+		checker_data datas[];
+		pushObject(value, datas);
+		data = datas[0];
+	} else {
+		char err[];
+		any funcs[];
+		int status;
+		(funcs, data, err, status) = impl.data.registry.checker(func);
+		if (status & 1) {
+			int vars[] = {DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ID};
+			getsys(callHandler, t, vars);
+			return;
+		}
+		hashObj.findAddKeyValue(t.hash, func, data);
+	}
+
+	report(t, stackType);
+
+	stack.lpop(1);
+	t.checkerDatas.lpush(t.checkerData);
+	t.functions.lpush(t.function);
+	t.function = func;
+	t.checkerData = data;
+
+	t.pointers.ipush(stack.lsize - stackType.i[8]);
+	t.pointers.ipush(stack.isize - stackType.i[9]);
+	t.pointers.ipush(stack.fsize - stackType.i[10]);
+	t.pointers.ipush(stack.csize - stackType.i[11]);
+	t.pointers.ipush(t.pointer);
+	t.pointer = 0;
+
+	return;
+};

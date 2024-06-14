@@ -1,0 +1,14 @@
+/* trie class, constructor, T18.847-T18.847; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "trie.dpvmake"
+
+() -> (volatile trieClass obj) trieCreate = {
+        trieImpl impl;
+        trieClass obj;
+
+        impl.methods = trieMethodsImpl;
+        objcopyto(obj, impl);
+
+        return obj;
+};

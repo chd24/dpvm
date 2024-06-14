@@ -1,0 +1,18 @@
+/* dpvm byte code translator, amd64 float load; T16.183-T18.397; $DVS:time$ */
+
+#include "../translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(const stateful translator_data data, volatile stateful asm_instr list[],
+		int i, int n) -> () {
+	n = data.l[4].l[i].i[2] - data.l[0].i[2] - n;
+
+	if (n >= -16 && n <= 15)
+		as(list, "fld [r11+b]", "41 DD 43 111", 0, n<<3, 0, 0, 0);
+	else
+		as(list, "fld [r11+d]", "41 DD 83 114", 0, n<<3, 0, 0, 0);
+	return;
+}

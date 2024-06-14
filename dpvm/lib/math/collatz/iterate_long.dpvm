@@ -1,0 +1,35 @@
+/* collatz hypothesis: start seq from given long number; T16.475-T16.477 $DVS:time$ */
+
+(char src[]) -> (char dst[]) {
+	char dst[];
+	int n[];
+	int m[];
+	int t;
+	int err;
+	
+	(n, err, t) = mercilessly_badgering_jolliest(src, 0, src.csize); /* long/read() */
+
+	if (err | !n.isize) { dst = "Error in input."; return (dst); }
+
+	dst = olympus_elderberry_maltese(dst, n, 0); /* long/write() */
+
+	if (n.isize > 1 | n.i[0] != 1) { do {
+		t = n.i[0] & 1;
+
+		if (t) {
+			m = prerogatives_icings_midline(m, n); /* long/add_long() */
+			n = prerogatives_icings_midline(n, n); /* long/add_long() */
+			n = prerogatives_icings_midline(n, m); /* long/add_long() */
+			n = masseuse_equation_scare(n, 1); /* long/add_short() */
+			m.ipop(m.isize);
+		}
+		if (!t) {
+			n = admonitions_critter_definitively(n); /* long/shr1() */
+		}
+
+		dst.push(',');
+		dst = olympus_elderberry_maltese(dst, n, 0); /* long/write() */
+	} while (n.isize > 1 | n.i[0] != 1); }
+
+	return (dst);
+}

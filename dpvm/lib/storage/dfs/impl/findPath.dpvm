@@ -1,0 +1,190 @@
+/* dfs class, findPath method implementation, T18.801-T18.915; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "dfs.dpvmake"
+
+(volatile stateful any dfsObj, const char path[]) -> (const dfsFileAttributes attr, const char error[]) findPath = {
+    dfsImpl impl;
+    dfsFileAttributes attr;
+    char err[] = convertObjToImpl(impl, dfsObj, "findPath");
+    if (err.csize) return (attr, err);
+
+    dfsPart parts[] = impl.data.parts;
+
+    if (!parts.lsize)
+        return (attr, mkError("volume not added", "findPath"));
+
+    int unicode[], uni, begin, end = path.csize;
+
+    unicode.ipush('/');
+    while (begin < end) {
+        (uni, begin) = scanutf8(path, begin, end);
+        if (uni < 0) {
+            attr.inode = begin;
+            return (attr, mkError("illegal path codetable", "findPath"));
+        }
+        if (uni >> 16) {
+	    if (uni > 0x10ffff) {
+		attr.inode = begin;
+		return (attr, mkError("unicode symbol not supported", "findPath"));
+	    }
+	    uni -= 0x10000;
+	    unicode.ipush(uni >> 10 | 0xD800);
+	    uni &= 0x3ff;
+	    uni |= 0xDC00;
+        }
+        if (uni != '/' || !unicode.isize || unicode[unicode.isize - 1] != '/')
+            unicode.ipush(uni);
+    }
+
+    int volume[], inodeBegin, inodeEnd, inode = 0x10, succInode, failInode, failBegin;
+
+    begin = 0; end = unicode.isize << 4;
+    do {
+        attr.inode = inode;
+
+        if (inode < inodeBegin || inode >= inodeEnd) {
+            int i;
+            for (i = 0; i < parts.lsize && (inode < inodeBegin || inode >= inodeEnd); i += 1)
+                volume = parts[i].volume, inodeBegin = parts[i].begin >> 2, inodeEnd = inodeBegin + (volume.isize >> 2);
+
+            if (inode < inodeBegin || inode >= inodeEnd)
+                return (attr, mkError("need more volume parts", "findPath"));
+        }
+
+        int ind = (inode - inodeBegin) << 2, iHead = volume[ind] & 0xffffffff, iType = iHead & 0xff;
+
+        if (begin >= end) {
+            if (iType != 1 && iType != 2)
+                return (attr, mkError("file not found (8)", "findPath"));
+
+            attr.mode = DFS_IFREG;
+            if (iType == 2)
+                attr.mode = DFS_IFDIR;
+            attr.size = volume[ind | 1];
+            if (!(iHead >> 16 & 0xff))
+		attr.mtime = impl.methods.dfsTime2Time(volume[ind | 2]);
+
+            begin = end + 1;
+
+        } else if (iType == DFS_INODE_NAME || iType == DFS_INODE_TRIE_FULL || iType == DFS_INODE_TRIE_PART) {
+            int inodes[], u[], i;
+
+            for (i = 1; i < 4; i += 1) {
+                int t = iHead >> (i << 3) & 0xff, n = volume[ind | i];
+                if (t >> 4 == 1) {
+                    if (n >> 60)
+                        return (attr, mkError("invalid inode of type 8/E/F in volume (1)", "findPath"));
+                    inodes.ipush(n << 4 | t & 0xf);
+
+                } else if (t >> 4 == 0) {
+                    if (n) {
+                        u.ipush(n & 0xffff);
+                        u.ipush(n >> 16 & 0xffff);
+                        u.ipush(n >> 32 & 0xffff);
+                        u.ipush(n >> 48 & 0xffff);
+                    }
+
+                } else
+                    return (attr, mkError("invalid inode of type 8/E/F in volume (2)", "findPath"));
+            }
+
+            if (inodes.isize < (iType != DFS_INODE_NAME) || inodes.isize > 2)
+                return (attr, mkError("invalid inode of type 8/E/F in volume (3)", "findPath"));
+
+            int bits;
+            if (iType == DFS_INODE_TRIE_PART || !inodes.isize) {
+                while (u.isize && u[u.isize - 1] == 0xffff)
+                    u.ipop(1);
+                if (u.isize && iType == DFS_INODE_TRIE_PART) {
+                    int last = u[u.isize - 1];
+                    if (last == 0x7fff)
+                        u.ipop(1);
+                    else
+                        for (bits = 15; last & 1; last >>= 1, bits -= 1);
+                }
+            }
+
+            int size = u.isize;
+            if (size) {
+                begin &= -0x10;
+                size -= !!bits;
+                for (i = 0; i < size && begin < end; i += 1, begin += 0x10)
+                    if (unicode[begin >> 4] == '/' || unicode[begin >> 4] != u[i]) {
+                        if (iType != 8 || !failInode)
+                            return (attr, mkError("file not found (1)", "findPath"));
+                        inodes.ipop(inodes.isize);
+                        inodes.ipush(failInode);
+                        i = size;
+                        begin = failBegin - 0x10;
+                    }
+                if (i < size)
+                    return (attr, mkError("file not found (2)", "findPath"));
+                if (bits) {
+                    if (begin >= end)
+                        return (attr, mkError("file not found (3)", "findPath"));
+                    if (unicode[begin >> 4] == '/' || unicode[begin >> 4] >> (16 - bits) != u[i] >> (16 - bits))
+                        return (attr, mkError("file not found (4)", "findPath"));
+                    begin += bits;
+                }
+            }
+
+            if (!inodes.isize)
+                inode = succInode;
+            else if (inodes.isize == 1)
+                inode = inodes[0];
+            else if ((iHead >> 12 & 0xf) == 1) {
+                if (begin & 0xf)
+                    return (attr, mkError("invalid volume", "findPath"));
+                inode = inodes[begin < end];
+            } else {
+                if (begin >= end || unicode[begin >> 4] == '/')
+                    return (attr, mkError("file not found (5)", "findPath"));
+                inode = inodes[unicode[begin >> 4] >> (15 - (begin & 0xf)) & 1];
+                begin += 1;
+            }
+
+        } else if (iType == DFS_INODE_DIR) {
+            if (begin < end) {
+                if (begin & 0xf || unicode[begin >> 4] != '/')
+                    return (attr, mkError("file not found (6)", "findPath"));
+                if (iHead >> 28 != 1 || volume[ind | 3] >> 60)
+                    return (attr, mkError("invalid inode of type 2 in volume", "findPath"));
+                inode = volume[ind | 3] << 4 | iHead >> 24 & 0xf;
+                begin += 16;
+            }
+
+        } else if (iType == DFS_INODE_FILE) {
+            if (begin < end)
+                return (attr, mkError("file not found (7)", "findPath"));
+
+        } else if (iType == DFS_INODE_VOLUME) {
+            if ((iHead >> 20 & 0xf) != 1 || volume[ind | 2] >> 60)
+                return (attr, mkError("invalid inode of type 3 in volume", "findPath"));
+            inode = volume[ind | 2] << 4 | iHead >> 16 & 0xf;
+
+        } else if (iType == DFS_INODE_ITEM) {
+            if ((iHead >> 20 & 0xf) != 1 || volume[ind | 2] >> 60)
+                return (attr, mkError("invalid inode of type 9 in volume (2)", "findPath"));
+            succInode = volume[ind | 2] << 4 | iHead >> 16 & 0xf;
+
+            if (iHead >> 24 & 0xff) {
+                if (iHead >> 28 != 1 || volume[ind | 3] >> 60)
+                    return (attr, mkError("invalid inode of type 9 in volume (3)", "findPath"));
+                failInode = volume[ind | 3] << 4 | iHead >> 24 & 0xf;
+                failBegin = begin;
+            } else
+                failInode = 0;
+
+            if ((iHead >> 12 & 0xf) != 1 || volume[ind | 1] >> 60)
+                return (attr, mkError("invalid inode of type 9 in volume (1)", "findPath"));
+            inode = volume[ind | 1] << 4 | iHead >> 8 & 0xf;
+
+        } else {
+            return (attr, mkError("invalid inode type in volume", "findPath"));
+        }
+
+    } while (begin <= end);
+
+    return (attr, "");
+};

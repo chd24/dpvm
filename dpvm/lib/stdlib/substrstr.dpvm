@@ -1,0 +1,43 @@
+/* find src in dst[begin..end), return index or -1; T15.543-T16.602; $DVS:time$ */
+	
+(const stateful char dst[], const stateful char src[], int begin, int end) 
+		-> (int index) {
+	int bigsize;
+	int size;
+	int index;
+	int i;
+	int s;
+	int t;
+	char c;
+	char d;
+
+	size = src.csize;
+	bigsize = end;
+	index = begin;
+
+	do {
+		t = size + index;
+		t = t > bigsize;
+		if (t) {
+			t = 0 - 1;
+			return (t);
+		}
+		i = 0;
+		do {
+			t = i == size;
+			if (t) {
+				return (index);
+			}
+			c = src[i];
+			s = c;
+			t = i + index;
+			d = dst[t];
+			t = d;
+			t = s == t;
+			i = i + 1;
+		} while (t);
+		index = index + 1;
+	} while(index);
+	
+	return (t);
+}

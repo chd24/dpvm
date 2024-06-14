@@ -1,0 +1,7 @@
+/* dpvm: list of mpopen bytecode flags for use both in dpvm source and programs; T18.740-T18.740; $DVS:time$ */
+
+int DPVM_MPOPEN_READ        = 0x0001 + _Z;
+int DPVM_MPOPEN_WRITE       = 0x0002 + _Z;
+int DPVM_MPOPEN_RW          = 0x0003 + _Z;
+int DPVM_MPOPEN_RW_MERGED   = 0x0005 + _Z;
+int DPVM_MPOPEN_INTERNAL    = 0x0008 + _Z;

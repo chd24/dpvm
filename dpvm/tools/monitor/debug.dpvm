@@ -1,0 +1,17 @@
+/* monitor: debug; T16.500-T19.649; $DVS:time$ */
+	
+#include "monitor.dpvmake"
+
+(volatile stateful mondata data) -> (const char err[]) prepareDebugger = {
+	debuggerClass debugger = data.registry.debugger();
+
+	char error[] = debugger.methods.setRegistry(debugger, data.registry);
+	if (error.csize) return error;
+
+	error = debugger.methods.debug(debugger, "", {}, DEBUG_MODE_GENERATE);
+	if (error.csize) return error;
+
+	data.debugger = debugger;
+
+	return "";
+};

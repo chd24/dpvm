@@ -1,0 +1,431 @@
+/* dfs class, rolloutVolume method implementation, T18.858-T19.169; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "dfs.dpvmake"
+
+type volumeData = {
+	volatile stateful dfsImpl impl;
+	volatile dfsNode files[];
+	volatile dfsNode dirs[];
+	volatile dfsNode volumes[];
+	volatile int volume[];
+	const char error[];
+	int allowedInodes;
+	int allowedInodesOnce;
+	int dirsPos;
+	int buildInVolumeBegin;
+	int buildInVolumeEnd;
+};
+
+(volatile stateful volumeData data, int inodeType, int data1, int data2, int data3) -> (int inode) addInode = {
+	if (data.error.csize)
+		return -1;
+
+	if (inodeType >> 4 || !(data.allowedInodes & 1 << inodeType)) {
+		data.error = mkError("illegal inode type", "addInode");
+		return -1;
+	}
+
+	if (data.allowedInodesOnce & 1 << inodeType)
+		data.allowedInodes &= ~(1 << inodeType);
+
+	data.volume.ipush(inodeType), data.volume.ipush(data1), data.volume.ipush(data2), data.volume.ipush(data3);
+
+	return (data.volume.isize >> 2) - 1;
+};
+
+(volatile stateful volumeData data, int inodeFrom, int inodeTo, int linkNo) -> (int err) addLink = {
+	if (data.error.csize)
+		return -1;
+
+	int buildInVolumeOn = inodeTo << 2 >= data.buildInVolumeBegin && inodeTo << 2 < data.buildInVolumeEnd;
+
+	if (inodeFrom < 0x10 || inodeFrom << 2 >= data.volume.isize || inodeTo < 0x10 || (inodeTo << 2 >= data.volume.isize && !buildInVolumeOn)) {
+		data.error = mkError("illegal inode", "addLink");
+		return -1;
+	}
+
+	if (linkNo < 1 || linkNo > 3) {
+		data.error = mkError("illegal linkNo", "addLink");
+		return -1;
+	}
+
+	inodeFrom <<= 2;
+
+	if (data.volume[inodeFrom] >> (linkNo << 3) & 0xff) {
+		data.error = mkError("inode link already set", "addLink");
+		return -1;
+	}
+
+	data.volume[inodeFrom] |= (0x10 | inodeTo & 0xf) << (linkNo << 3);
+	data.volume[inodeFrom | linkNo] = inodeTo >> 4;
+
+	if (!buildInVolume) {
+		inodeTo <<= 2;
+
+		if (data.volume[inodeTo] >> 32 == 0xffffffff) {
+			data.error = mkError("too many links to inode", "addLink");
+			return -1;
+		}
+
+		data.volume[inodeTo] += 0x100000000;
+	}
+
+	return 0;
+};
+
+(volatile stateful volumeData data, int inode, int sectorNo, int fileSize) -> (int nLinks[], int nextSectorNo) addFileLink = {
+	int nLinks[];
+
+	if (data.error.csize)
+	    return (nLinks, sectorNo);
+
+	if (inode < 0x10 || inode >= data.volume.isize << 2) {
+	    data.error = mkError("illegal inode", "addFileLink");
+	    return (nLinks, sectorNo);
+	}
+
+	if (sectorNo < data.volume.isize >> 6) {
+	    data.error = mkError("illegal sectorNo", "addFileLink");
+	    return (nLinks, sectorNo);
+	}
+
+	inode <<= 2;
+
+	if (data.volume[inode] >> 24 & 0xff) {
+	    data.error = mkError("inode link already set", "addFileLink");
+	    return (nLinks, sectorNo);
+	}
+
+	int level, nLinkSectors;
+	(nLinks, level, nLinkSectors) = getFileTreeParams(fileSize);
+
+	if (!level)
+		return (nLinks, sectorNo);
+	if (level > 9) {
+		data.error = mkError("too large file size level", "addFileLink");
+		return (nLinks, sectorNo);
+	}
+
+	data.volume[inode] |= level << 24;
+	data.volume[inode | 3] = sectorNo;
+
+	return (nLinks, sectorNo + nLinkSectors);
+};
+
+(volatile stateful any d, volatile stateful trieNode parentNode, volatile stateful trieNode node, int dir) -> () trieCallback = {
+	volumeData to[];
+	objcopyto(to, {d});
+	volumeData data = to[0];
+
+	int bitStart, bitEnd = node.bitNo, parentInode, inode, link, nUnicodes, lastNUnicodes;
+
+	if (parentNode.flags & TRIE_FLAG_KEY) {
+		bitStart = parentNode.bitNo;
+		if (parentNode.flags & TRIE_FLAG_VALUE) {
+			dfsNode nd[];
+			objcopyto(nd, {parentNode.value});
+			dfsNode value = nd[0];
+			parentInode = value.inode;
+		} else
+			parentInode = parentNode.value.i[0];
+		if (parentNode.flags & TRIE_FLAG_LEFT && parentNode.flags & TRIE_FLAG_RIGHT)
+			link = dir + 2, bitStart += 1;
+		else
+			link = 3;
+	} else
+		parentInode = data.dirs[data.dirsPos].attr.inode, link = 3;
+
+	if (bitStart < bitEnd)
+		bitStart &= -0x10;
+	nUnicodes = -(bitStart - bitEnd & -0x10) >> 4;
+	lastNUnicodes = (node.flags & TRIE_FLAG_LEFT || node.flags & TRIE_FLAG_RIGHT) << 2;
+
+	while (nUnicodes) {
+		int i, todo = nUnicodes, packedUni[3], uni, ind = bitStart >> 4, lim = 8, start, inodeType = DFS_INODE_TRIE_FULL;
+		if (nUnicodes <= lastNUnicodes)
+			lim = 4, start = !!(node.flags & TRIE_FLAG_VALUE);
+		for (i = 0; i < lim; i += 1) {
+			if (i < todo) {
+				uni = node.key.i[ind + i];
+				if (i == todo - 1 && bitEnd & 0xf) {
+					uni >>= 15 - (bitEnd & 0xf);
+					uni |= 1;
+					uni <<= 15 - (bitEnd & 0xf);
+					uni -= 1;
+					inodeType = DFS_INODE_TRIE_PART;
+					bitStart = bitEnd;
+				} else
+					bitStart += 16;
+				nUnicodes -= 1;
+			} else {
+				uni = 0xffff;
+				if (i == todo && !(bitEnd & 0xf))
+					uni = 0x7fff;
+				inodeType = DFS_INODE_TRIE_PART;
+			}
+			packedUni[(i >> 2) + start] |= uni << ((i & 3) << 4);
+		}
+		int ino = addInode(data, inodeType, packedUni[0], packedUni[1], packedUni[2]);
+		addLink(data, parentInode, ino, link);
+		parentInode = ino;
+		if (lim == 4)
+			inode = ino, link = 1;
+		else
+			link = 3;
+	}
+
+	if (!inode && lastNUnicodes)
+		inode = addInode(data, DFS_INODE_TRIE_FULL, 0, 0, 0),
+		addLink(data, parentInode, inode, link),
+		parentInode = inode, link = 1;
+
+	if ((node.flags | ~(TRIE_FLAG_VALUE | TRIE_FLAG_LEFT | TRIE_FLAG_RIGHT)) == -1) {
+		int ino = addInode(data, DFS_INODE_TRIE_FULL, 0, 0, 0);
+		addLink(data, inode, ino, 3);
+		inode = ino;
+	}
+
+	if (node.flags & TRIE_FLAG_VALUE) {
+		dfsNode nd[];
+		objcopyto(nd, {node.value});
+		dfsNode value = nd[0];
+		if (!value.attr.inode) {
+			int inodeType;
+			if ((value.attr.mode & DFS_IFMT) == DFS_IFREG) {
+				inodeType = DFS_INODE_FILE;
+				data.files.lpush(value);
+			} else if (!value.body.isize) {
+				inodeType = DFS_INODE_DIR;
+				data.dirs.lpush(value);
+			} else {
+				data.volumes.lpush(value);
+				value.parentInode = parentInode;
+				value.link = link;
+				return;
+			}
+			value.attr.inode = addInode(data, inodeType, value.attr.size, data.impl.methods.time2dfsTime(value.attr.mtime), 0);
+		}
+		addLink(data, parentInode, value.attr.inode, link);
+		value.inode = inode;
+	} else
+		node.value.ipush(inode);
+
+	return;
+};
+
+(volatile stateful any dfsObj, volatile stateful any cdata, const (volatile stateful any data, const stateful int part[]) -> () callback,
+		const char volumeName[]) -> (const char error[]) rolloutVolume = {
+
+    /* initial checks */
+
+	dfsImpl impl;
+	char err[] = convertObjToImpl(impl, dfsObj, "rolloutVolume");
+	if (err.csize) return err;
+
+	dfsNode node = impl.data.root;
+	if (!node.attr.mode)
+		return mkError("any path was not added to volume", "rolloutVolume");
+	if ((node.attr.mode & DFS_IFMT) != DFS_IFDIR)
+		return mkError("root node is not a directory", "rolloutVolume");
+
+
+   /* initializing volume data structure */
+
+	volumeData data = {impl};
+	data.dirs.lpush(node);
+	data.allowedInodesOnce = 1 << DFS_INODE_VOLUME | 1 << DFS_INODE_SECTORS | 1 << DFS_INODE_NODES | 1 << DFS_INODE_BOOT | 1 << DFS_INODE_CLUSTERS;
+	data.allowedInodes = data.allowedInodesOnce | 1 << DFS_INODE_NAME | 1 << DFS_INODE_DIR;
+
+	int i;
+	for (i = 0; i < 0x40; i += 1)
+		data.volume.ipush(0);
+
+
+   /* adding basic volume inodes */
+
+	int iVolume = addInode(data, DFS_INODE_VOLUME, 0, 0, 0),
+		iClusters = addInode(data, DFS_INODE_CLUSTERS, 0, 0, 0),
+		iBoot = addInode(data, DFS_INODE_BOOT, 0, 0, 0),
+		iNodes = addInode(data, DFS_INODE_NODES, 0, 0, 0),
+		iSectors = addInode(data, DFS_INODE_SECTORS, 0, 0, 0),
+		iRoot = addInode(data, DFS_INODE_DIR, node.attr.size, 0, 0);
+
+	data.volume[iVolume << 2] += 0x100000000;
+
+	addLink(data, iVolume, iRoot, 2);
+	addLink(data, iVolume, iClusters, 3);
+	addLink(data, iClusters, iBoot, 3);
+	addLink(data, iBoot, iNodes, 3);
+	addLink(data, iNodes, iSectors, 3);
+
+	node.attr.inode = iRoot;
+
+	if (data.error.csize)
+		return data.error;
+
+
+   /* setting volume name */
+
+	if (!volumeName.csize)
+		return mkError("volume name is empty", "rolloutVolume");
+
+	int pos, end = volumeName.csize, uni, unicode[];
+	while (pos < end) {
+		(uni, pos) = scanutf8(volumeName, pos, end);
+		if (uni >> 16)
+			return mkError("illegal unicode symbol in volume name", "rolloutVolume");
+		unicode.ipush(uni);
+	}
+
+	while (unicode.isize < 12 || (unicode.isize & 7) != 4)
+		unicode.ipush(0xffff);
+
+	int iName = iVolume, link = 1, done;
+
+	for (pos = 0, end = unicode.isize; pos < end; pos += done) {
+		if (end - pos > 12)
+			done = 8;
+		else
+			done = 12;
+
+		int d[3];
+		for (i = 0; i < done; i += 1)
+			d[i >> 2] |= unicode[pos + i] << ((i & 3) << 4);
+
+		int inode = addInode(data, DFS_INODE_NAME, d[0], d[1], d[2]);
+		addLink(data, iName, inode, link);
+		iName = inode, link = 3;
+	}
+
+	if (data.error.csize)
+		return data.error;
+
+
+   /* adding files and catalogues to volume */
+
+	data.allowedInodes = 1 << DFS_INODE_FILE | 1 << DFS_INODE_DIR | 1 << DFS_INODE_TRIE_FULL | 1 << DFS_INODE_TRIE_PART;
+
+	for (i = 0; i < data.dirs.lsize; i += 1) {
+		data.dirsPos = i;
+		err = data.dirs[i].trie.methods.traverseDown(data.dirs[i].trie, data, trieCallback);
+		if (err.csize)
+			return err;
+		if (data.error.csize)
+			return data.error;
+	}
+
+
+   /* finishing inodes part of the volume except files links */
+
+	data.allowedInodes = 1 << DFS_INODE_FREE;
+
+	iName = iNodes, link = 2;
+
+	while (data.volume.isize & 0x3f) {
+		int inode = addInode(data, DFS_INODE_FREE, 0, 0, 0);
+		addLink(data, iName, inode, link);
+		iName = inode, link = 3;
+		data.volume[iNodes << 2 | 1] += 1;
+	}
+	if (data.error.csize)
+		return data.error;
+
+	data.allowedInodes = 0;
+
+
+    /* counting file sizes */
+
+	int linkSector = data.volume.isize >> 6, nSector = linkSector;
+	int fileSectors;
+
+	for (i = 0; i < data.files.lsize; i += 1) {
+		dfsNode file = data.files[i];
+
+		(file.nLinks, nSector) = addFileLink(data, file.attr.inode, nSector, file.attr.size);
+		if (data.error.csize)
+			return data.error;
+
+		if (file.nLinks.isize == 1)
+			nSector += 1;
+		else if (file.nLinks.isize)
+			fileSectors += file.nLinks[0];
+	}
+
+
+   /* counting volumes sizes */
+
+	for (i = 0; i < data.volumes.lsize; i += 1) {
+		dfsNode volume = data.volumes[i];
+		int offset = nSector + fileSectors, inode = (volume.body[0x42] + offset) << 4 | volume.body[0x40] >> 16 & 0xf;
+		data.buildInVolumeBegin = offset << 6;
+		data.buildInVolumeEnd = data.buildInVolumeBegin + volume.body.isize;
+		addLink(data, volume.parentInode, inode, volume.link);
+		char error[] = buildInVolume(volume.body, offset);
+		if (error.csize)
+			return error;
+		fileSectors += volume.body.isize >> 6;
+	}
+
+
+   /* setting total number of sectors in the volume and rolling out inodes part of volume */
+
+	data.volume[iSectors << 2 | 3] = nSector + fileSectors - 1;
+
+	callback(cdata, data.volume);
+
+
+   /* rolling out files links parts */
+
+	int j, k, links[];
+
+	for (i = 0; i < data.files.lsize; i += 1) {
+		dfsNode file = data.files[i];
+
+		if (file.nLinks.isize == 1) {
+			linkSector += 1;
+			callback(cdata, file.body);
+
+		} else if (file.nLinks.isize) {
+			linkSector += 1;
+
+			for (j = file.nLinks.isize - 2; j >= 0; j -= 1) {
+				int size = file.nLinks[j], lim = file.nLinks[j + 1] << 6;
+				for (k = 0; k < size; k += 1) {
+					if (j)
+						links.ipush(linkSector), linkSector += 1;
+					else
+						links.ipush(nSector), nSector += 1;
+				}
+				for(k = k; k < lim; k += 1)
+					links.ipush(0);
+			}
+
+			callback(cdata, links);
+			links.ipop(links.isize);
+		}
+	}
+
+
+  /* rolling out file bodies */
+
+	for (i = 0; i < data.files.lsize; i += 1) {
+		dfsNode file = data.files[i];
+
+		if (file.nLinks.isize >= 2) {
+			callback(cdata, file.body);
+		}
+	}
+
+
+  /* rolling out build-in volumes */
+
+	for (i = 0; i < data.volumes.lsize; i += 1) {
+		dfsNode volume = data.volumes[i];
+		callback(cdata, volume.body);
+	}
+
+
+	return "";
+};

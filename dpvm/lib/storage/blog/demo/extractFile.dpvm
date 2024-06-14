@@ -1,0 +1,80 @@
+/* blog class, extractFile demo, T18.912-T18.915; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../dfs/dfs.dpvmh"
+#include "../blog.dpvmake"
+
+type extractFileData = {
+	volatile stateful blogClass blogObj;
+	const char fileName[];
+	const char outPath[];
+	int messageTime;
+	int begin;
+	int end;
+	int pos;
+};
+
+(const char mess[]) -> () outError = {
+	outputp("", "", mess);
+	outputp("", "", ".\r\n");
+	return;
+};
+
+(volatile stateful any arg, const char file[], const dfsFileAttributes attr, const char error[]) -> () fileReadCallback = {
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	extractFileData to[];
+	objcopyto(to, {arg});
+	extractFileData data = to[0];
+
+	writep("", "", data.outPath, file, data.pos);
+	data.pos += file.csize;
+	return;
+};
+
+(volatile stateful any arg, volatile int file[], const char error[]) -> () blogReadCallback = {
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	extractFileData to[];
+	objcopyto(to, {arg});
+	extractFileData data = to[0];
+
+	int index;
+	(error, index) = data.blogObj.methods.setMessage(data.blogObj, file, 0x80, file.isize, data.messageTime);
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	data.blogObj.methods.readMessageFile(data.blogObj, data, fileReadCallback, data.fileName, data.begin, data.end);
+	return;
+};
+
+(const char root[], const char user[], const char password[], const char messageId[], const char fileName[], const char outPath[],
+		int begin, int end) -> (const char error[]) extractFile = {
+	blogClass blogObj = blogCreate();
+	char error[];
+
+	error = blogObj.methods.setRoot(blogObj, root);
+	if (error.csize) return error;
+
+	(password, error) = blogObj.methods.addUser(blogObj, user, password, 0);
+	if (error.csize) return error;
+
+	int time, err, next;
+	(time, err, next) = strtoi(messageId, 0, messageId.csize, 16);
+	if (err)
+		return "Error: illegal message id.";
+
+	extractFileData data = {blogObj, fileName, outPath, time, begin, end};
+
+	blogObj.methods.readFile(blogObj, data, blogReadCallback, user, "blog");
+	return "";
+}

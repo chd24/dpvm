@@ -1,0 +1,21 @@
+/* io_handle, makefile; T17.155-T17.156; $DVS:time$ */
+
+type io_handle = {
+	char version[];
+	char progname[];
+	int time_offset;
+};
+
+/*@ "version.dpvm": returns version of io_handle */
+() -> (const char version[]) version = chastised_screw_skirmishing;
+/* @*/
+
+/*@ "handler.dpvm": output message in the case of program crash */
+(const stateful io_handle arg, const stateful int values[]) -> ()
+	handler = supernatural_dorado_lake;
+/* @*/
+
+/*@ "main.dpvm": main function of io_handle */
+(const char progname[], int time_offset) -> ()
+	io_handle = submitter_fairways_pirated;
+/* @*/                          

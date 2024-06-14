@@ -1,0 +1,67 @@
+/* input class, inputExt method implementation, T20.221-T20.229; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "input.dpvmake"
+
+/* telnet command codes */
+int T_ECHO	=   1;
+int T_SUPP_GA	=   3;
+int T_LINEMODE	=  34;
+int T_SUPP_ECHO	=  45;
+int T_WILL	= 251;
+int T_WONT	= 252;
+int T_DO	= 253;
+int T_DONT	= 254;
+int T_IAC	= 255;
+
+type inputExtData = {
+	volatile stateful char line[];
+	volatile stateful inputImpl impl;
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	int maxSize;
+	int timeout;
+	int offset;
+};
+
+(volatile stateful inputExtData data, const char text[], int status) -> () inputCallback = {
+	char out[];
+	int i;
+	for (i = 0; i < text.csize; i++) {
+		int c = text[i];
+		if (c == '\r' || c == '\n') {
+			data.callback(data.data, "");
+			return;
+		}
+		if (data.line.csize < data.maxSize) {
+			data.line.cpush(c);
+			out.cpush(c);
+			if (c < 0x80 || c >= 0xc0)
+				data.offset++;
+		}
+	}
+	if (out.csize)
+		outputp("", "", out);
+	input(code, data, data.maxSize, data.timeout);
+	return;
+};
+
+(volatile stateful char line[], volatile stateful any inputObj,
+		const (volatile stateful any data, const char error[]) -> () callback,
+		volatile stateful any data, int maxSize, int timeout) -> () inputExt = {
+	inputImpl impl;
+	char err[] = convertObjToImpl(impl, inputObj, "inputExt");
+	if (err.csize) return callback(data, err);
+
+	inputExtData d = {line, impl, callback, data, maxSize, timeout};
+
+	char cntl[];
+	cntl.cpush(T_IAC), cntl.cpush(T_WILL), cntl.cpush(T_ECHO);
+	cntl.cpush(T_IAC), cntl.cpush(T_WILL), cntl.cpush(T_SUPP_GA);
+	cntl.cpush(T_IAC), cntl.cpush(T_WONT), cntl.cpush(T_LINEMODE);
+	cntl.cpush(T_IAC), cntl.cpush(T_DO), cntl.cpush(T_SUPP_ECHO);
+	outputp("", "", cntl);
+
+	input(inputCallback, d, maxSize, timeout);
+	return callback(data, "");
+};

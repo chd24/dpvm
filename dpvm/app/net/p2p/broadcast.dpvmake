@@ -1,0 +1,9 @@
+/* p2p module text example, makefile; T16.968-T17.959; $DVS:time$ */
+
+/*@ "broadcast.dpvm": save and broadcast given object */
+(const any obj) -> () broadcast = ZSTyzCLeoxy_Pauu2pm6xQ7_Lpon4WaBJqE_EEqx5TzQKfR /* fuller_tribunal_balmiest */;
+/* @*/
+
+/*@ "request.dpvm": request object by its short name with first underline i.e. _xxx_yyy_zzz */
+(const stateful char short_name[]) -> () request = j2dXv99k6r6_KKcZa1myVb9_nd4bMEYhaf7_nT8EpbKGB28 /* gaudy_subscribes_mangling */;
+/* @*/

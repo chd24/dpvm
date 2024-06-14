@@ -1,0 +1,78 @@
+/* dnet node, hosts command; T17.563-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) hosts_func {
+	char m[];
+	strcat(m, "Active hosts:\r\n");
+
+	dnet_host h[] = ctx.hosts;
+	dnet_connection c[] = ctx.conns;
+
+	int i;
+	for (i = 0; i < h.lsize; i += 1) {
+		char a[];
+		strcat(a, "  ");
+		printint(a, i, 1);
+		substrcat(m, a, a.csize - 3, a.csize);
+		strcat(m, ". ");
+
+		char b[];
+		print_hostname(b, ctx, i, 0);
+		char d[];
+		printint(d, (ctx.last_time - h[i].last_time) / 1000000000, 1);
+		while(b.csize + d.csize < 30)
+			b.cpush(' ');
+		strcat(m, b);
+		strcat(m, d);
+		strcat(m, " sec, ");
+
+		if (h[i].version.csize)
+			strcat(m, h[i].version);
+		else
+			strcat(m, "unknown");
+		strcat(m, ", ");
+
+		int nconn;
+		int mode;
+		(nconn, mode) = route_to_host(ctx, h[i]);
+
+		if (mode & DNET_HOST_LOCAL)
+			strcat(m, "local    ");
+		else if (mode & DNET_HOST_IMMEDIATE)
+			strcat(m, "immediate");
+		else if (mode & DNET_HOST_MANUAL)
+			strcat(m, "manual   ");
+		else
+			strcat(m, "auto     ");
+
+		if (h[i].flags & DNET_HOST_TRUSTED)
+			strcat(m, " trust  ");
+		else
+			strcat(m, "        ");
+
+		if (nconn >= 0) {
+			printip(m, c[nconn].ip0, c[nconn].ip1);
+			strcat(m, ":");
+			printint(m, c[nconn].port, 1);
+		} else if (nconn == -2) {
+			strcat(m, "127.0.0.1:0");
+		} else {
+			strcat(m, "0.0.0.0:0");
+		}
+
+		strcat(m, "\r\n");
+	}
+
+	return (m, 0);
+}
+
+dnet_command hosts_command = {
+	"hosts",
+	"list active hosts",
+	hosts_func,
+	0,
+	0		
+};

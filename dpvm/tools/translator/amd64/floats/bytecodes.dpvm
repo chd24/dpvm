@@ -1,0 +1,390 @@
+/* translations of bytecodes; T19.511-T20.125; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/bytecodes.dpvmh"
+#include "floats.dpvmake"
+
+(volatile stateful floatsData data) -> (int res)
+
+num = {
+	data.ints.ipush(data.d.func.c[data.pos]);
+	return 1;
+},
+
+ill = {
+	return mkError(data, "bytecodes:ill", "illegal bytecode");
+},
+
+Nop = {
+	return 1;
+},
+
+Ret = {
+	if (data.links.isize < data.nInputs)
+		return mkError(data, "bytecodes:ret", "too small number of actual outputs");
+
+	int i, n;
+	for (i = data.nInputs; i; i -= 1)
+		if (data.links[data.links.isize - i] != data.nInputs - i)
+			return mkError(data, "bytecodes:ret", "actual output do not match input");
+
+	if (data.pos)
+		n = data.d.states[data.pos - 1].i[2];
+	else
+		n = data.d.input.i[2];
+	for (i = 0; i < n; i += 1)
+		doAsm(data, "fstp st(b)", "DD b0", 0, 0xD8);
+
+	epilogue(data);
+	return 0;
+},
+
+Neg = {
+	data.ints[data.ints.isize - 1] = -data.ints[data.ints.isize - 1];
+	return 1;
+},
+
+Not = {
+	data.ints[data.ints.isize - 1] = ~data.ints[data.ints.isize - 1];
+	return 1;
+},
+
+Add = {
+	data.ints[data.ints.isize - 2] += data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Sub = {
+	data.ints[data.ints.isize - 2] -= data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Shl = {
+	data.ints[data.ints.isize - 2] <<= data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Shr = {
+	data.ints[data.ints.isize - 2] >>= data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+And = {
+	data.ints[data.ints.isize - 2] &= data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Or = {
+	data.ints[data.ints.isize - 2] |= data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Xor = {
+	data.ints[data.ints.isize - 2] ^= data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Eq = {
+	data.ints[data.ints.isize - 2] = data.ints[data.ints.isize - 2] == data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Lt = {
+	data.ints[data.ints.isize - 2] = data.ints[data.ints.isize - 2] < data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Gt = {
+	data.ints[data.ints.isize - 2] = data.ints[data.ints.isize - 2] > data.ints[data.ints.isize - 1];
+	data.ints.ipop(1);
+	return 1;
+},
+
+Code = {
+	int reg = asmRegs.lsize - 1;
+	data.links.ipush(reg);
+	if (!data.wasCode) {
+		data.wasCode = 1;
+		if (asmRegs[reg].save)
+			doAsm(data, "push r", "41?R==1 50+r*1", reg, 0);
+		doAsm(data, "mov r,q", "49 BC b0 b1 b2 b3 b4 b5 b6 b7", reg, data.funcAddr + 0x10);
+		doAsm(data, "mov r,[r]", "4D 8B 24 24", reg, 0);
+	}
+	return 1;
+},
+
+Lload = {
+	data.links.ipush(data.links[data.links.isize - 1 - data.ints[data.ints.isize - 1]]);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Iload = {
+	data.ints[data.ints.isize - 1] = data.ints[data.ints.isize - 2 - data.ints[data.ints.isize - 1]];
+	return 1;
+},
+
+Fload = {
+	doAsm(data, "fld st(b)", "D9 b0", 0, 0xC0 + data.ints[data.ints.isize - 1]);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Lstor = {
+	data.links[data.links.isize - 2 - data.ints[data.ints.isize - 1]] = data.links[data.links.isize - 1];
+	data.links.ipop(1);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Istor = {
+	data.ints[data.ints.isize - 3 - data.ints[data.ints.isize - 1]] = data.ints[data.ints.isize - 2];
+	data.ints.ipop(2);
+	return 1;
+},
+
+Fstor = {
+	doAsm(data, "fstp st(b)", "DD b0", 0, 0xD9 + data.ints[data.ints.isize - 1]);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Lpops = {
+	data.links.ipop(1);
+	return 1;
+},
+
+Ipops = {
+	data.ints.ipop(1);
+	return 1;
+},
+
+Fpops = {
+	doAsm(data, "fstp st(b)", "DD b0", 0, 0xD8);
+	return 1;
+},
+
+Lpopn = {
+	int n = data.ints[data.ints.isize - 1];
+	data.links.ipop(n);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Ipopn = {
+	int n = data.ints[data.ints.isize - 1];
+	data.ints.ipop(n + 1);
+	return 1;
+},
+
+Fpopn = {
+	int i, n = data.ints[data.ints.isize - 1];
+	for (i = 0; i < n; i += 1)
+		doAsm(data, "fstp st(b)", "DD b0", 0, 0xD8);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Iget = {
+	if (data.links[data.links.isize - 1] != asmRegs.lsize - 1)
+		return mkError(data, "bytecodes:iget", "iget bytecode supported for the self function object only");
+	data.ints[data.ints.isize - 1] = data.d.func.i[data.ints[data.ints.isize - 1]];
+	data.links.ipop(1);
+	return 1;
+},
+
+Fget = {
+	int n = data.ints[data.ints.isize - 1] << 3, reg = data.links[data.links.isize - 1];
+	if (n < 0x80)
+		doAsm(data, "fld qword [r+b]", "41?R==1 DD 40+r*1 24?r==4 b0", reg, n);
+	else
+		doAsm(data, "fld qword [r+d]", "41?R==1 DD 80+r*1 24?r==4 b0 b1 b2 b3", reg, n);
+	data.links.ipop(1);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Fset = {
+	int n = data.ints[data.ints.isize - 1] << 3, reg = data.links[data.links.isize - 1];
+	if (n < 0x80)
+		doAsm(data, "fstp qword [r+b]", "41?R==1 DD 58+r*1 24?r==4 b0", reg, n);
+	else
+		doAsm(data, "fstp qword [r+d]", "41?R==1 DD 98+r*1 24?r==4 b0 b1 b2 b3", reg, n);
+	data.links.ipop(1);
+	data.ints.ipop(1);
+	return 1;
+},
+
+Itof = {
+	int n = data.ints[data.ints.isize - 1];
+	if (n == 0)
+		doAsm(data, "fldz", "D9 EE", 0, 0);
+	else if (n == 1)
+		doAsm(data, "fld1", "D9 E8", 0, 0);
+	else
+		return mkError(data, "bytecodes:itof", "itof bytecode supported for numbers 0 and 1 only");
+	data.ints.ipop(1);
+	return 1;
+},
+
+Fneg = {
+	doAsm(data, "fchs", "D9 E0", 0, 0);
+	return 1;
+},
+
+Fsqrt = {
+	doAsm(data, "fsqrt", "D9 FA", 0, 0);
+	return 1;
+},
+
+Fexp = {
+	if (data.d.machcode.i[2] >= STACK_MAX - 1)
+		return mkError(data, "bytecodes:fexp", "maximum stack size larger than float processor has");
+
+	doAsm(data, "fldl2e", "D9 EA", 0, 0);
+	doAsm(data, "fmulp st1,st0", "DE C9", 0, 0);
+	doAsm(data, "fld st0", "D9 C0", 0, 0);
+	doAsm(data, "frndint", "D9 FC", 0, 0);
+	doAsm(data, "fsub st1,st0", "DC E9", 0, 0);
+	doAsm(data, "fxch st0,st1", "D9 C9", 0, 0);
+	doAsm(data, "f2xm1", "D9 F0", 0, 0);
+	doAsm(data, "fld1", "D9 E8", 0, 0);
+	doAsm(data, "faddp st1,st0", "DE C1", 0, 0);
+	doAsm(data, "fscale", "D9 FD", 0, 0);
+	doAsm(data, "fstp st1", "DD D9", 0, 0);
+	return 1;
+},
+
+Flog = {
+	if (data.d.machcode.i[2] == STACK_MAX)
+		return mkError(data, "bytecodes:flog", "maximum stack size larger than float processor has");
+
+	doAsm(data, "fldln2", "D9 ED", 0, 0);
+	doAsm(data, "fxch st0,st1", "D9 C9", 0, 0);
+	doAsm(data, "fyl2x", "D9 F1", 0, 0);
+	return 1;
+},
+
+Fsncs = {
+	doAsm(data, "fsincos", "D9 FB", 0, 0);
+	return 1;
+},
+
+Fatan = {
+	doAsm(data, "fpatan", "D9 F3", 0, 0);
+	return 1;
+},
+
+Fadd = {
+	doAsm(data, "faddp", "DE C1", 0, 0);
+	return 1;
+},
+
+Fsub = {
+	doAsm(data, "fsubp", "DE E9", 0, 0);
+	return 1;
+},
+
+Fmul = {
+	doAsm(data, "fmulp", "DE C9", 0, 0);
+	return 1;
+},
+
+Fdiv = {
+	doAsm(data, "fdivp", "DE F9", 0, 0);
+	return 1;
+},
+
+Feq = {
+	any f = data.d.func;
+	int n = data.pos, size = f.csize, cond, res;
+
+	if (size > n + 1 && f.c[n + 1] == DPVM_CODE_ITOF)
+		cond = 0xDA, res = 2;
+	else if (size > n + 3 && f.c[n + 1] == DPVM_CODE_ZERO + 1 && f.c[n + 2] == DPVM_CODE_XOR
+			&& f.c[n + 3] == DPVM_CODE_ITOF)
+		cond = 0xDB, res = 4;
+	else
+		return mkError(data, "bytecodes:feq", "float comparison == supported only in float expressions");
+
+	doAsm(data, "fcomip st0,st1", "DF F1", 0, 0);
+	doAsm(data, "fstp st0", "DD D8", 0, 0);
+	doAsm(data, "fld1", "D9 E8", 0, 0);
+	doAsm(data, "fldz", "D9 EE", 0, 0);
+	doAsm(data, "fcmovcc st0,st1", "b0 C9", 0, cond);
+	doAsm(data, "fstp st1", "DD D9", 0, 0);
+
+	return res;
+},
+
+Flt = {
+	any f = data.d.func;
+	int n = data.pos, size = f.csize, cond, res;
+
+	if (size > n + 1 && f.c[n + 1] == DPVM_CODE_ITOF)
+		cond = 0xDB, res = 2;
+	else if (size > n + 3 && f.c[n + 1] == DPVM_CODE_ZERO + 1 && f.c[n + 2] == DPVM_CODE_XOR
+			&& f.c[n + 3] == DPVM_CODE_ITOF)
+		cond = 0xDA, res = 4;
+	else
+		return mkError(data, "bytecodes:fgt", "float comparison < supported only in float expressions");
+
+	doAsm(data, "fcomip st0,st1", "DF F1", 0, 0);
+	doAsm(data, "fstp st0", "DD D8", 0, 0);
+	doAsm(data, "fld1", "D9 E8", 0, 0);
+	doAsm(data, "fldz", "D9 EE", 0, 0);
+	doAsm(data, "fcmovcc st0,st1", "b0 D1", 0, cond);
+	doAsm(data, "fstp st1", "DD D9", 0, 0);
+
+	return res;
+},
+
+Fgt = {
+	any f = data.d.func;
+	int n = data.pos, size = f.csize, cond, res;
+
+	if (size > n + 1 && f.c[n + 1] == DPVM_CODE_ITOF)
+		cond = 0xDA, res = 2;
+	else if (size > n + 3 && f.c[n + 1] == DPVM_CODE_ZERO + 1 && f.c[n + 2] == DPVM_CODE_XOR
+			&& f.c[n + 3] == DPVM_CODE_ITOF)
+		cond = 0xDB, res = 4;
+	else
+		return mkError(data, "bytecodes:flt", "float comparison > supported only in float expressions");
+
+	doAsm(data, "fcomip st0,st1", "DF F1", 0, 0);
+	doAsm(data, "fstp st0", "DD D8", 0, 0);
+	doAsm(data, "fld1", "D9 E8", 0, 0);
+	doAsm(data, "fldz", "D9 EE", 0, 0);
+	doAsm(data, "fcmovcc st0,st1", "b0 C1", 0, cond);
+	doAsm(data, "fstp st1", "DD D9", 0, 0);
+
+	return res;
+},
+
+bytecodes[256] = {
+/* 00 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 10 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 20 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 30 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 40 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 50 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 60 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 70 */ num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,   num,  num,  num,  num,
+/* 80 */ ill,  Nop,  Code, ill,   ill,  ill,  ill,  ill,   Ret,  ill,  ill,  ill,   ill,  ill,  ill,  ill,
+/* 90 */ ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill,   Eq,   Lt,   Gt,   Neg,   Feq,  Flt,  Fgt,  Fneg,
+/* A0 */ Lload,Iload,Fload,ill,   Lstor,Istor,Fstor,ill,   Lpops,Ipops,Fpops,ill,   Lpopn,Ipopn,Fpopn,ill,
+/* B0 */ ill,  Iget, Fget, ill,   ill,  ill,  Fset, ill,   ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill,
+/* C0 */ Add,  Sub,  ill,  ill,   Fadd, Fsub, Fmul, Fdiv,  Shl,  Shr,  ill,  ill,   And,  Or,   Xor,  Not,
+/* D0 */ Itof, ill,  ill,  ill,   ill,  ill,  ill,  ill,   ill,  ill,  Fsqrt,Fexp,  Flog, Fsncs,ill,  Fatan,
+/* E0 */ ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill,
+/* F0 */ ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill,   ill,  ill,  ill,  ill
+};

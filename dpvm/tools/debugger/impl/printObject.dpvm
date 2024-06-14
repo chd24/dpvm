@@ -1,0 +1,43 @@
+/* output object internals to string; T19.656-T20.133; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+
+int LIMIT_OUTPUT = 0x100;
+
+(volatile stateful char str[], const stateful any obj) -> () printObject = {
+	printf(str, "%p (", {obj.type});
+
+	int i, size;
+	char coma[] = "", defcoma[] = ", ";
+
+	for (size = obj.lsize, i = 0; i < size; i += 1) {
+		printf(str, "%s%p", {coma, obj.l[i]});
+		coma = defcoma;
+		if (i == LIMIT_OUTPUT && size > LIMIT_OUTPUT << 1)
+			printf(str, "%s...", {coma}), i = size - LIMIT_OUTPUT - 1;
+	}
+
+	for (size = obj.isize, i = 0; i < size; i += 1) {
+		printf(str, "%s%d", {coma, obj.i[i]});
+		coma = defcoma;
+		if (i == LIMIT_OUTPUT && size > LIMIT_OUTPUT << 1)
+			printf(str, "%s...", {coma}), i = size - LIMIT_OUTPUT - 1;
+	}
+
+	for (size = obj.fsize, i = 0; i < size; i += 1) {
+		printf(str, "%s%.15f", {coma, obj.f[i]});
+		coma = defcoma;
+		if (i == LIMIT_OUTPUT && size > LIMIT_OUTPUT << 1)
+			printf(str, "%s...", {coma}), i = size - LIMIT_OUTPUT - 1;
+	}
+
+	for (size = obj.csize, i = 0; i < size; i += 1) {
+		printf(str, "%s%02X", {coma, +obj.c[i]});
+		coma = defcoma;
+		if (i == LIMIT_OUTPUT && size > LIMIT_OUTPUT << 1)
+			printf(str, "%s...", {coma}), i = size - LIMIT_OUTPUT - 1;
+	}
+
+	printf(str, ")\r\n", {});
+	return;
+};

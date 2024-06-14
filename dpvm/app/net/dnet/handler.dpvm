@@ -1,0 +1,38 @@
+/* dnet: error handler; T17.534-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const dnet_data data, const int values[]) -> () {
+	char str[];
+	int cod;
+	int res;
+
+	strcat(str, "Dnet crashed with error ");
+	cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+
+	dnet_context ctx;
+	ctx.data = data;
+	ctx.conns[0].thread_id = DNET_THREAD_ID_HANDLER;
+
+	write_log(ctx, str, 1);
+
+	return;
+}

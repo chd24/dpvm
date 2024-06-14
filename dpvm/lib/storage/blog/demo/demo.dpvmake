@@ -1,0 +1,22 @@
+/* blog class, makefile for demos, T18.723-T19.349; $DVS:time$ */
+
+/*@ "copyMessage.dpvm": copy message from database of one user to another */
+(const char root[], const char userFrom[], const char passwordFrom[], const char userTo[], const char messageId[]) -> ()
+        copyMessage = fattiest_cooperates_demise;
+/* @*/
+
+/*@ "resetTip.dpvm": reset message tip according to actual author/header and body of message */
+(const char root[], const char user[], const char password[], const char messageId[]) -> (const char error[])
+	resetTip = parallels_oleanders_scrubbers;
+/* @*/
+
+/*@ "extractFile.dpvm": output segment [begin,end) of file fileName from given message to outPath file */
+(const char root[], const char user[], const char password[], const char messageId[], const char fileName[], const char outPath[],
+		int begin, int end) -> (const char error[])
+	extractFile = futures_anneal_feltpen;
+/* @*/
+
+/*@ "addFile.dpvm": create file fileName in message and copy external file loadPath to it */
+(const char root[], const char user[], const char password[], const char messageId[], const char filePath[], const char loadPath[], int dfsFlags) -> (const char error[])
+	addFile = rapist_attending_raked;
+/* @*/           

@@ -1,0 +1,20 @@
+/* encode bigendian sub-array of int32[]; T16.516-T17.685; $DVS:time$ */
+
+(const stateful int arr[], int begin, int end) -> (volatile char str[]) {
+	const char mime[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	char str[];
+	int c;
+	int d;
+
+	while (begin < end) {
+		c = c << 32 | arr.i[begin];
+		d += 32;
+		begin += 1;
+		do {
+			d -= 6;
+			str.cpush(mime[c >> d & 63]);
+		} while (d >= 6);
+	}
+	
+	return str;
+}

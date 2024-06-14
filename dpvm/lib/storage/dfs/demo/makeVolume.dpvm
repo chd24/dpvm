@@ -1,0 +1,173 @@
+/* dfs class, make volume from dir demo, T18.880-T18.977; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../dfs.dpvmake"
+
+int READ_SIZE = 0x100000;
+
+type volumeFile = {
+	const char path[];
+	const dfsFileAttributes attr;
+};
+
+type volumeData = {
+	const char volumeName[];
+	const char volumePath[];
+	const char dirPath[];
+	volatile dfsClass dfs;
+	volatile volumeFile dirs[];
+	volatile volumeFile files[];
+	volatile char file[];
+	int pos;
+};
+
+(const char error[]) -> () outError = {
+	char mess[];
+	printf(mess, "%s.\r\n", {error});
+	outputp("", "", mess);
+	return;
+}
+
+(volatile stateful any data, const stateful int part[]) -> () writeCallback = {
+	volumeData to[];
+	objcopyto(to, {data});
+	volumeData d = to[0];
+
+	int i, todo, max = READ_SIZE >> 3;
+	for (i = 0; i < part.isize; i += todo) {
+		todo = part.isize - i;
+		if (todo > max)
+			todo = max;
+		writep("", "", d.volumePath, ints2chars(part, i, i + todo), -1);
+	}
+	return;
+};
+
+(volatile stateful volumeData data, const char file[], int status) -> () readCallback = {
+	if (data.pos < data.files.lsize) {
+		if (file.csize)
+			strcat(data.file, file);
+
+		if (file.csize == READ_SIZE || status > file.csize) {
+			char path[];
+			printf(path, "%s%s", {data.dirPath, data.files[data.pos].path});
+			read(code, data, path, data.file.csize, READ_SIZE);
+			return;
+		}
+
+		char path[] = data.files[data.pos].path;
+		dfsFileAttributes attr = data.files[data.pos].attr;
+		if ((attr.mode & DFS_IFMT) == DFS_IFDIR && path.csize > 4) {
+			char path1[];
+			substrcat(path1, path, 0, path.csize - 4);
+			path = path1;
+		}
+
+		char error[] = data.dfs.methods.addPath(data.dfs, path, data.file, attr);
+		if (error.csize) {
+			char err[];
+			printf(err, "%s, path = '%s', mode = 0x%x", {error, path, attr.mode});
+			outError(err);
+			return;
+		}
+
+		char f[];
+		data.file = f;
+	}
+
+	data.pos += 1;
+	if (data.pos < data.files.lsize) {
+		code(data, "", 1);
+		return;
+	}
+
+	char error[] = data.dfs.methods.rolloutVolume(data.dfs, data, writeCallback, data.volumeName);
+	if (!error.csize)
+		error = "Volume saved";
+
+	outError(error);
+	return;
+};
+
+(volatile stateful volumeData data, const any stats) -> () statCallback = {
+	int i;
+	for (i = 0; i < stats.lsize; i += 1) {
+		any stat = stats.l[i];
+
+		char name[];
+		int j;
+		for (j = 0; j < stat.csize; j += 1)
+			name.cpush(stat.c[j]);
+
+		if ((name != "." || !data.pos) && name != "..") {
+			int at[];
+			for (j = 0; j < stat.isize; j += 1)
+				at.ipush(stat.i[j]);
+
+			dfsFileAttributes attr;
+			objcopyto(attr, at);
+
+			char path[];
+			printf(path, "%s/%s", {data.dirs[data.pos].path, name});
+
+			int isdfs;
+
+			if ((attr.mode & DFS_IFMT) == DFS_IFREG && name.csize > 4 && name[name.csize - 4] == '.'
+					&& name[name.csize - 3] == 'd' && name[name.csize - 2] == 'f' && name[name.csize - 1] == 's'
+					&& attr.size >= 0x400 && !(attr.size & 0x1ff)) {
+				attr.mode &= ~DFS_IFMT;
+				attr.mode |= DFS_IFDIR;
+				isdfs = 1;
+			}
+
+			volumeFile file = {path, attr};
+
+			if ((attr.mode & DFS_IFMT) == DFS_IFREG || isdfs) {
+				data.files.lpush(file);
+
+			} else if ((attr.mode & DFS_IFMT) == DFS_IFDIR) {
+				if (name != ".")
+					data.dirs.lpush(file);
+				else
+					path = "/";
+
+				char body[], error[] = data.dfs.methods.addPath(data.dfs, path, body, attr);
+				if (error.csize) {
+					char err[];
+					printf(err, "%s, path = '%s', mode = 0x%x", {error, path, attr.mode});
+					outError(err);
+					return;
+				}
+
+			} else {
+				char err[];
+				printf(err, "Error: illegal file mode 0x%x of element '%s'", {path, attr.mode});
+				outError(err);
+				return;
+			}
+		}
+	}
+
+	data.pos += 1;
+	if (data.pos < data.dirs.lsize) {
+		char mask[];
+		printf(mask, "%s%s/*", {data.dirPath, data.dirs[data.pos].path});
+		mstat(code, data, mask, 0, READ_SIZE);
+		return;
+	}
+
+	data.pos = 0;
+	readCallback(data, "", 1);
+	return;
+};
+
+(const char volumeName[], const char dirPath[], const char volumePath[]) -> () makeVolume = {
+	dfsClass dfs = dfsCreate();
+	volumeFile dir = {""}, dirs[] = {dir};
+	volumeData data = {volumeName, volumePath, dirPath, dfs, dirs};
+	data.pos = -1;
+
+	statCallback(data, "");
+	return;
+};

@@ -1,0 +1,43 @@
+/* collatz hypothesis: look for pairs (a,b) i.e. ak + b; T16.475-T16.475 $DVS:time$
+   if process_pair(a,b) = 0 then look for pairs (2*a,b) and (2*a,a+b) etc.
+*/
+
+(int lim) -> (int arr[]) {
+	int A[];
+	int B[];
+	int arr[];
+	int a;
+	int b;
+	int i;
+	int res;
+	
+	A.push(2);
+	B.push(1);
+
+	do {
+		a = A.i[i];
+		b = B.i[i];
+
+		res = curds_slurping_pluckier(a, b); /* process_pair() */
+
+		if (!res) {
+			arr.push(a);
+			arr.push(b);
+			if (2 * a <= lim) {
+				A.push(2*a);
+				B.push(b);
+				A.push(2*a);
+				B.push(a+b);
+			}
+		}
+
+		if (res < 0) {
+			arr.push(a-1);
+			arr.push(b);
+		}
+
+		i = i + 1;
+	} while (i < A.isize);
+
+	return (arr);
+}

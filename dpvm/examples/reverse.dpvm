@@ -1,0 +1,22 @@
+/* Reverse inputted text; T15.541-T17.178; $DVS:time$ */
+
+(const any arg, const char text[], int status) -> () reverse_text {
+	char out[];
+	int size;
+
+        for (size = text.csize - 1; size >= 0; size -= 1)
+		out.cpush(text[size]);
+
+        outputp("", "", "Reversed text: ");
+        outputp("", "", out);
+        outputp("", "", "\r\n");
+
+	return;
+}
+
+(int n) -> () {
+	/* input text of length n and call reverse_text */
+        outputp("", "", "Enter text: ");
+	input(reverse_text, "", n, -1);
+	return;
+}

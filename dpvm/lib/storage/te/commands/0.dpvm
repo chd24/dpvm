@@ -1,0 +1,21 @@
+/* view entry by link 0, T18.327-T18.334; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) command0 {
+	int index0 = data.pos / 36 + 1;
+	int index;
+	for (index = data.nextIndexes[index0]; index != index0 && index & 3; index = data.nextIndexes[index]);
+	if (!(index & 3))
+		data.pos = index * 36;
+
+	return "view";
+}
+
+teCommand cmd0 = {
+        "0",
+        "view entry referred by field 0 of current entry",
+        command0
+};
+
+

@@ -1,0 +1,55 @@
+/* kraken class, signQuery() internal method, T19.994-T20.029; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../../common/mpopenFlags.dpvmh"
+#include "../../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../../lib/math/crypto/base64/base64.dpvmake"
+#include "kraken.dpvmake"
+
+(const stateful krakenImpl impl, const char method[], const char parameters[]) -> (const char query[][], const char error[])
+		formPrivateQuery = {
+	char q[][];
+
+	char url[];
+	strcat(url, PRIVATE_URL);
+	strcat(url, method);
+
+	char publicKey[];
+	printf(publicKey, "--header=API-Key: %s", {impl.data.publicKey});
+	q.lpush(publicKey);
+
+	char payload[];
+	printf(payload, "nonce=%d", {impl.data.nonce});
+	if (parameters.csize)
+		printf(payload, "&%s", {parameters});
+	char in[];
+	printf(in, "%d%s", {payload, impl.data.nonce});
+	char message[];
+	int lim = strstr(url, ".com");
+	if (lim < 0)
+		return (q, mkError("can't find '.com' in url", "formPrivateQuery"));
+	substrcat(message, url, lim + 4, url.csize);
+	char error[] = impl.data.hmac_sha256.methods.computeHash(message, impl.data.hmac_sha256, in);
+	if (error.csize)
+		return (q, error);
+	char sign[];
+	error = impl.data.hmac_sha512.methods.signMessage(sign, impl.data.hmac_sha512, message);
+	if (error.csize)
+		return (q, error);
+	char signHdr[];
+	printf(signHdr, "--header=API-Sign: %s", {base64_encode_substr(sign, 0, sign.csize)});
+	q.lpush(signHdr);
+
+	q.lpush("--header=Content-Type: application/x-www-form-urlencoded; charset=utf-8");
+	q.lpush("--header=Accept: application/json");
+
+	char post[];
+	printf(post, "--post-data=%s", {payload});
+	q.lpush(post);
+	q.lpush("--tries=1");
+	q.lpush("--timeout=60");
+	q.lpush("-qO-");
+	q.lpush(url);
+
+	return (q, "");
+};

@@ -1,0 +1,473 @@
+/* forex class, syncExchange method implementation, T20.037-T20.177; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "forex.dpvmake"
+
+type syncData = {
+	volatile stateful forexImpl impl;
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	volatile char txid[];
+	volatile stateful char txids[][];
+	volatile stateful int iout[];
+	volatile stateful float fout[];
+	volatile stateful forexOrder closedOrders[];
+	int flags;
+	int stage;
+	int phase;
+	int done;
+};
+
+int STAGE_BEGIN			= 0;
+int STAGE_LIST_ORDERS		= 1;
+int STAGE_GET_BALANCES		= 2;
+int STAGE_ORDER_STATUS		= 3;
+int STAGE_CANCEL_ALL		= 4;
+int STAGE_CANCEL_ORDERS		= 5;
+int STAGE_ADD_ORDERS		= 6;
+int STAGE_GET_BALANCES_FIN	= 7;
+int STAGE_END			= 8;
+
+(float x) -> (float y) round = {
+	int i = x * 1000000;
+	x = i;
+	return x / 1000000;
+};
+
+(volatile stateful any data, const char error[]) -> () syncCallback = {
+	syncData darr[];
+	pushObject(data, darr);
+	syncData d = darr[0];
+
+	if (d.stage == STAGE_BEGIN) {
+		int i, size = 1;
+		if (d.flags & SYNC_SET_TEST_ALL) {
+			size = d.impl.data.inputValuesPerSlot;
+			d.flags &= ~SYNC_SET_TEST_ALL;
+		}
+		for (i = 0; i < size; i += 1) {
+			int n = d.impl.data.inputDataEnd - size + i;
+			if (n >= 0) {
+				float price = d.impl.data.inputData[n];
+				error = d.impl.data.exchange.methods.setTestPrice(d.impl.data.exchange, price);
+				if (!error.csize) {
+					char str[];
+					printf(str, "syncExchange: test price %7.2f processed", {price});
+					d.impl.methods.logOutput(d.impl, str, 9);
+				} else {
+					char str[];
+					printf(str, "syncExchange: test price %7.2f processing error: %s", {error, price});
+					d.impl.methods.logOutput(d.impl, str, 9);
+				}
+			}
+		}
+		d.done = 0;
+		d.stage += 1;
+		d.phase = 0;
+	}
+
+	if (d.stage == STAGE_LIST_ORDERS) {
+		if (!d.phase) {
+			d.phase = 1;
+			d.txids.lpop(d.txids.lsize);
+			char pair[];
+			printf(pair, "%s%s", {d.impl.data.currencies[1], d.impl.data.currencies[0]});
+			d.impl.data.exchange.methods.listOrders(d.txids, d.impl.data.exchange, code, d, pair);
+			return;
+		} else {
+			if (!error.csize) {
+				forexOrder ord[] = d.impl.data.orders, open[], close[] =  d.impl.data.closedOrders;
+				char unknown[];
+				int i, j;
+				for (j = 0; j < ord.lsize; j += 1) {
+					if (!ord[j].txid.csize) {
+						open.lpush(ord[j]);
+						ord[j] = ord[ord.lsize - 1];
+						ord.lpop(1);
+						j -= 1;
+					}
+				}
+				int npending = open.lsize, nunknown;
+				for (i = 0; i < d.txids.lsize; i += 1) {
+					for (j = 0; j < ord.lsize; j += 1) {
+						if (d.txids[i] == ord[j].txid) {
+							open.lpush(ord[j]);
+							ord[j] = ord[ord.lsize - 1];
+							ord.lpop(1);
+							j = ord.lsize;
+						}
+					}
+					if (j == ord.lsize) {
+						printf(unknown, " %s", {d.txids[i]});
+						nunknown += 1;
+					}
+				}
+				char str[];
+				printf(str, "syncExchange: orders: %d pending open, %d opened, %d unknown, %d pending close, %d closed, %d early closed, %d total known",
+					{npending, open.lsize - npending, nunknown, close.lsize, ord.lsize,
+					d.impl.data.nClosedOrders - close.lsize,
+					open.lsize + ord.lsize + d.impl.data.nClosedOrders});
+				d.impl.methods.logOutput(d.impl, str, 8);
+				if (npending) {
+					char s[];
+					printf(s, " - pendOpen:", {});
+					for (i = 0; i < npending; i += 1)
+						printf(s, " %d", {open[i].id});
+					d.impl.methods.logOutput(d.impl, s, 9);
+				}
+				if (open.lsize > npending) {
+					char s[];
+					printf(s, " - opened  :", {});
+					for (i = npending; i < open.lsize; i += 1)
+						printf(s, " %d", {open[i].id});
+					d.impl.methods.logOutput(d.impl, s, 9);
+				}
+				if (nunknown) {
+					char s[];
+					printf(s, " - unknown :%s", {unknown});
+					d.impl.methods.logOutput(d.impl, s, 9);
+				}
+				if (close.lsize) {
+					char s[];
+					printf(s, " - pendClos:", {});
+					for (i = 0; i < close.lsize; i += 1)
+						printf(s, " %d", {close[i].id});
+					d.impl.methods.logOutput(d.impl, s, 9);
+				}
+				if (ord.lsize) {
+					char s[];
+					printf(s, " - closed  :", {});
+					for (i = 0; i < ord.lsize; i += 1) {
+						printf(s, " %d", {ord[i].id});
+						open.lpush(ord[i]);
+					}
+					d.impl.methods.logOutput(d.impl, s, 9);
+				}
+				d.impl.data.orders = open;
+				d.closedOrders = ord;
+			} else {
+				char str[];
+				printf(str, "syncExchange: orders list query failed, error: %s", {error});
+				d.impl.methods.logOutput(d.impl, str, 5);
+			}
+			d.stage	+= 1;
+			d.phase = 0;
+		}
+	}
+
+	if (d.stage == STAGE_GET_BALANCES) {
+		if (!d.phase) {
+			d.phase = 1;
+			d.fout.fpop(d.fout.fsize);
+			d.impl.data.exchange.methods.getBalances(d.fout, d.impl.data.exchange, code, d,
+				d.impl.data.currencies);
+			return;
+		} else {
+			if (!error.csize) {
+				char str[];
+				strcat(str, "syncExchange: balances (free/busy): ");
+				int i;
+				float sum;
+				for (i = 0; i < d.impl.data.currencies.lsize; i += 1) {
+					float  total = d.fout[i * BALANCE_END + BALANCE_TOTAL],
+						hold = d.fout[i * BALANCE_END + BALANCE_HOLD ], rate;
+					printf(str, "%s: %11.6f/%11.6f; ", {d.impl.data.currencies[i],
+						total - hold + 0.0000004, hold + 0.0000004});
+					if (i < d.impl.data.balance.fsize) {
+						d.impl.data.balance[i] = total - hold;
+						(error, rate) = d.impl.methods.getCurrentRate(d.impl, 0, i);
+						if (error.csize) {
+							char s[];
+							printf(s, "syncExchange: get currency %s rate failed, error: %s",
+								{d.impl.data.currencies[i], error});
+							d.impl.methods.logOutput(d.impl, s, 5);
+						} else
+							sum += total * rate;
+					}
+				}
+				printf(str, "total: %7.2f %s", {d.impl.data.currencies[0], sum + 0.004});
+				d.impl.methods.logOutput(d.impl, str, 8);
+			} else {
+				char str[];
+				printf(str, "syncExchange: get balances query failed, error: %s", {error});
+				d.impl.methods.logOutput(d.impl, str, 5);
+			}
+			d.stage	+= 1;
+			d.phase = 0;
+		}
+	}
+
+	if (d.stage == STAGE_ORDER_STATUS) {
+		forexOrder open[] = d.impl.data.orders, closed[] = d.closedOrders;
+
+		if (d.phase) {
+			d.phase -= 1;
+
+			forexOrder order = closed[d.phase];
+			char mess[], txid[] = order.txid;
+			int action, status;
+
+			if (!error.csize) {
+				status = d.iout[0];
+			} else {
+				char str[];
+				printf(str, "syncExchange: order %d (%s) get status failed, error: %s",
+					{txid, error, order.id});
+				d.impl.methods.logOutput(d.impl, str, 5);
+				status = ORDER_STATUS_UNKNOWN;
+			}
+
+			if (status == ORDER_STATUS_EXECUTED) {
+				action = ORDER_ACTION_EXECUTED;
+			} else if (status == ORDER_STATUS_CANCELED) {
+				action = ORDER_ACTION_CANCELED;
+				mess = "processed";
+			} else if (status == ORDER_STATUS_EXPIRED) {
+				action = ORDER_ACTION_EXPIRED;
+				mess = "processed";
+			} else {
+				mess = "assumed as opened";
+				action = -1;
+			}
+
+			if (action >= 0) {
+				int i;
+				for (i = 0; i < open.lsize && open[i] != order; i += 1);
+				if (i < open.lsize) {
+					order.txid = "\n";
+					processOrder(d.impl, i, action);
+				} else
+					mess = "closed by other order";
+				d.done = 1;
+			}
+
+			if (mess.csize) {
+				const char statuses[][] = {"unknown", "pending", "open", "executed", "canceled", "expired"};
+				char str[];
+				printf(str, "syncExchange: order %d (%s) not listed but reported status as %s: %s",
+					{txid, statuses[status], mess, order.id});
+				d.impl.methods.logOutput(d.impl, str, 5);
+			}
+
+			d.phase += 1;
+		}
+
+		if (d.phase < closed.lsize) {
+			d.phase += 1;
+			d.iout.ipop(d.iout.isize);
+			d.impl.data.exchange.methods.getOrderStatus(d.iout, d.impl.data.exchange, code, d, closed[d.phase - 1].txid);
+			return;
+		} else {
+			closed.lpop(closed.lsize);
+			d.stage	+= 1;
+			d.phase = 0;
+		}
+	}
+
+	if (d.stage == STAGE_CANCEL_ALL) {
+		if (!(d.flags & SYNC_CANCEL_ALL))
+			d.stage += 1;
+		else if (!d.phase) {
+			d.phase = 1;
+			d.iout.ipop(d.iout.isize);
+			d.impl.data.exchange.methods.cancelAll(d.iout, d.impl.data.exchange, code, d);
+			return;
+		} else {
+			if (!error.csize) {
+				char str[];
+				printf(str, "syncExchange: %d orders cancelled", {d.iout[0]});
+				d.impl.methods.logOutput(d.impl, str, 7);
+			} else {
+				char str[];
+				printf(str, "syncExchange: cancelling all orders failed, error: %s", {error});
+				d.impl.methods.logOutput(d.impl, str, 5);
+			}
+			d.flags &= ~SYNC_CANCEL_ALL;
+			d.stage	+= 1;
+			d.phase = 0;
+		}
+	}
+
+	if (d.stage == STAGE_CANCEL_ORDERS) {
+		forexOrder closed[] = d.impl.data.closedOrders;
+		if (d.phase) {
+			d.phase -= 1;
+			if (!error.csize) {
+				char str[];
+				printf(str, "syncExchange: order %d (%s) cancelled",
+					{closed[d.phase].txid, closed[d.phase].id});
+				d.impl.methods.logOutput(d.impl, str, 7);
+				closed[d.phase] = closed[closed.lsize - 1];
+				closed.lpop(1);
+				d.done = 1;
+			} else {
+				char str[];
+				printf(str, "syncExchange: order %d (%s) cancelling failed, error: %s",
+					{closed[d.phase].txid, error, closed[d.phase].id});
+				d.impl.methods.logOutput(d.impl, str, 5);
+				if (strstr(error, "not found") >= 0) {
+					closed[d.phase] = closed[closed.lsize - 1];
+					closed.lpop(1);
+					d.done = 1;
+				} else
+					d.phase += 1;
+			}
+		}
+
+		if (d.phase < closed.lsize) {
+			d.phase += 1;
+			d.impl.data.exchange.methods.cancelOrder(d.impl.data.exchange, code, d, closed[d.phase - 1].txid);
+			return;
+		} else {
+			d.stage	+= 1;
+			d.phase = 0;
+		}
+	}
+
+	if (d.stage == STAGE_ADD_ORDERS) {
+		forexOrder open[] = d.impl.data.orders;
+		if (d.phase) {
+			d.phase -= 1;
+			forexOrder ord = open[d.phase];
+			if (!error.csize) {
+				ord.txid = d.txid;
+				char str[];
+				printf(str, "syncExchange: order %d (%s) added", {ord.txid, ord.id});
+				d.impl.methods.logOutput(d.impl, str, 7);
+				d.done = 1;
+			} else {
+				char str[];
+				printf(str, "syncExchange: order %d adding failed, error: %s", {error, ord.id});
+				d.impl.methods.logOutput(d.impl, str, 5);
+			}
+			d.phase += 1;
+		}
+
+		while (d.phase < open.lsize && open[d.phase].txid.csize)
+			d.phase += 1;
+
+		if (d.phase < open.lsize) {
+			forexOrder ord = open[d.phase];
+			d.phase += 1;
+			char txid[];
+			d.txid = txid;
+			char pair[];
+			printf(pair, "%s%s", {d.impl.data.currencies[1], d.impl.data.currencies[0]});
+			const char types[][] = {"MARKET  ", "LIMIT   ", "STOPLOSS", "TRAILING"};
+			const char directions[][] = {"ADD$", "BUY ", "SELL", "ADD@"};
+			char str[];
+			int typ = ord.orderType, dir = ord.currencyFrom << 1 | ord.currencyTo;
+			float volume = ord.amount, price = ord.rate;
+			if (!ord.currencyFrom)
+				volume *= price, price = 1 / price;
+			volume = round(volume);
+			price = round(price);
+			printf(str, "syncExchange: adding order %d: %s %s %s %11.6f at %7.2f",
+					{pair, types[typ], directions[dir], ord.id, volume + 0.0000004, price + 0.004});
+			d.impl.methods.logOutput(d.impl, str, 9);
+			d.impl.data.exchange.methods.addOrder(d.txid, d.impl.data.exchange, code, d, pair, typ,
+				dir, volume, price);
+			return;
+		} else {
+			d.stage	+= 1;
+			d.phase = 0;
+		}
+	}
+
+	if (d.stage == STAGE_GET_BALANCES_FIN) {
+		if (d.done || !(d.flags & SYNC_SHOW_STAT))
+			d.stage += 1;
+		else if (!d.phase) {
+			d.phase = 1;
+			d.fout.fpop(d.fout.fsize);
+			d.impl.data.exchange.methods.getBalances(d.fout, d.impl.data.exchange, code, d,
+				d.impl.data.currencies);
+			return;
+		} else {
+			if (!error.csize) {
+				char str[];
+				strcat(str, "syncExchange: balances (free/busy): ");
+				int i;
+				float sum;
+				for (i = 0; i < d.impl.data.currencies.lsize; i += 1) {
+					float  total = d.fout[i * BALANCE_END + BALANCE_TOTAL],
+						hold = d.fout[i * BALANCE_END + BALANCE_HOLD ], rate;
+					printf(str, "%s: %11.6f/%11.6f; ", {d.impl.data.currencies[i],
+						total - hold + 0.0000004, hold + 0.0000004});
+					if (i < d.impl.data.balance.fsize) {
+						d.impl.data.balance[i] = total - hold;
+						(error, rate) = d.impl.methods.getCurrentRate(d.impl, 0, i);
+						if (error.csize) {
+							char s[];
+							printf(s, "syncExchange: get currency %s rate failed, error: %s",
+								{d.impl.data.currencies[i], error});
+							d.impl.methods.logOutput(d.impl, s, 5);
+						} else
+							sum += total * rate;
+					}
+				}
+				printf(str, "total: %7.2f %s", {d.impl.data.currencies[0], sum + 0.004});
+				d.impl.methods.logOutput(d.impl, str, 8);
+			} else {
+				char str[];
+				printf(str, "syncExchange: get balances query failed, error: %s", {error});
+				d.impl.methods.logOutput(d.impl, str, 5);
+			}
+			d.stage	+= 1;
+			d.phase = 0;
+		}
+	}
+
+	if (d.stage == STAGE_END) {
+		if (d.done) {
+			d.stage = STAGE_BEGIN;
+			code(d, "");
+			return;
+		} else if (d.flags & SYNC_SHOW_STAT) {
+			char str[];
+			int leb = d.impl.data.stats[ORDER_TYPE_LIMIT][ORDER_ACTION_EXECUTED][ORDER_DIRECTION_BUY],
+			    les = d.impl.data.stats[ORDER_TYPE_LIMIT][ORDER_ACTION_EXECUTED][ORDER_DIRECTION_SELL],
+			    lcb = d.impl.data.stats[ORDER_TYPE_LIMIT][ORDER_ACTION_CANCELED][ORDER_DIRECTION_BUY],
+			    lcs = d.impl.data.stats[ORDER_TYPE_LIMIT][ORDER_ACTION_CANCELED][ORDER_DIRECTION_SELL],
+			    le = leb + les,
+			    l = leb + les + lcb + lcs,
+			    ted = d.impl.data.success[1][1],
+			    teu = d.impl.data.success[1][2],
+			    td  = d.impl.data.count[1][1],
+			    tu  = d.impl.data.count[1][2],
+			    te  = ted + teu,
+			    t   = td + tu;
+			l += (l == 0);
+			le += (le == 0);
+			t += (t == 0);
+			te += (te == 0);
+			printf(str, "Stats (up/down/succUp/succDown/succ): orders %6.2f%%/%6.2f%%/%6.2f%%/%6.2f%%/%6.2f%%, predictions %6.2f%%/%6.2f%%/%6.2f%%/%6.2f%%/%6.2f%%",
+				{100.0 * (les + lcs) / l, 100.0 * (leb + lcb) / l,
+				 100.0 * les / le, 100.0 * leb / le, 100.0 * (leb + les) / l,
+				 100.0 * (teu + td - ted) / t, 100.0 * (ted + tu - teu) / t,
+				 100.0 * teu / te, 100.0 * ted / te, 100.0 * (teu + ted) / t});
+			d.impl.methods.logOutput(d.impl, str, 6);
+		}
+	}
+
+	d.callback(d.data, "");
+	return;
+};
+
+(volatile stateful any forexObj, const (volatile stateful any data, const char error[]) -> () callback,
+		volatile stateful any data, int flags) -> () syncExchange = {
+	forexImpl impl;
+	char err[] = convertObjToImpl(impl, forexObj, "syncExchange");
+	if (err.csize)
+		return callback(data, err);
+
+	if (!impl.data.exchangeSet)
+		return callback(data, mkError("exchange is not set", "syncExchange"));
+
+	syncData d = {impl, callback, data};
+	d.flags = flags;
+
+	syncCallback(d, "");
+	return;
+};

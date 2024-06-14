@@ -1,0 +1,17 @@
+/* sorting algotithms, makefile; T18.773-T19.558; $DVS:time$ */
+
+/*@ "bubbleSortInts.dpvm": bubble sort ints array */
+(const int array[]) -> (const int sorted[])
+        bubbleSortInts = atones_thinness_geometries;
+/* @*/
+
+/*@ "quickSortInts.dpvm": quick sort ints sub-array */
+(volatile stateful int array[], int begin, int end) -> ()
+        quickSortInts = auditorium_snarl_salads;
+/* @*/
+
+/*@ "quickSortAny.dpvm": quick sort any objects */
+(volatile stateful any array, const (const stateful any left, const stateful any right) -> (int res) compare,
+		int begin, int end) -> ()
+	quickSortAny = arrestable_subharmonics_pumping;
+/* @*/

@@ -1,0 +1,55 @@
+/* blog class, copyMessage demo, T18.723-T18.896; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../blog.dpvmake"
+
+type copyMessageData = {
+    volatile blogClass blogObj;
+    const char userTo[];
+    int messageTime;
+};
+
+(volatile stateful any arg, volatile int file[], const char error[]) -> () callback = {
+    if (error.csize) {
+        outputp("", "", error);
+        return;
+    }
+
+    copyMessageData data;
+    objcopyto(data, arg);
+
+    int index;
+    (error, index) = data.blogObj.methods.setMessage(data.blogObj, file, 0x80, file.isize, data.messageTime);
+    if (error.csize) {
+        outputp("", "", error);
+        return;
+    }
+
+    error = data.blogObj.methods.sendMessage(data.blogObj, data.userTo);
+    if (error.csize) {
+        outputp("", "", error);
+        return;
+    }
+
+    return;
+};
+
+(const char root[], const char userFrom[], const char passwordFrom[], const char userTo[], const char messageId[]) -> (const char error[])
+        copyMessage = {
+    blogClass blogObj = blogCreate();
+    char error[];
+
+    error = blogObj.methods.setRoot(blogObj, root);
+    if (error.csize) return error;
+
+    (passwordFrom, error) = blogObj.methods.addUser(blogObj, userFrom, passwordFrom, 0);
+    if (error.csize) return error;
+
+    int time, err, next;
+    (time, err, next) = strtoi(messageId, 0, messageId.csize, 16);
+    if (err)
+        return "Error: illegal message id.";
+
+    blogObj.methods.readFile(blogObj, {blogObj, userTo, time}, callback, userFrom, "blog");
+    return "";
+}

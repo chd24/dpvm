@@ -1,0 +1,59 @@
+/* test internal cgi module */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "cgi.dpvmh"
+
+const char version[] = "test cgi module 0.1.2, T18.742-T18.888"; /* $DVS:time$ */
+
+int TIMEOUT = 10000000000;
+
+type testData = {
+	int pos;
+};
+
+(volatile stateful testData data, const char text[], int status) -> () inputCallback = {
+	if (status <= 0) {
+		outputp("", "", "\r\n<hr></body></html>");
+		return;
+	}
+
+	if (!data.pos) {
+		outputp("", "", "Input:\r\n<hr>\r\n");
+		data.pos = 1;
+	}
+	outputp("", "", text);
+	input(code, data, 0x100000, TIMEOUT);
+	return;
+};
+
+(const char path[], const char env[][]) -> (int status) testCgi = {
+    char out[];
+
+    printf(out, "Content-Type: text/html;charset=utf-8\r\n\r\n", {});
+    printf(out, "<!DOCTYPE html>\r\n<html><head><title>Test cgi module</title></head>\r\n<body><h1>Test cgi module</h1><hr>", {});
+    printf(out, "<p>path = %s</p>\r\n", {path});
+    printf(out, "<p>version = %s</p>\r\n", {version});
+
+    int i, post;
+    for (i = 0; i < env.lsize; i += 1) {
+	post |= (env[i] == "REQUEST_METHOD=POST");
+	printf(out, "<p>%s</p>\r\n", {env[i]});
+    }
+
+    outputp("", "", out);
+
+    testData data;
+
+    if (post)
+	input(inputCallback, data, 0x100000, TIMEOUT);
+    else
+	inputCallback(data, "", 0);
+
+    return 200;
+};
+
+cgiModule testCgiModule = {
+    "/cgi-bin/test.cgi",
+    version,
+    testCgi
+};

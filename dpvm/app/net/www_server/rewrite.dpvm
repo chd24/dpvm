@@ -1,0 +1,76 @@
+/* www server: rewrite; T15.560-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+
+(const char relpath[], const char query[]) -> (const char relpath[], const char query[]) {
+	char relpath0[] = relpath;
+	int size = relpath0.csize;
+
+	if (!strstr(relpath0, "/scripts/te/")) {
+		if (strstr(relpath0, ".js") + 3 == size) {
+			char query1[];
+			strcat(query1, "f=");
+			substrcat(query1, relpath0, 12, size - 3);
+			return ("/cgi-bin/gentejs.cgi", query1);
+		}
+	}
+
+	char query0[] = query;
+	char query1[];
+	query = query1;
+
+	char name[];
+	int i;
+	int n;
+	for (i = 0; i <= size; i += 1) {
+		int c = '/';
+		if (i < size)
+			c = relpath0[i];
+		if (c != '/')
+			name.cpush(c);
+		else if (name.csize) {
+			if (n == 0) {
+				int r = name != "log";
+                int t = name != "blog" && name != "blog0" && r;
+                int s = name != "dsearch" && name != "tester" && name != "choose" && t;
+				if (s)
+					return (relpath, query0);
+				char relpath1[];
+				relpath = relpath1;
+				strcat(relpath, "/cgi-bin/");
+				strcat(relpath, name);
+				strcat(relpath, ".cgi");
+				if (t)
+					return (relpath, query0);
+				if (!r)
+					n = 6;	/* for log */
+			} else if (n == 1) {
+				strcat(query, "u=");
+				strcat(query, name);		
+			} else if (n == 2) {
+				strcat(query, "&p");
+				int t = query.csize;
+				strcat(query, name);
+				query[t] = '=';
+			} else if (n == 3) {
+				strcat(query, "&t=");
+				strcat(query, name);		
+			} else if (n == 4) {
+				strcat(query, "&f=");
+				strcat(query, name);
+			} else if (n == 5) {
+				strcat(query, "/");
+				strcat(query, name);
+				n = n - 1;
+			} else if (n == 7) {
+				strcat(query, "l=");
+				strcat(query, name);
+				n = 3;
+			}
+			n += 1;
+			name.cpop(name.csize);
+		}
+	}
+
+	return (relpath, query);
+}

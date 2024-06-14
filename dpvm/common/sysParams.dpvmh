@@ -1,0 +1,41 @@
+/* dpvm: list of system parameters for use both in dpvm source and programs; T19.050-T20.029; $DVS:time$ */
+
+/* global system parameters */
+int DPVM_SYS_PARAM_TIME			= 0x000 + _Z;
+int DPVM_SYS_PARAM_NOBJECTS		= 0x001 + _Z;
+int DPVM_SYS_PARAM_NTHREADS		= 0x002 + _Z;
+int DPVM_SYS_PARAM_NACTIVE		= 0x003 + _Z;
+int DPVM_SYS_PARAM_NPTHREADS		= 0x004 + _Z;
+int DPVM_SYS_PARAM_NADDRS		= 0x005 + _Z;
+int DPVM_SYS_PARAM_NMESS		= 0x006 + _Z;
+int DPVM_SYS_PARAM_QSIZE		= 0x007 + _Z;
+int DPVM_SYS_PARAM_QTIME		= 0x008 + _Z;
+int DPVM_SYS_PARAM_NTRANSACTIONS	= 0x009 + _Z;
+int DPVM_SYS_PARAM_NRESULTS		= 0x00A + _Z;
+int DPVM_SYS_PARAM_MEMORY		= 0x00B + _Z;
+int DPVM_SYS_PARAM_ALLOCED		= 0x00C + _Z;
+int DPVM_SYS_PARAM_MAPPED		= 0x00D + _Z;
+
+/* error handler parameters */
+int DPVM_SYS_PARAM_ERROR		= 0x100 + _Z;
+int DPVM_SYS_PARAM_CODE			= 0x101 + _Z;
+int DPVM_SYS_PARAM_POS			= 0x102 + _Z;
+int DPVM_SYS_PARAM_FUNC_SHORT		= 0x103 + _Z;
+int DPVM_SYS_PARAM_ERROR_END		= 0x104 + _Z;
+
+/* task parameters */
+int DPVM_SYS_PARAM_FLAGS		= 0x200 + _Z;
+int DPVM_SYS_PARAM_ID			= 0x201 + _Z;
+int DPVM_SYS_PARAM_ID_CHILD		= 0x202 + _Z;
+int DPVM_SYS_PARAM_ID_NEXT		= 0x203 + _Z;
+int DPVM_SYS_PARAM_NTASKS		= 0x204 + _Z;
+int DPVM_SYS_PARAM_MEMORY_QUOTA		= 0x205 + _Z;
+int DPVM_SYS_PARAM_CHECKER_HASH		= 0x208 + _Z;
+int DPVM_SYS_PARAM_TRANSLATOR_HASH	= 0x20C + _Z;
+int DPVM_SYS_PARAM_HASHES_END		= 0x210 + _Z;
+
+/* task name */
+int DPVM_SYS_PARAM_NAME			= 0x300 + _Z;
+int DPVM_SYS_PARAM_NAME_END		= 0x320 + _Z;
+
+int DPVM_SYS_PARAM_END			= 0x320 + _Z;

@@ -1,0 +1,77 @@
+/* dnet node, conn command; T17.563-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) conn_func {
+	char m[];
+	strcat(m, "Current connections:\r\n");
+
+	dnet_connection cc[] = ctx.conns;
+
+	int i;
+	int n;
+	for (i = 0; i < cc.lsize; i += 1) {
+		dnet_connection c = cc[i];
+
+		if (c.thread_id >= 0) {
+			char a[];
+			strcat(a, "  ");
+			printint(a, n, 1);
+			substrcat(m, a, a.csize - 3, a.csize);
+			strcat(m, ". ");
+
+			char b[];
+			printip(b, c.ip0, c.ip1);
+			strcat(b, ":");
+			printint(b, c.port, 1);
+
+			char d[];
+			if (c.flags & DNET_CONN_FINISHED) {
+				printint(d, (c.last_time - c.start_time) / 1000000000, 1);
+				d.cpush('+');
+				printint(d, (ctx.last_time - c.last_time) / 1000000000, 1);
+			} else
+				printint(d, (ctx.last_time - c.start_time) / 1000000000, 1);
+
+			while(b.csize + d.csize < 30)
+				b.cpush(' ');
+			strcat(m, b);
+			strcat(m, d);
+			strcat(m, " sec, flags ");
+
+			printhex(m, c.flags, 1, 0);
+			strcat(m, ", ");
+
+			printint(m, c.in_bytes, 1);
+			strcat(m, "/");
+			printint(m, c.out_bytes, 1);
+			strcat(m, " in/out bytes, ");
+
+			printint(m, c.in_packets, 1);
+			strcat(m, "/");
+			printint(m, c.out_packets, 1);
+			strcat(m, " packets, ");
+
+			printint(m, c.in_dropped, 1);
+			strcat(m, "/");
+			printint(m, c.out_dropped, 1);
+			strcat(m, " dropped");
+
+			strcat(m, "\r\n");
+
+			n += 1;
+		}
+	}
+
+	return (m, 0);
+}
+
+dnet_command conn_command = {
+	"conn",
+	"list connections",
+	conn_func,
+	0,
+	0		
+};

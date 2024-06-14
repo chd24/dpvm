@@ -1,0 +1,54 @@
+/* check_recursive, main file; T17.638-T20.056; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/algorithms/vectorset/vectorset.dpvmake"
+#include "checker.dpvmake"
+
+(const stateful any func) -> (const char error[]) {
+	int hashset[];
+	any todolist[];
+	int todopos;
+
+	addint(hashset, func);
+	todolist.lpush(func);
+
+	for (todopos = 0; todopos < todolist.lsize; todopos += 1) {
+		int flags;
+		any funcs[];
+		checker_data data;
+		char error[];
+
+		func = todolist.l[todopos];
+
+		(funcs, data, error, flags) = checker(func);
+
+                if (flags & CHECKER_ILLEGAL) {
+                    (funcs, data, error, flags) = checker_internal(func, CHECKER_MODE_DEBUG);
+                    return error;
+                }
+
+		int i;
+		for (i = 1; i < func.csize; i += 1) {
+			if (data.code_map[i] && func.c[i] >= 0xE0) {
+				int pos = data.states.l[i].lsize;
+				stack_state st = data.states.l[i - 1];
+				if (st.c[pos] & CHECKER_OBJ && st.l[pos].csize)
+					funcs.lpush(st.l[pos]);
+			}
+		}
+
+		for (i = 0; i < funcs.lsize; i += 1) {
+			func = funcs.l[i];
+			if (findint(hashset, func) < 0) {
+				addint(hashset, func);
+				todolist.lpush(func);
+			}
+		}
+	}
+
+	char mess[];
+	strcat(mess, "check_recursive: ");
+	printint(mess, todolist.lsize, 1);
+	strcat(mess, " functions successfully checked.");
+	return mess;
+}

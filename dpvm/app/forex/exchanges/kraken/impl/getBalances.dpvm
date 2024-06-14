@@ -1,0 +1,151 @@
+/* kraken class, getData() method implementation, T19.829-T20.040; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../../common/sysParams.dpvmh"
+#include "../../../../../common/mpopenFlags.dpvmh"
+#include "../../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../../lib/math/crypto/json/json.dpvmake"
+#include "kraken.dpvmake"
+
+int TIMEOUT = 60000000000;
+
+type getBalancesData = {
+	volatile stateful krakenImpl impl;
+	volatile stateful float out[];
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	const char currencies[][];
+	volatile char text[];
+};
+
+(volatile stateful getBalancesData d, const char text[], int status) -> () inputCallback = {
+	if (status < 0 && !d.text.csize) {
+		char error[];
+		printf(error, "Input failed: error %d.", {status});
+		d.callback(d.data, error);
+		return;
+	}
+	if (status > 0) {
+		strcat(d.text, text);
+		input(code, d, 0x100000, TIMEOUT);
+		return;
+	}
+	if (!d.text.csize) {
+		d.callback(d.data, "Empty output.");
+		return;
+	}
+
+	jsonClass json = jsonCreate();
+	jsonMethods j = json.methods;
+	jsonObject obj;
+	char error[];
+	int next;
+	(obj, error, next) = j.deserialize(d.text, 0, d.text.csize);
+	if (error.csize) {
+		d.callback(d.data, error);
+		return;
+	}
+	jsonObject err = j.getObjectByIndex(j.getObjectByName(obj, "error"), 0);
+	if (!j.isNull(err)) {
+		char e[];
+		error = j.getString(e, err);
+		if (error.csize)
+			d.callback(d.data, error);
+		else
+			d.callback(d.data, e);
+		return;
+	}
+
+	jsonObject res = j.getObjectByName(obj, "result");
+	if (j.isNull(res)) {
+		d.callback(d.data, "No result found");
+		return;
+	}
+
+	int i;
+	for (i = 0; i < d.currencies.lsize; i += 1) {
+		jsonObject item = j.getObjectByName(res, d.currencies[i]);
+		if (j.isNull(item)) {
+			char zname[];
+			printf(zname, "Z%s", {d.currencies[i]});
+			item = j.getObjectByName(res, zname);
+		}
+		if (j.isNull(item)) {
+			char xname[];
+			printf(xname, "X%s", {d.currencies[i]});
+			item = j.getObjectByName(res, xname);
+		}
+		int k;
+		for (k = 0; k < BALANCE_END; k += 1) {
+			float f;
+			if (!j.isNull(item)) {
+				char field[];
+				if (k == BALANCE_TOTAL)
+					field = "balance";
+				else if (k == BALANCE_HOLD)
+					field = "hold_trade";
+				char str[];
+				error = j.getString(str, j.getObjectByName(item, field));
+				if (!error.csize) {
+					any x;
+					scanf(x, "%f", str, 0, str.csize);
+					if (x.fsize)
+						f = x.f[0];
+					else
+						error = "Float not found in string";
+				}
+				if (error.csize) {
+					d.callback(d.data, error);
+					return;
+				}
+			}
+			d.out.fpush(f);
+		}
+	}
+
+	d.callback(d.data, "");
+	return;
+};
+
+(volatile stateful getBalancesData d, int status) -> () mpopenCallback = {
+	if (status != DPVM_MPOPEN_READ) {
+		char error[];
+		printf(error, "Mpopen failed: error %d.", {status});
+		d.callback(d.data, error);
+		return;
+	}
+	char text[];
+	d.text = text;
+	input(inputCallback, d, 0x100000, TIMEOUT);
+	return;
+};
+
+(volatile stateful getBalancesData d, const int values[]) -> () timeCallback = {
+	d.impl.data.nonce = values[0];
+
+	char args[][];
+	char error[];
+	(args, error) = formPrivateQuery(d.impl, "BalanceEx", "");
+	mpopen(mpopenCallback, d, WGET_BIN, args, DPVM_MPOPEN_READ);
+	return;
+};
+
+(volatile stateful float out[], volatile stateful any krakenObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char currencies[][]) -> () getBalances = {
+	krakenImpl impl;
+	char err[] = convertObjToImpl(impl, krakenObj, "getBalances");
+	if (err.csize) {
+		callback(data, err);
+		return;
+	}
+
+	char text[];
+	getBalancesData d = {impl, out, callback, data, currencies, text};
+
+	const int vars[] = {DPVM_SYS_PARAM_TIME};
+	int values[] = {impl.data.nonce + REQUEST_INTERVAL};
+	setsys(timeCallback, d, vars, values);
+	return;
+
+}

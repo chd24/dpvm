@@ -1,0 +1,75 @@
+/* dfs class, methods implementation, T18.798-T19.059; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../te/te.dpvmake"
+#include "dfs.dpvmake"
+#include "version.dpvmh"
+
+(int time) -> (int dfsTime) time2dfsTime = {
+	int teTime = teObj.utilities.time2teTime(time), dfsTime = (teTime >> 32) << 2;
+
+	teTime &= 0xffffffff, teTime *= 1000, dfsTime <<= 10, dfsTime |= teTime >> 32;
+	teTime &= 0xffffffff, teTime *= 1000, dfsTime <<= 10, dfsTime |= teTime >> 32;
+	teTime &= 0xffffffff, teTime *= 1000, dfsTime <<= 10, dfsTime |= teTime >> 32;
+
+	return dfsTime;
+};
+
+(int dfsTime) -> (int time) dfsTime2Time = {
+	int teTime = (((dfsTime >> 20 & 0x3ff) * 1000000 + (dfsTime >> 10 & 0x3ff) * 1000 + (dfsTime & 0x3ff)) << 32) / 1000000000;
+	return teObj.utilities.teTime2Time(teTime | dfsTime & 0xffffffff00000000);
+};
+
+(volatile stateful any dfsObj) -> (const char error[], int flags) getFlags = {
+	dfsImpl impl;
+	char err[] = convertObjToImpl(impl, dfsObj, "getFlags");
+	if (err.csize) return (err, 0);
+
+	return ("", impl.data.flags);
+};
+
+(volatile stateful any dfsObj, int flags) -> (const char error[]) setFlags = {
+	dfsImpl impl;
+	char err[] = convertObjToImpl(impl, dfsObj, "setFlags");
+	if (err.csize) return err;
+
+	if (flags & ~(DFS_FLAG_DEBUG))
+		return mkError("unsupported flags", "setFlags");
+
+	impl.data.flags = flags;
+	return "";
+};
+
+(volatile stateful any dfsObj, volatile int volume[], int begin) -> (const char error[]) addVolumePart = {
+	dfsImpl impl;
+	char err[] = convertObjToImpl(impl, dfsObj, "addVolumePart");
+	if (err.csize) return err;
+
+	err = checkVolumePart(volume, begin, 0);
+	if (err.csize) return err;
+
+	if (!impl.data.parts.lsize && begin)
+		return mkError("first volume part should contain its beginning", "addVolumePart");
+
+	dfsPart part = {volume, begin};
+	impl.data.parts.lpush(part);
+
+	return "";
+};
+
+dfsMethods dfsMethodsImpl = {
+	version,
+	time2dfsTime,
+	dfsTime2Time,
+	getFlags,
+	setFlags,
+	addVolumePart,
+	findPath,
+	getFileRuns,
+	resizeFile,
+	listCatalogue,
+	addToCatalogue,
+	addPath,
+	rolloutVolume
+};

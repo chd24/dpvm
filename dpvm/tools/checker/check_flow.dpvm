@@ -1,0 +1,45 @@
+/* flow checker; T16.016-T20.132; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "checker.dpvmh"
+
+(const stateful any func, const stateful int map[]) -> (int flags, volatile char cover[]) {
+	char cover[];
+	int i, size = map.isize;
+
+	for (i = size - 1; i >= 0; i--)
+		cover.cpush(0);
+
+	int flow = CHECKER_ILLEGAL;
+	for (i = 0; i < size; i++) {
+		int c = func.c[i];
+
+		flow |= cover[i];
+
+		if (flow) {
+			if (c == DPVM_CODE_RET)
+				flow = 2;
+
+			else if (c == DPVM_CODE_JB) {
+				int j = map[i], k = i;
+				do {
+					k--;
+					if (k == j) return (cover, flow);
+				} while (cover[k] != 2);
+				flow = 4;
+
+			} else if (c >= DPVM_CODE_JF && c <= DPVM_CODE_JNZF) {
+				int j = map[i];
+				cover[j] = 1;
+				if (c == DPVM_CODE_JF)
+					flow = 4;
+			}
+		}
+
+		cover[i] = flow;
+		flow &= CHECKER_ILLEGAL;
+	}
+
+	return (cover, flow);
+}

@@ -1,0 +1,26 @@
+/* finalize sha512 computation; T16.493-T19.991; $DVS:time$ */
+
+#include "sha512.dpvmake"
+
+(volatile stateful int ctx[]) -> () {
+	char str[];
+	int n;
+	int i;
+
+	str.cpush(0x80);
+
+	for (n = ctx[88] + 1; (n & 0x7f) != 0x70; n += 1)
+		str.cpush(0);
+
+	for (i = 0; i < 8; i += 1)
+		str.cpush(0);
+
+	n = ctx[88] << 3;
+	for (i = 56; i >= 0; i -= 8)
+		str.cpush(n >> i);
+
+	sha512_addSubstr(ctx, str, 0, str.csize);
+
+	ctx.ipop(81);
+	return;
+}

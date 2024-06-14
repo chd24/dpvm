@@ -1,0 +1,35 @@
+/* count output rule param from input params and pseudocode; T16.089-T17.665; $DVS:time$ */
+
+(const stateful int params[], int pseudocode) -> (int param) {
+	int st[];
+
+	st.ipush(pseudocode & 0xff);
+
+	for (pseudocode >>= 8; pseudocode; pseudocode >>= 8) {
+		int c = pseudocode & 0xff;
+
+		if (c < 0x40 && c < params.isize) {
+			st.ipush(params.i[params.isize - 1 - c]);
+		} else if (c >= 0x40 && c < 0x80 && c - 0x40 < params.isize) {
+			st.ipush(params.i[c - 0x40]);
+		} else if (c == 0x98 && st.isize > 1) { /* eq */
+			int n = st.i[st.isize - 2] == st.i[st.isize - 1];
+			st.ipop(1);
+			st[st.isize - 1] = n;
+		} else if (c == 0x9B && st.isize > 0) { /* neg */
+			st[st.isize - 1] = -st.i[st.isize - 1];
+		} else if (c == 0xC0 && st.isize > 1) { /* add */
+			int n = st.i[st.isize - 2] + st.i[st.isize - 1];
+			st.ipop(1);
+			st[st.isize - 1] = n;
+		} else if (c == 0xC1 && st.isize > 1) { /* sub */
+			int n = st.i[st.isize - 2] - st.i[st.isize - 1];
+			st.ipop(1);
+			st[st.isize - 1] = n;
+		} else if (c == 0xCF && st.isize > 0) { /* not */
+			st[st.isize - 1] = ~st.i[st.isize - 1];
+		}
+	}
+
+	return st[st.isize - 1];
+}

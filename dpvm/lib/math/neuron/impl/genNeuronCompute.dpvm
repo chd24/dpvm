@@ -1,0 +1,82 @@
+/* neuron class */
+char methodVersion[] = "genNeuronCompute() internal method, T19.484-T19.734"; /* $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "neuron.dpvmake"
+
+(volatile stateful char s[], const stateful neuronDataCompile data, int layerId, int groupId, int neuronId,
+		int mode, int startInput) -> (int startInput) genNeuronCompute = {
+	neuronNet net = data.net;
+	neuronLayer layer = net.layers[layerId];
+	neuronGroup group = layer.groups[groupId];
+	neuron n = group.neurons[neuronId];
+	int l;
+
+	printf(s, "\t/* neuron %d, mode %d, start from input %d */\r\n", {neuronId, mode, startInput});
+
+	/* generate source code for compute0 function */
+
+	if (!mode) {
+		int was, nobreak = !(data.flags & NEURON_SPLIT_SUMS),
+				inputIds[] = n.inputNeuronIds, weightIds[] = n.inputWeightIds;
+		if (startInput)
+			printf(s, "\to[%d] = o[%d]", {n.outputStartId, n.outputStartId}), was = 1;
+		else
+			printf(s, "\to[%d] = ", {n.outputStartId});
+		for (l = startInput; l < inputIds.isize && (nobreak || !was || s.csize < SOURCE_MAX); l += 1) {
+			if (was) s.cpush('+');
+			int gid = weightToGroup(layer, weightIds[l]);
+			char d = 'q' + gid;
+			printf(s, "%c[%d]", {weightIds[l] - layer.groups[gid].weightStartId, d});
+			if (inputIds[l] >= 0) {
+				neuron m = net.neurons[inputIds[l]];
+				char c = 'a' + m.groupId;
+				printf(s, "*%c[%d]", {m.outputStartId, c});
+			}
+			was = 1;
+		}
+		printf(s, ";\r\n", {});
+		if (l == inputIds.isize) {
+			l = -1;
+			printf(s, "\to[%d] = ", {n.outputStartId});
+			char argument[];
+			printf(argument, "o[%d]", {n.outputStartId});
+			printInlineFunction(s, n.activation.function, argument);
+			strcat(s, ";\r\n");
+		}
+
+	/* generate source code for propagate0 function */
+
+	} else {
+		int was, nobreak = !(data.flags & NEURON_SPLIT_SUMS),
+				inputIds[] = n.outputNeuronIds, weightIds[] = n.outputWeightIds;
+		layer = net.layers[layerId + 1];
+		if (startInput)
+			printf(s, "\tp[%d] = p[%d]", {n.outputStartId, n.outputStartId}), was = 1;
+		else
+			printf(s, "\tp[%d] = ", {n.outputStartId});
+		for (l = startInput; l < inputIds.isize && (nobreak || !was || s.csize < SOURCE_MAX); l += 1) {
+			if (was) s.cpush('+');
+			int gid = weightToGroup(layer, weightIds[l]);
+			char d = 'q' + gid;
+			printf(s, "%c[%d]", {weightIds[l] - layer.groups[gid].weightStartId, d});
+			if (inputIds[l] >= 0) {
+				neuron m = net.neurons[inputIds[l]];
+				char c = 'a' + m.groupId;
+				printf(s, "*%c[%d]", {m.outputStartId, c});
+			}
+			was = 1;
+		}
+		printf(s, ";\r\n", {});
+		if (l == inputIds.isize) {
+			l = -1;
+			printf(s, "\tp[%d] *= ", {n.outputStartId});
+			char argument[];
+			printf(argument, "o[%d]", {n.outputStartId});
+			printInlineFunction(s, n.activation.derivationFromFunction, argument);
+			strcat(s, ";\r\n");
+		}
+	}
+
+	return l;
+};

@@ -1,0 +1,40 @@
+/* blog class, internal header, T18.715-T19.350"; $DVS:time$ */
+
+#include "../../../algorithms/hashtable/hash.dpvmake"
+#include "../../dfs/dfs.dpvmake"
+#include "../blog.dpvmh"
+
+type blogUser = {
+	const char name[];
+	volatile int dfsCtx[];
+	volatile char env[][];
+	int envChanged;
+};
+
+type blogMessage = {
+	volatile dfsClass dfsObj;
+	const char path[];
+	const char raw[];
+	volatile char tip[];
+	volatile int dfsCtx[];
+	volatile any seed;
+	int inited;
+	int time;
+	int parentTime;
+	int dfsFlags;
+};
+
+type blogData = {
+	const char root[];
+	volatile blogUser users[];
+	volatile int fileIndexes[];
+	volatile int messages[][];
+	volatile hashData messagesHash;
+	volatile blogMessage message;
+	int currentTime;
+};
+
+type blogImpl = {
+	volatile blogData data;
+	const blogMethods methods;
+};

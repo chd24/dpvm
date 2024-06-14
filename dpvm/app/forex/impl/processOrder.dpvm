@@ -1,0 +1,84 @@
+/* forex class, processOrder internal method implementation, T19.780-T20.042; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "forex.dpvmh"
+
+int LOG_LEVEL = 8;
+
+(volatile stateful forexImpl impl, int orderNo, int action) -> () processOrder = {
+	const char types[][] = {"MARKET  ", "LIMIT   ", "STOPLOSS", "TRAILING"};
+	const char actions[][] = {"CREATED ", "EXECUTED", "EXPIRED ", "CANCELED"};
+	const char directions[][] = {"ADD$", "BUY ", "SELL", "ADD@"};
+	forexOrder order = impl.data.orders[orderNo];
+	int direction = order.currencyFrom << 1 | order.currencyTo, total, begin, end, i, j;
+
+	if (action == ORDER_ACTION_CREATED) {
+		begin = ORDER_ACTION_CREATED;
+		end = ORDER_ACTION_CREATED + 1;
+		impl.data.balance[order.currencyFrom] -= order.amount;
+
+	} else {
+		begin = ORDER_ACTION_CREATED + 1;
+		end = ORDER_ACTION_END;
+		impl.data.orders[orderNo] = impl.data.orders[impl.data.orders.lsize - 1];
+		impl.data.orders.lpop(1);
+		impl.data.nClosedOrders += 1;
+		if (order.txid != "\n") {
+			if (order.txid.csize)
+				impl.data.closedOrders.lpush(order);
+			if (action == ORDER_ACTION_EXECUTED || action == ORDER_ACTION_EXPIRED &&
+					(order.type == ORDER_TYPE_STOP_LOSS || order.type == ORDER_TYPE_TRAILING_STOP))
+				impl.data.balance[order.currencyTo] += order.amount * order.rate;
+			else
+				impl.data.balance[order.currencyFrom] += order.amount;
+		}
+	}
+
+	impl.data.stats[order.orderType][action][direction] += 1;
+
+	for (i = begin; i < end; i += 1)
+		for (j = ORDER_DIRECTION_BUY; j <= ORDER_DIRECTION_SELL; j += 1)
+			total += impl.data.stats[order.orderType][i][j];
+
+	if (!total)
+		total = 1;
+
+	float b00, b01, b10, b11, rate;
+	char mess[], err[];
+	(err, b00) = impl.methods.getBalance(impl, 0, BALANCE_TYPE_FREE);
+	(err, b01) = impl.methods.getBalance(impl, 1, BALANCE_TYPE_FREE);
+	(err, b10) = impl.methods.getBalance(impl, 0, BALANCE_TYPE_ORDERS);
+	(err, b11) = impl.methods.getBalance(impl, 1, BALANCE_TYPE_ORDERS);
+	(err, rate) = impl.methods.getCurrentRate(impl, 0, 1);
+	float b0 = b00 + b10, b1 = b01 + b11;
+	if (b0 < 0.00000001) b0 = 1;
+	if (b1 < 0.00000001) b1 = 1;
+
+	float amount0 = order.amount, amount1 = amount0, ordRate = order.rate, effRate = ordRate, backRate = ordRate;
+	if (order.orderType == ORDER_TYPE_TRAILING_STOP &&
+			action != ORDER_ACTION_EXECUTED && action != ORDER_ACTION_EXPIRED)
+		(err, effRate) = impl.methods.getCurrentRate(impl, order.currencyTo, order.currencyFrom);
+	else
+		backRate = 1 / ordRate;
+
+	if (direction == 0) {
+		amount1 = 0;
+	} else if (direction == 1) {
+		amount1 = amount0 * effRate;
+		ordRate = backRate;
+	} else if (direction == 2) {
+		amount0 = amount1 * effRate;
+	} else {
+		amount0 = 0;
+	}
+
+	printf(mess, "ORDER %4d %s %s %s %7.2f$/%13.8f@ at %8.2f (%10.6f%%) Balance: %7.2f$/%13.8f@, free: %6.2f%%/%6.2f%%, total: %7.2f$",
+		{types[order.orderType], actions[action], directions[direction], order.id, amount0, amount1, ordRate,
+		impl.data.stats[order.orderType][action][direction] * 100.0 / total, b00 + b10, b01 + b11,
+		b00 * 100 / b0, b01 * 100 / b1, b00 + b10 + rate * (b01 + b11)});
+	impl.methods.logOutput(impl, mess, LOG_LEVEL);
+
+	if (order.callback.csize)
+		order.callback(impl, order, action);
+	return;
+};

@@ -1,0 +1,79 @@
+/* replaces shifts by rotates; T16.576-T16.615; $DVS:time$ */
+
+#include "graphs.dpvmake"
+
+(volatile stateful schema s) -> () {
+	gate g = s.base;
+	int i;
+
+	g.depth = -1;
+
+	for (g = g.next, i = 0; g.depth >= 0; g = g.next, i = i + 1) {
+		g.depth = i;
+
+		if (g.op == op_or | g.op == op_add | g.op == op_xor) {
+			gate p = g.in0;
+			gate q = g.in1;
+
+			if (p.op == op_shl & q.op == op_shr
+			  | p.op == op_shr & q.op == op_shl) {
+				gate r = p.in0;
+				gate t = q.in0;
+				int sum = p.value + q.value;
+				
+				if (!r.op & r.depth == t.depth
+			  	 & !(((p.flags ^ g.flags) | (q.flags ^ g.flags)
+				    | (r.flags ^ g.flags)) & flag_32bit)
+				 & (sum == 32 & (g.flags & flag_32bit) != 0
+				  | sum == 64 & (g.flags & flag_32bit) == 0)) {
+					if (p.op == op_shl)
+						g.op = op_rol;
+					else
+						g.op = op_ror;
+					g.value = p.value;
+
+					g.in0 = r.in0;
+					if (r.flags & flag_in0right)
+						r.in0.out1 = g,
+						g.flags = g.flags | flag_in0right;
+					else
+						r.in0.out0 = g,
+						g.flags = g.flags & ~flag_in0right;
+
+					g.in1 = g;
+					g.flags = g.flags & ~flag_in1right;
+					g.edgesmask = g.edgesmask & ~2;
+
+					p.in0 = p;
+					p.in1 = p;
+					p.out0 = p;
+					p.out1 = p;
+					p.prev.next = p.next;
+					p.next.prev = p.prev;
+					p.prev = p;
+					p.next = p;
+
+					q.in0 = q;
+					q.in1 = q;
+					q.out0 = q;
+					q.out1 = q;
+					q.prev.next = q.next;
+					q.next.prev = q.prev;
+					q.prev = q;
+					q.next = q;
+
+					r.in0 = r;
+					r.in1 = r;
+					r.out0 = r;
+					r.out1 = r;
+					r.prev.next = r.next;
+					r.next.prev = r.prev;
+					r.prev = r;
+					r.next = r;
+				}
+			}
+		}
+	}
+
+	return;
+}

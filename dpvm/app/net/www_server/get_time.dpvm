@@ -1,0 +1,96 @@
+/* www server: get time; T15.546-T18.884; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+int TIMEOUT = 300000000000; /* 5 min */
+
+(const www_data arg) -> () conn_finish {
+	mrecvp("", "", arg.address, 1 << 63);
+	return;
+}
+
+(const www_data arg, const any obj, int status) -> () conn_cycle {
+	if (obj.lsize != 1 || status) {
+		conn_finish(arg);
+		return;
+	}
+
+	www_mess mess;
+	objcopyto(mess, obj.l[0]);
+
+	if (mess.close) {
+		conn_finish(arg);
+		return;
+	}
+
+	mrecvp(code, arg, arg.address, TIMEOUT);
+
+	www_data data;
+	objcopyto(data, arg);
+	
+	char req[];
+	char path[];
+	char relpath[];
+	char query[];
+	char content[];
+
+	if (mess.reqstart == -1)
+		mess.reqstart = 0;
+	else
+		data.time = 0;
+	substrcat(req, mess.request, mess.reqstart, mess.request.csize);
+	data.request = req;
+	data.path = path;
+	data.relpath = relpath;
+	data.query = query;
+	data.content = content;
+
+	input(read_request, data, 0x1000, TIMEOUT_WEB);
+
+	return;
+}
+
+(volatile www_data arg, int status) -> () conn_start {
+    if (status < 0) {
+        send_headers(arg, "", 520 - status, 0, 0);
+        return;
+    }
+
+    www_addr addr;
+	addr.version = arg.version;
+	addr.taskid = arg.taskid;
+	addr.time = arg.time;
+	addr.ipaddr0 = arg.ipaddr0;
+	addr.ipaddr1 = arg.ipaddr1;
+	addr.port = arg.port;
+	arg.address = addr;
+
+	www_mess mess;
+	mess.close = 0;
+	mess.reqstart = -1;
+	any obj;
+	obj.lpush(mess);
+
+	mrecvp("", "", arg.address, 0);
+
+	conn_cycle(arg, obj, 0);
+	return;
+}
+	
+(volatile www_data data, const stateful int result[]) -> () {
+	data.time = result[0];
+
+	if (data.flags & USE_SSL) {
+		char args[][];
+		args.lpush(data.ssl_cert);
+		args.lpush(data.ssl_pem);
+		char prog[];
+		strcat(prog, data.root);
+		strcat(prog, "/cgi-bin/sslproxy");
+		mpopen(conn_start, data, prog, args, 5);
+	} else
+		conn_start(data, 1);
+
+	return;
+}

@@ -1,0 +1,14 @@
+/* config class, loadp config type, T20.065-T20.065; $DVS:time$ */
+
+type loadpConfig = {
+	const any configObj;
+	const any program;
+	const any registry;
+	const char login[];
+	const char password[];
+	int taskid;
+	int time;
+	int delay;
+	int id;
+	float rating;
+};

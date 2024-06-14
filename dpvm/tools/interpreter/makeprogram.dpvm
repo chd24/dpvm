@@ -1,0 +1,156 @@
+/* make program for counting expression; T15.521-T19.640; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "interpreter.dpvmake"
+
+(const stateful registryData registry, const char src[], const any links)
+		-> (const char program[], int status) {
+	char p[];
+	int size;
+	int nl;
+	int ni;
+	int nf;
+	int nc;
+	int sum;
+	int status;
+	int tmp;
+	int n;
+	int i;
+	char c;
+
+	/* get info of expression */
+	size = src.csize;
+	char mess[];
+	(mess, nl, ni, nf, nc, status) = getinfo(registry, src, links, 0, size);
+	if (status < 0)
+	    return (mess, status);
+	sum = nl + ni + nf + nc;
+	status = (nl != 1 | sum != 1);
+
+	/* print header of program: */
+	strcat(p, "(volatile any O) -> (const any O) {\r\n");
+
+	i = 97;
+
+	/* print any vars declarations */
+	while (nl) {
+		n =  97; c = n; p.push(c);	/* a */
+		n = 110; c = n; p.push(c);	/* n */
+		n = 121; c = n; p.push(c);	/* y */
+		n =  32; c = n; p.push(c);	/*   */
+		n =   i; c = n; p.push(c);	/* X */
+		n =  59; c = n; p.push(c);	/* ; */
+		n =  10; c = n; p.push(c);	/* \n */
+		i = i + 1;
+		nl = nl - 1;
+	}
+
+	/* print int vars declarations */
+	while (ni) {
+		n = 105; c = n; p.push(c);	/* i */
+		n = 110; c = n; p.push(c);	/* n */
+		n = 116; c = n; p.push(c);	/* t */
+		n =  32; c = n; p.push(c);	/*   */
+		n =   i; c = n; p.push(c);	/* X */
+		n =  59; c = n; p.push(c);	/* ; */
+		n =  10; c = n; p.push(c);	/* \n */
+		i = i + 1;
+		ni = ni - 1;
+	}
+
+	/* print float vars declarations */
+	while (nf) {
+		n = 102; c = n; p.push(c);	/* f */
+		n = 108; c = n; p.push(c);	/* l */
+		n = 111; c = n; p.push(c);	/* o */
+		n =  97; c = n; p.push(c);	/* a */
+		n = 116; c = n; p.push(c);	/* t */
+		n =  32; c = n; p.push(c);	/*   */
+		n =   i; c = n; p.push(c);	/* X */
+		n =  59; c = n; p.push(c);	/* ; */
+		n =  10; c = n; p.push(c);	/* \n */
+		i = i + 1;
+		nf = nf - 1;
+	}
+
+	/* print char vars declarations */
+	while (nc) {
+		n =  99; c = n; p.push(c);	/* c */
+		n = 104; c = n; p.push(c);	/* h */
+		n =  97; c = n; p.push(c);	/* a */
+		n = 114; c = n; p.push(c);	/* r */
+		n =  32; c = n; p.push(c);	/*   */
+		n =   i; c = n; p.push(c);	/* X */
+		n =  59; c = n; p.push(c);	/* ; */
+		n =  10; c = n; p.push(c);	/* \n */
+		i = i + 1;
+		nc = nc - 1;
+	}
+
+	/* (X,X,...)= */
+	if (sum) {
+		if (sum > 1) {
+			n =  40; c = n; p.push(c);		/* ( */
+		}
+		i = 97;
+		ni = sum;
+		while (ni) {
+			n =   i; c = n; p.push(c);		/* X */
+			i = i + 1;
+			ni = ni - 1;
+			if (ni) {
+				n =  44; c = n; p.push(c);	/* , */
+			}
+		}
+		if (sum > 1) {
+			n =  41; c = n; p.push(c);		/* ) */
+		}
+		n =  61; c = n; p.push(c);			/* = */
+	}
+
+	/* copy expression */
+	i = 0;
+	for (i = 0; i < size; i = i + 1)
+		p.cpush(src[i]);
+
+	n =  59; c = n; p.push(c);			/* ; */
+	n =  10; c = n; p.push(c);			/* \n */
+
+	/* push results to object */
+	i = 97;
+	ni = sum;
+	while (ni) {
+		n =  79; c = n; p.push(c);		/* O */
+		n =  46; c = n; p.push(c);		/* . */
+		n = 112; c = n; p.push(c);		/* p */
+		n = 117; c = n; p.push(c);		/* u */
+		n = 115; c = n; p.push(c);		/* s */
+		n = 104; c = n; p.push(c);		/* h */
+		n =  40; c = n; p.push(c);		/* ( */
+		n =   i; c = n; p.push(c);		/* X */
+		n =  41; c = n; p.push(c);		/* ) */
+		n =  59; c = n; p.push(c);		/* ; */
+		n =  10; c = n; p.push(c);		/* \n */
+		i = i + 1;
+		ni = ni - 1;
+	}
+
+	/* return */
+	n = 114; c = n; p.push(c);			/* r */
+	n = 101; c = n; p.push(c);			/* e */
+	n = 116; c = n; p.push(c);			/* t */
+	n = 117; c = n; p.push(c);			/* u */
+	n = 114; c = n; p.push(c);			/* r */
+	n = 110; c = n; p.push(c);			/* n */
+	p.cpush(' ');
+	n =  97; 
+	if (status) n = 79;
+	p.cpush(n);					/* O|a */
+	n =  59; c = n; p.push(c);			/* ; */
+	n =  10; c = n; p.push(c);			/* \n */
+		
+	/* footer */
+	n = 125; c = n; p.push(c);			/* } */
+
+	return (p, 0);
+}

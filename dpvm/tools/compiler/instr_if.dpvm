@@ -1,0 +1,130 @@
+/* dpvm: if statement; T15.455-T20.114; $DVS:time$ */
+
+/* if (expr) instr [else instr] */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const Instr instr) -> (int status) {
+	any dst;
+	int ndst;
+	int pos;
+	int end;
+	int status;
+	char c;
+
+
+	/* read 'if' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 17) return -1;
+
+	data.pos = pos;
+
+
+	/* read '(' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status) {
+		data.mess = "( expected after if";
+		return -2;
+	}
+	data.pos = pos;
+
+	
+	/* read expr */
+	data.nlinks = 0;
+	data.nints = 0;
+	data.nfloats = 0;
+	data.nchars = 0;
+	type res;
+	(res, status) = getexpr(data, instr); /* getexpr() */
+	if (status != 1) {
+		data.mess = "integer expression expected after (";
+		return -2;
+	}
+
+
+	/* read ')' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 1) {
+		data.mess = ") expected after expression";
+		return -2;
+	}
+	data.pos = pos;
+
+
+	/* push 'jzf' bytecode */
+	dst = data.dst;
+	ndst = dst.csize;
+	c = 0x96; dst.push(c);
+	data.nints--;
+	data.ndst++;
+
+
+	/* compile instruction */
+	status = instr(data);
+	if (status) {
+		if (status == -1)
+			data.mess = "instruction expected after )";
+		return -2;
+	}
+
+
+	/* read 'else' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 62) {
+		/* push 'lf' bytecode */
+		c = 0x94; dst.push(c);
+		data.ndst++;
+
+		return 0;
+	}
+	data.pos = pos;
+
+	
+	/* move compiled code by 3 position forward */
+	pos = dst.csize - 1;
+	c =  0; 
+	dst.push(c);
+	dst.push(c);
+	dst.push(c);
+	data.ndst += 3;
+
+	while (pos > ndst) {
+		dst.c[pos + 3] = dst.c[pos];
+		pos--;
+	}
+
+
+	/* insert '0 iload jzf ipops' bytecodes after expression */
+	c =    0; dst.c[ndst] = c;
+	c = 0xA1; dst.c[ndst + 1] = c;
+	c = 0x96; dst.c[ndst + 2] = c;
+	c = 0xA9; dst.c[ndst + 3] = c;
+
+
+	/* push '1 lf jnzf; bytecodes before else instruction */
+	c =    1; dst.push(c);
+	c = 0x94; dst.push(c);
+	c = 0x97; dst.push(c);
+	data.ndst += 3;
+		
+
+	/* compile else instruction */
+	status = instr(data);
+	if (status) {
+		if (status == -1) 
+			data.mess = "instruction expected after else";
+		return -2;
+	}
+
+
+	/* push 'lf' bytecode */
+	c = 0x94; dst.push(c);
+	data.ndst++;
+
+
+	return 0;
+}

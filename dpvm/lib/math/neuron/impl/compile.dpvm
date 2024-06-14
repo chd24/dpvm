@@ -1,0 +1,84 @@
+/* neuron class */
+char methodVersion[] = "compile() internal method, T19.577-T19.643"; /* $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "neuron.dpvmake"
+
+int OUTPUT_MAX = 0x1000;
+char ARCH[] = "amd64";
+
+(const stateful char name[], const char cod[], const stateful char suffix[]) -> () saveCode = {
+	char path[];
+	printf(path, "../dpvm/tests/neuron/%s.%s", {name, suffix});
+	writep("", "", path, "", 0);
+	writep("", "", path, cod, 0);
+	return;
+}
+
+(const char source[], int max) -> () outputSource = {
+	if (max && source.csize > max) {
+		char mess[];
+		substrcat(mess, source, 0, max >> 1);
+		strcat(mess, "\r\n...\r\n");
+		substrcat(mess, source, source.csize - (max >> 1), source.csize);
+		source = mess;
+	}
+
+	outputp("", "", source);
+	return;
+};
+
+(const stateful neuronDataCompile data, const char name[], const char source[], const any links) -> (const any func) compile = {
+	compsrc src = {name, source, links}, srcs[] = {src};
+
+	if (data.flags & NEURON_DUMP_SOURCE)
+		outputSource(source, OUTPUT_MAX);
+
+	if (data.flags & NEURON_SAVE_CODE)
+		saveCode(name, source, "dpvm");
+
+	if (data.flags & NEURON_DEBUG_COMPILATION) {
+		char mess[];
+		printf(mess, "Compiling %s (%x)... ", {name, source.csize});
+		outputp("", "", mess);
+	}
+
+	any func = data.registry.compiler.compile(data.registry, srcs);
+
+	if (data.flags & NEURON_DEBUG_COMPILATION) {
+		char mess[];
+		int error = func.type == "".type, out;
+
+		if (!error)
+			printf(mess, "%p (%x); translating... ", {func, func.csize});
+		else if (data.flags & NEURON_DUMP_SOURCE)
+			printf(mess, "Error.\r\n", {});
+		else
+			printf(mess, "Error. Source:\r\n", {}), out = 1;
+
+		outputp("", "", mess);
+
+		if (out)
+			outputSource(source, 0);
+
+		if (!error) {
+			char res[] = data.registry.translator.translatorTest(data.registry, func, ARCH, -1);
+			if (res.csize > 2 * func.csize) {
+				char mess1[];
+				printf(mess1, "[translated to %x bytes].\r\n", {res.csize});
+				outputp("", "", mess1);
+			}
+
+			if (data.flags & NEURON_SAVE_CODE) {
+				int i, size = func.csize;
+				char cod[];
+				for (i = 0; i < size; i += 1)
+					cod.cpush(func.c[i]);
+				saveCode(name, cod, "bin");
+				saveCode(name, res, ARCH);
+			}
+		}
+	}
+
+	return func;
+};

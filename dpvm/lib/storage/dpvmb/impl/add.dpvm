@@ -1,0 +1,134 @@
+/* dpvmb class, add() method implementation, T20.142-T20.147; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/bytecodes.dpvmh"
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "dpvmb.dpvmake"
+
+(const stateful char db[], int pos) -> (int n) readInt = {
+	int res, i;
+	for (i = DPVMB_LINK_SIZE - 1; i >= 0; i--)
+		res <<= 8, res |= db[pos + i];
+	return res;
+};
+
+(volatile stateful char db[], int n) -> () pushInt = {
+	int i;
+	for (i = 0; i < DPVMB_LINK_SIZE; i++)
+		db.cpush(n), n >>= 8;
+	return;
+};
+
+(const stateful char db[], int hash, int bit) -> (int n) getBit = {
+	return db[hash + (bit >> 3)] >> (bit & 7) & 1;
+};
+
+(const stateful char db[], int header) -> (int hash) getHash = {
+	if (header < 0 || header + DPVMB_HEAD_SIZE > db.csize)
+		return -1;
+	int alignedSize = ((readInt(db, header + DPVMB_HEAD_OBJ_SIZE) - 1) | (DPVMB_OBJ_ALIGN - 1)) + 1;
+	int nlinks = db[header + DPVMB_HEAD_N_LINKS];
+	if (!nlinks && header != alignedSize + DPVMB_HASH_SIZE)
+		nlinks = 0x100;
+	return header - nlinks * DPVMB_LINK_SIZE - DPVMB_HASH_SIZE;
+};
+
+(const stateful char db[], int header, int hash, int nlink) -> (int header) getChildHeader = {
+	int link = hash + DPVMB_HASH_SIZE + nlink * DPVMB_LINK_SIZE;
+	if (link >= header)
+		return 0;
+	link = readInt(db, link);
+	return link ? hash - link * DPVMB_LINK_SIZE : 0;
+};
+
+(volatile stateful any dpvmbObj, const char object[], int hash0, int hash1, int hash2, int hash3) -> (const char error[]) add = {
+	dpvmbImpl impl;
+	char err[] = convertObjToImpl(impl, dpvmbObj, "add");
+	if (err.csize) return err;
+
+	if (!impl.data.dbInited)
+		return mkError("database not initialized", "add");
+
+	char db[] = impl.data.db;
+
+	if (impl.data.flags & DPVMB_FLAG_USE_ARCHIVER) {
+		if (!impl.data.archiver.csize) {
+			char error[] = find((volatile char[]){}, dpvmbObj, 0, 0, 0, 0);
+			if (!impl.data.archiver.csize)
+				return error;
+		}
+
+		any res;
+		int begin, size;
+		(res, begin, size) = impl.data.archiver(hash0, hash1, hash2, hash3, object.csize);
+		if (size > 0) {
+			strcat(db, object);
+			int i;
+			for (i = 0, size = res.csize; i < size; i++)
+				db.cpush(res.c[i]);
+			impl.data.archiver = (Archiver){};
+			return "";
+
+		} else if (size < 0) {
+			char mess[];
+			printf(mess, "Error %d in arhiver, header = %x", {size, begin});
+			return mkError(mess, "add");
+		}
+
+	} else {
+		int size0 = db.csize, header = size0 - DPVMB_HEAD_SIZE, nbit, hash = getHash(db, header);
+		if (hash < 0)
+			return mkError("Illegal header", "add");
+
+		strcat(db, object);
+		while (db.csize & (DPVMB_OBJ_ALIGN - 1))
+			db.cpush(0);
+
+		int newhash = db.csize;
+		pushInt(db, hash0);
+		pushInt(db, hash1);
+		pushInt(db, hash2);
+		pushInt(db, hash3);
+
+		for (nbit = 0; nbit < DPVMB_HASH_SIZE << 3; nbit++) {
+			int childHeader = getChildHeader(db, header, hash, nbit);
+			if (childHeader < 0) {
+				db.cpop(db.csize - size0);
+				return mkError("Illegal child header", "add");
+			}
+			if (getBit(db, hash, nbit) == getBit(db, newhash, nbit)) {
+				pushInt(db, childHeader ? (newhash - childHeader) / DPVMB_LINK_SIZE : 0);
+			} else {
+				pushInt(db, (newhash - header) / DPVMB_LINK_SIZE);
+				if (!childHeader) {
+					nbit++;
+					pushInt(db, object.csize);
+					Archiver verifyObj;
+					int i;
+					for (i = size0 - DPVMB_HEAD_SIZE; i < size0; i++)
+						verifyObj.cpush(db[i]);
+					for (i = newhash; i < db.csize; i++)
+						verifyObj.cpush(db[i]);
+					for (i = DPVMB_HEAD_SHORT_HASH; i < DPVMB_HEAD_N_LINKS; i++)
+						verifyObj.cpush(0);
+					verifyObj.cpush(nbit);
+					verifyObj.cpush(DPVM_CODE_ILL);
+					pushInt(db, verifyObj | nbit << 48 | DPVM_CODE_ILL << 56);
+
+					impl.data.archiver = (Archiver){};
+					return "";
+				}
+				header = childHeader;
+				hash = getHash(db, header);
+				if (hash < 0) {
+					db.cpop(db.csize - size0);
+					return mkError("Illegal header", "add");
+				}
+			}
+		}
+
+		db.cpop(db.csize - size0);
+	}
+
+	return mkError("Object already exists", "add");
+};

@@ -1,0 +1,69 @@
+/* track class, splitTrack demo, T20.106-T20.106; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../track.dpvmake"
+
+int READ_SIZE = 0x100000;
+
+type demoData = {
+	volatile trackClass trackObj;
+	const char trackFileName[];
+	const char resultDir[];
+	volatile char file[];
+};
+
+(volatile stateful demoData data, const char text[], int status) -> () readCallback = {
+	char error[];
+
+	if (status < 0)
+		error = "Read file error.";
+
+	if (text.csize)
+		strcat(data.file, text);
+
+	if (!error.csize && text.csize == READ_SIZE) {
+		read(code, data, data.trackFileName, data.file.csize, READ_SIZE);
+		return;
+	}
+
+	Track tracks[];
+	if (!error.csize)
+		error = data.trackObj.methods.readPlt(tracks, data.trackObj, data.file);
+
+	if (!error.csize)
+		error = data.trackObj.methods.splitTrack(tracks, data.trackObj, tracks[0]);
+
+	int i;
+	for (i = 1; i < tracks.lsize && !error.csize; i += 1) {
+		char file[];
+		error = data.trackObj.methods.savePlt(file, data.trackObj, tracks[i]);
+		if (!error.csize) {
+			char name[];
+			printf(name, "%s/%s.plt", {data.resultDir, tracks[i].name});
+			writep("", "", name, file, 0);
+			writep("", "", name, "", file.csize);
+		}
+	}
+
+	if (!error.csize)
+		error = "Track splitted.";
+
+	outputp("", "", error);
+	outputp("", "", "\r\n");
+	return;
+};
+
+(const stateful any registry, const char trackFileName[], const char resultDir[], int timeLag) -> (const char error[])
+		splitTrack = {
+	trackClass trackObj = trackCreate();
+
+	char error[] = trackObj.methods.setTimeLag(trackObj, timeLag);
+	if (error.csize) return error;
+
+	error = trackObj.methods.setRegistry(trackObj, registry);
+	if (error.csize) return error;
+
+	demoData data = {trackObj, trackFileName, resultDir};
+	read(readCallback, data, trackFileName, 0, READ_SIZE);
+	return "";
+};

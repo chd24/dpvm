@@ -1,0 +1,34 @@
+/* compiler, operators IDs and priorities, T20.089-T20.089; $DVS:time$ */
+
+
+/* priorities */
+
+			/*    /    <>=!  ><&|
+			   +-* &|^%<>==><==&|?: */
+char oper_priorities[]	= "110057602244333389AA";
+
+/* binary operators */
+
+int OPER_PLUS		= 0;
+int OPER_MINUS		= 1;
+int OPER_MULTIPLY	= 2;
+int OPER_DIVIDE		= 3;
+int OPER_AND		= 4;
+int OPER_OR		= 5;
+int OPER_XOR		= 6;
+int OPER_REMAINDER	= 7;
+int OPER_SHIFT_L	= 8;
+int OPER_SHIFT_R	= 9;
+int OPER_EQ		= 10;
+int OPER_NOT_EQ		= 11;
+int OPER_GT		= 12;
+int OPER_LT		= 13;
+int OPER_GT_EQ		= 14;
+int OPER_LT_EQ		= 15;
+int OPER_AND_AND	= 16;
+int OPER_OR_OR		= 17;
+
+/* ternary operators */
+
+int OPER_QUESTION	= 18;
+int OPER_COLON		= 19;

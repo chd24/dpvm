@@ -1,0 +1,79 @@
+/* dpvm byte code translator, amd64 int load to register; T16.080-T20.100; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../translator_utils.dpvmake"
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		int datatype, int reg, int i, int n) -> () {
+	char a[];
+	char h[];
+	char hex[];
+	char from[];
+	char to[];
+	int r;
+	int c;
+
+	n = data.l[4].l[i].i[datatype] - data.l[0].i[datatype] - n - 1;
+
+	if (datatype == 0) {
+		c = 7;
+		from = "rdi";
+		hex = "48 89";
+		n = n << 3;
+	}
+	if (datatype == 1) {
+		c = 6;
+		from = "rsi";
+		hex = "48 89";
+		n = n << 3;
+	}
+	if (datatype == 2) {
+		c = 3;
+		from = "r11";
+		hex = "49 89";
+		n = n << 3;
+	}
+
+	if (datatype == 3) {
+		c = 2;
+		from = "r10";
+		hex = "41 88";
+	}
+
+	if (reg == 0) { /* rax */
+		to = "rax";
+		if (datatype == 3) { to = "al"; }
+	}
+	if (reg == 1) { /* rcx */
+		c = c | 8;
+		to = "rcx";
+		if (datatype == 3) { to = "cl"; }
+	}
+	if (reg == 2) { /* rdx */
+		c = c | 0x10;
+		to = "rdx";
+		if (datatype == 3) { to = "dl"; }
+	}
+	
+	strcat(h, hex);
+	h.push(' ');
+	strcat(a, "mov [");
+	strcat(a, from);
+	a.push('+');
+
+	if (n >= -0x80 && n <= 0x7F) {
+		a.push('b');
+		printhex(h, c | 0x40, 2, 1);
+		strcat(h, " 111");
+	} else {
+		a.push('d');
+		printhex(h, c | 0x80, 2, 1);
+		strcat(h, " 114");
+	}
+	a.push(']');
+	a.push(',');
+	strcat(a, to);
+
+	asm_add(list, a, h, 0, n, 0, 0, 0);
+	return;
+}

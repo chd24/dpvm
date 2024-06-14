@@ -1,0 +1,15 @@
+/* return version of telnet module */
+	
+char version[] = "telnet version 0.1.0, T18.249-T18.252"; /* $DVS:time$ */
+
+() -> (const char version[]) {
+	return version;
+}
+
+/* history:
+
+T18.252 ver 0.1.0: first working version without telnet command mode
+
+T18.249 ver 0.0.1: project started
+
+*/

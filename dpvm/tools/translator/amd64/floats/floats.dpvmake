@@ -1,0 +1,39 @@
+/* floats computations translator for amd64, makefile; T19.506-T19.586; $DVS:time$ */
+
+#include "floats.dpvmh"
+
+/*@ "findend.dpvm": finds end of potentially compiled using this method segment 
+	of bytecodes starting from given beginning pos in function */
+(const stateful any func, int begin) -> (int end)
+	findend = sturdiest_bleary_imagines;
+/* @*/
+
+/*@ "mkError.dpvm": compose error message */
+(volatile stateful floatsData data, const char function[], const char error[]) -> (int res)
+	mkError = visage_implausibly_referee;
+/* @*/
+
+/*@ "doAsm.dpvm": add assembly instruction */
+(volatile stateful floatsData data, const char mnemonics[], const char codes[], int reg, int offset) -> ()
+	doAsm = sequoia_faltered_menacingly;
+/* @*/
+
+/*@ "preamble.dpvm": put preamble of asm function to machcode */
+(volatile stateful floatsData data) -> ()
+	preamble = assumed_intoned_evaluates;
+/* @*/
+
+/*@ "epilogue.dpvm": put epilogue of asm function to machcode */
+(volatile stateful floatsData data) -> ()
+	epilogue = iconography_enforceable_clarion;
+/* @*/
+
+/*@ "bytecodes.dpvm": array of functions performing actions corresponding to bytecodes */
+(volatile stateful floatsData data) -> (int res)
+	bytecodes[256] = interment_dormitory_sympathised;
+/* @*/
+
+/*@ "main.dpvm": full translation cycle from function to machina code */
+(volatile stateful translator_data d) -> (int res)
+	floatsMain = programmed_fancying_blowtorch;
+/* @*/                                                 

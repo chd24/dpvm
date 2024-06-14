@@ -1,0 +1,135 @@
+/* minimize number of unknown values in vectors; T16.472-T16.473; $DVS:time$ */
+
+(int minvect[], int maxvect[], int nvectors) -> (int res) {
+	int minmatr[];
+	int maxmatr[];
+	int mask;
+	int flag;
+	int n;
+	int i;
+	int j;
+	int k;
+	int sum;
+	int ni;
+	int res;
+	int a;
+	int b;
+	int m;
+
+	n = maxvect.isize;
+	
+	if (!n | !nvectors) { return (res); }
+
+	i = 0; do {
+		minmatr.push(0);
+		maxmatr.push(-1);
+		i = i + 1;
+	} while (i < nvectors);
+
+	do {
+		flag = 0;
+		i = 0; do {
+			j = nvectors; do {
+				if ((minvect.i[j] >> i & 1) == (maxvect.i[j] >> i & 1)) {
+					sum = 0;
+					k = 0; do {
+						if ((maxvect.i[k] >> i & 1) & (maxmatr.i[k] >> j & 1)) {
+							sum = sum + 1;
+							ni = k;
+						}
+						k = k + 1;
+					} while (k < nvectors);
+					k = ni;
+					if (sum == 0) {
+						if (minvect.i[j] >> i & 1) {
+							res = -1; return (res);
+						}
+					}
+					if (sum == 1) {
+						if (minvect.i[j] >> i & 1) {
+							if (!(minvect.i[k] >> i & 1)) {
+								minvect[k] = minvect.i[k] | 1 << i;
+								flag = 1;
+							}
+							if (!(minmatr.i[k] >> j & 1)) {
+								minmatr[k] = minmatr.i[k] | 1 << j;
+								flag = 1;
+							}
+						}
+						if (!(maxvect.i[j] >> i & 1)) {
+							a = (minvect.i[k] >> i & 1);
+							b = (minmatr.i[k] >> j & 1);
+							if (a & b) { res = -1; return (res); }
+							if (a) {
+								maxmatr[k] = maxmatr.i[k] & ~(1 << j);
+								flag = 1;
+							}
+							if (b) {
+								maxvect[k] = maxvect.i[k] & ~(1 << i);
+								flag = 1;
+							}
+						}
+					}
+				}
+				j = j + 1;
+			} while (j < n);
+			i = i + 1;
+		} while (i < n);
+
+		if (n - nvectors >= 2) {
+		    j = nvectors; do {
+			sum = 0;
+			k = 0; do {
+				if (maxmatr.i[k] >> j & 1) {
+					if (!sum) { a = k; }
+					if (sum == 1) { b = k; }
+					sum = sum + 1;
+				}
+				k = k + 1;
+			} while (k < nvectors);
+
+			if (sum == 2) {
+				i = j + 1; do {
+					if (!(maxvect.i[i] >> j & 1) | !(maxvect.i[j] >> i & 1)) {
+						sum = 0;
+						k = 0; do {
+							if ((maxmatr.i[k] >> i & 1) != (maxmatr.i[k] >> j & 1)) {
+								sum = 1;
+							}
+							k = k + 1;
+						} while (k < nvectors & !sum);
+
+						if (!sum) {
+							m = maxvect.i[i] | maxvect.i[j];
+							k = 0; do {
+								if (!(m >> k & 1)) {
+									if (minvect.i[a] >> k & 1) {
+										res = -1; return (res);
+									}
+									if (maxvect.i[a] >> k & 1) {
+										maxvect[a] = maxvect.i[a] & ~(1 << k);
+										flag = 1;
+									}
+									if (minvect.i[b] >> k & 1) {
+										res = -1; return (res);
+									}
+									if (maxvect.i[b] >> k & 1) {
+										maxvect[b] = maxvect.i[b] & ~(1 << k);
+										flag = 1;
+									}
+								}
+								k = k + 1;
+							} while (k < n);
+						}
+					}
+					i = i + 1;
+				} while (i < n);
+			}
+
+			j = j + 1;
+		    } while (j < n - 1);
+		}
+	} while (flag);
+
+	return (res);
+}

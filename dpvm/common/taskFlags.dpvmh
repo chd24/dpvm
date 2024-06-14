@@ -1,0 +1,17 @@
+/* dpvm: list of task flags for use both in dpvm source and programs; T18.327-T19.626; $DVS:time$ */
+
+int DPVM_TASK_FLAG_FINISH		= 0x0001 + _Z;
+int DPVM_TASK_FLAG_STOP			= 0x0002 + _Z;
+int DPVM_TASK_FLAG_AND_RECURSIVE	= 0x0004 + _Z;
+int DPVM_TASK_FLAG_OR_RECURSIVE		= 0x0008 + _Z;
+
+int DPVM_TASK_FLAG_NO_FLAGS		= 0x0010 + _Z;
+int DPVM_TASK_FLAG_NO_NAME		= 0x0020 + _Z;
+int DPVM_TASK_FLAG_NO_HANDLER		= 0x0040 + _Z;
+int DPVM_TASK_FLAG_NO_CHILDS		= 0x0080 + _Z;
+
+int DPVM_TASK_FLAG_NO_INPUT_HISTORY	= 0x0100 + _Z;
+int DPVM_TASK_FLAG_NO_INPUT_ECHO	= 0x0200 + _Z;
+int DPVM_TASK_FLAG_NO_SELF_MEMORY_QUOTA	= 0x0400 + _Z;
+
+int DPVM_TASK_FLAG_NO_IO_EXP		= 32	 + _Z;

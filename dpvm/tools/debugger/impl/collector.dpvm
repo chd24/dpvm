@@ -1,0 +1,50 @@
+/* debugger class, handler, T19.651-T20.133; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "debugger.dpvmake"
+
+type collectorData = {
+	const stateful thread t;
+	volatile debuggerMessage arr[];
+	int threadId;
+};
+
+(volatile stateful collectorData data, const any objs, int status) -> () received = {
+	int i;
+	for (i = 0; i < objs.lsize; i += 1) {
+		if (objs.l[i].type == debuggerMessage) {
+			debuggerMessage M[];
+			pushObject(objs.l[i], M);
+			debuggerMessage m = M[0];
+			if (m.pointer == 1 << 63) {
+				msendp("", "", data.t.handleAddress, data.arr);
+				return;
+			}
+			if (data.threadId == -1)
+				data.threadId = m.threadId;
+			if (m.threadId == data.threadId) {
+				int cod = DPVM_CODE_CALL;
+				if (m.pointer >= 0)
+					cod = m.function.c[m.pointer];
+				if (cod == DPVM_CODE_CALL)
+					data.arr.lpush(m);
+				else if (cod == DPVM_CODE_RET)
+					data.arr.lpop(1);
+			}
+		}
+	}
+
+	mrecv(code, data, data.t.reportAddress, -1);
+	return;
+};
+
+(const stateful thread t, const int values[]) -> () collector = {
+	collectorData data;
+	data.t = t;
+	data.threadId = -1;
+	received(data, "", 0);
+	return;
+};

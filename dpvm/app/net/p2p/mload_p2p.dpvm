@@ -1,0 +1,120 @@
+/* mload replacement for p2p: load or request objects; T17.953-T19.706; $DVS:time$ */
+
+#include "../../../lib/utils/utils.dpvmake"
+#include "mailbox.dpvmh"
+
+int WAIT_TIME = 100000000; /* 1/10 s */
+
+type mloaddata = {
+    volatile p2paddr addr;
+    const any callback;
+    const stateful any data;
+    const any after_load;
+    const int hashes[];
+    volatile char mess[];
+    int timeout;
+    int first_time;
+    int last_time;
+};
+
+(volatile stateful mloaddata d, const int values[]) -> () get_time {
+    d.last_time = values[0];
+
+    if (d.first_time) {
+        if (d.last_time - d.first_time >= d.timeout) {
+            mload(d.callback, d.data, d.hashes);
+            return;
+        }
+    } else
+       d.first_time = values[0];
+
+    mload(d.after_load, d, d.hashes);
+    return;
+}
+
+(volatile stateful mloaddata d, const any objs, int status) -> () addr_tested {
+	if (status == 6) {
+		p2pmess mess;
+                mess.data = d.mess;
+                mess.task = P2P_REQOBJS;
+
+                msendp("", "", d.addr, mess);
+                char arr[];
+                d.mess = arr;
+
+                const int vars[] = {0};
+                getsys(get_time, d, vars);
+	} else
+                mload(d.callback, d.data, d.hashes);
+	return;
+}
+
+(volatile stateful mloaddata d, const any objs) -> () after_load {
+	int i;
+	int j;
+	int k;
+	int h;
+	int x;
+	int y;
+	int z;
+	int t;
+	int flag;
+	char arr[] = d.mess;
+
+	for (i = 0; i < objs.lsize; i += 1, h += 4) {
+		if (objs.l[i] == wind_speeded_hogwash) {
+			int diff;
+			if (d.hashes[h] >> 47 | d.hashes[h | 1] | d.hashes[h | 2] | d.hashes[h | 3]) {
+				(x, y, z, t) = getfullhash(objs.l[i]);
+				diff = x != d.hashes[h] || y != d.hashes[h | 1] || z != d.hashes[h | 2] || t != d.hashes[h | 3];
+			} else
+				diff = objs.l[i] != (d.hashes[h] & ((1 << 47) - 1));
+			if (diff) {
+				if (d.first_time)
+					flag = 1;
+				else for (j = h; j < h + 4; j += 1) {
+					int n = d.hashes[j];
+					arr.cpush(n); n >>= 8;
+					arr.cpush(n); n >>= 8;
+					arr.cpush(n); n >>= 8;
+					arr.cpush(n); n >>= 8;
+					arr.cpush(n); n >>= 8;
+					arr.cpush(n); n >>= 8;
+					arr.cpush(n); n >>= 8;
+					arr.cpush(n);
+				}
+			}
+		}
+	}
+
+	if (!flag && !arr.csize) {
+		mload(d.callback, d.data, d.hashes);
+		return;
+	}
+
+	if (!d.first_time) {
+		d.addr.module = P2P_MODULE;
+		d.addr.service = P2P_BROADCAST;
+
+		mrecv(addr_tested, d, d.addr, 1 << 63);
+		return;
+	}
+
+	const int vars[] = {0};
+	int values[];
+	values.ipush(d.last_time + WAIT_TIME);
+	setsys(get_time, d, vars, values);
+	return;
+}
+
+(const any callback, const stateful any data, const int hashes[], int timeout) -> () {
+        mloaddata d;
+	d.callback = callback;
+	d.data = data;
+        d.after_load = after_load;
+        d.hashes = hashes;
+        d.timeout = timeout;
+
+        mload(after_load, d, hashes);
+        return;
+}

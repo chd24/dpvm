@@ -1,0 +1,44 @@
+/* blog class, public header, T18.715-T19.346; $DVS:time$ */
+
+type blogMethods = {
+	const char version[];
+	const (volatile stateful any blogObj, const char root[]) -> (const char error[]) setRoot;
+	const (volatile stateful any blogObj, int dfsFlags) -> (const char error[]) setFlags;
+	const (volatile stateful any blogObj, const char name[], const char password[], int currentTime) -> (const char recodedPassword[], const char error[]) addUser;
+	const (volatile stateful any blogObj, const char name[], const char password[], int currentTime) -> (const char recodedPassword[], const char error[]) changePassword;
+	const (volatile stateful any blogObj, volatile stateful any data,
+		const (volatile stateful any data, volatile int file[], const char error[]) -> () callback,
+		const char userName[], const char fileType[]) -> () readFile;
+	const (volatile stateful any blogObj, const char userName[], const char fileType[], volatile stateful int file[])
+		-> (const char error[]) writeFile;
+	const (volatile stateful any blogObj, const char userName[], const stateful int file[], int begin, int end)
+		-> (const char error[]) setupEnvironment;
+	const (volatile stateful any blogObj, const char userName[], volatile stateful int file[]) -> (const char error[], int changed) saveEnvironment;
+	const (volatile stateful any blogObj, const char userName[], const char var[]) -> (const char value[], const char error[]) getEnvVar;
+	const (volatile stateful any blogObj, const char userName[], const char var[], const char value[]) -> (const char error[]) setEnvVar;
+	const (volatile stateful any blogObj, const stateful int file[], int fileIndex, int beginItemIndex, int endItemIndex)
+		-> (const char error[]) addMessages;
+	const (volatile stateful any blogObj, int startNo, int quantity) -> (volatile int fileItemIndexes[], const char error[]) sortMessages;
+	const (volatile stateful any blogObj, int time) -> (const char error[], int fileIndex, int itemIndex) findMessage;
+	const (volatile stateful any blogObj, const stateful int file[], int begin, int end, int time) -> (const char error[], int index) setMessage;
+	const (volatile stateful any blogObj, const char userTo[]) -> (const char error[]) sendMessage;
+	const (volatile stateful any blogObj, volatile stateful any data,
+		const (volatile stateful any data, const char file[], const int attr[8], const char error[]) -> () callback,
+		const char path[], int begin, int end) -> () readMessageFile;
+	const (volatile stateful any blogObj, volatile stateful any data,
+		const (volatile stateful any data, const char fileName[], const int attr[8], const char error[]) -> () callback,
+		const char path[], int begin, int end) -> () readMessageDir;
+	const (volatile stateful any blogObj, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback, const char path[]) -> () createMessageFile;
+	const (volatile stateful any blogObj, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback,
+		const char path[], const char content[], int begin, int end, int newSize) -> () writeMessageFile;
+	const (volatile stateful any blogObj, int parentTime, int time) -> (const char error[]) newMessage;
+	const (volatile stateful any blogObj, const char path[], volatile char body[]) -> (const char error[]) addMessageFile;
+	const (volatile stateful any blogObj) -> (const char error[]) writeMessage;
+	const (volatile stateful any blogObj, const stateful char file[]) -> (const char error[]) addToTip;
+	const (volatile stateful any blogObj) -> (const char tip[], const char error[]) getTip;
+};
+
+type blogClass = {
+	volatile any data;
+	const blogMethods methods;
+};

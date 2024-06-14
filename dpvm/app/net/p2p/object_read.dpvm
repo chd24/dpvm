@@ -1,0 +1,260 @@
+/* p2p read serialized objects; T16.957-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "cache.dpvmake"
+#include "p2p.dpvmake"
+#include "mailbox.dpvmh"
+#include "deserialize.dpvmh"
+
+int STATS_PERIOD = 300000000000;
+
+type reader = {
+    p2pdata data;
+    volatile p2pmess ms[];
+    volatile cacheData cache;
+    volatile int hashes[];
+    volatile char objects[][];
+    int statsOutTime;
+    int nReceived;
+    int nPopped;
+    int nFound;
+    int nDecoded;
+    int nSaved;
+    int nCached;
+    int nRejected;
+};
+
+any W = wind_speeded_hogwash;
+
+(const stateful reader rd, const stateful p2pmess mess, const stateful char text[], int level) -> () log_obj {
+	if (rd.data.log_level < level)
+		return;
+
+	char m[];
+	strcat(m, "Object ");
+	printobjname(m, str2int(mess.data, 0) << 17 >> 17);
+	strcat(m, " sent from host ");
+	strcat(m, mess.host);
+	strcat(m, ":");
+	printint(m, mess.port, 1);
+	strcat(m, " ");
+	strcat(m, text);
+	strcat(m, ".");
+	write_log(rd.data, m, level);
+	return;
+}
+
+(volatile stateful reader rd, const int values[]) -> () out_stats {
+    int wait_time = STATS_PERIOD;
+
+    if (values[0] - rd.statsOutTime >= wait_time) {
+        char m[];
+        strcat(m, "Reader stats");
+        strcat(m, ": received="); printint(m, rd.nReceived, 1);
+        strcat(m, ", popped=");   printint(m, rd.nPopped, 1);
+        strcat(m, ", found=");    printint(m, rd.nFound, 1);
+        strcat(m, ", decoded=");  printint(m, rd.nDecoded, 1);
+        strcat(m, ", saved=");    printint(m, rd.nSaved, 1);
+        strcat(m, ", cached=");   printint(m, rd.nCached, 1);
+        strcat(m, ", rejected="); printint(m, rd.nRejected, 1);
+        strcat(m, "; cache");
+        strcat(m, ": objects=");  printint(m, rd.cache.nObjects, 1);
+        strcat(m, ", items=");    printint(m, rd.cache.nItems, 1);
+        strcat(m, ", buckets=");  printint(m, rd.cache.nBuckets, 1);
+        write_log(rd.data, m, 7);
+        if (rd.data.log_level >= 10) {
+            char d[];
+            cacheObj.dump(d, rd.cache);
+            write_log(rd.data, d, 10);
+        }
+        rd.statsOutTime = values[0];
+    } else if (values[0] >= rd.statsOutTime)
+        wait_time -= values[0] - rd.statsOutTime;
+
+    if (rd.objects.lsize)
+        wait_time = 0;
+
+    mrecv(rd.data.func, rd, rd.data.mboxaddr, wait_time);
+    return;
+}
+
+(volatile stateful reader rd) -> () read_cycle {
+    const int vars[] = {0};
+    getsys(out_stats, rd, vars);
+    return;
+}
+
+(volatile stateful reader rd, const any objs) -> () after_save {
+	int i;
+        for (i = 0; i < objs.lsize; i += 1)
+                if (objs.l[i] == W)
+			log_obj(rd, rd.ms[i], "not saved", 4);
+                else
+                        rd.nSaved += 1;
+
+        rd.ms.lpop(rd.ms.lsize);
+        cacheObj.popObjs(rd.cache, rd.objects, rd.hashes);
+        rd.nPopped += rd.objects.lsize;
+        rd.hashes.ipop(rd.hashes.isize);
+
+        read_cycle(rd);
+	return;
+}
+
+(volatile stateful reader rd, const any objs) -> () make_objects {
+        rd.hashes.ipop(rd.hashes.isize);
+
+        any objsave;
+        char deps[];
+	int i;
+	int count;
+
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+	addr.service = P2P_ADDRMAN;
+	addr.task_id = rd.data.task_id;
+
+        for (i = 0; i < rd.ms.lsize; i += 1) {
+		any obj;
+                int missedDeps[];
+		char error[];
+		log_obj(rd, rd.ms[i], "before stage 2 deserialization", 9);
+                (obj, missedDeps, error, count) = deserialize2(rd.ms[i].data, objsave, objs, count);
+		log_obj(rd, rd.ms[i], "after stage 2 deserialization", 9);
+
+		if (error.csize) {
+			char m[];
+                        strcat(m, "rejected, error: ");
+			strcat(m, error);
+			log_obj(rd, rd.ms[i], m, 5);
+                        rd.nRejected += 1;
+
+                        if (rd.data.log_level >= 10) {
+				char objstr[];
+				serialize(objstr, obj);
+				logObject(rd.data, "Reconstructed", objstr, 0, objstr.csize);
+			}
+                } else if (!missedDeps.isize) {
+			objsave.lpush(obj);
+			msendp("", "", addr, rd.ms[i]);
+			log_obj(rd, rd.ms[i], "deserialized", 9);
+                        str2hash(rd.hashes, rd.ms[i].data, 0);
+                        rd.nDecoded += 1;
+                } else {
+                        cacheObj.pushObj(rd.cache, rd.ms[i].data, missedDeps);
+                        int j;
+                        for (j = 0; j < missedDeps.isize; j += 1)
+                            substrcat(deps, rd.ms[i].data, missedDeps[j], missedDeps[j] + 32);
+                        log_obj(rd, rd.ms[i], "missed deps, cached", 9);
+                        rd.nCached += 1;
+                }
+	}
+	
+        if (deps.csize) {
+            p2pmess mess;
+            mess.data = deps;
+            mess.task = P2P_REQOBJS;
+
+            msendp("", "", addr, mess);
+        }
+
+	msave(after_save, rd, objsave);
+	return;
+}
+
+(volatile stateful reader rd, const any objs) -> () premake {
+        rd.hashes.ipop(rd.hashes.isize);
+
+        int from;
+        int to;
+        int size = objs.lsize;
+        for (from = 0; from < size; from += 1)
+                if (objs.l[from] == W) {
+                        rd.ms[to] = rd.ms[from];
+                        deserialize1(rd.hashes, rd.ms[to].data, 2);
+                        log_obj(rd, rd.ms[to], "passed stage 1 deserialization", 9);
+                        to += 1;
+                } else {
+                        log_obj(rd, rd.ms[from], "found in storage", 9);
+                        rd.nFound += 1;
+                }
+
+        rd.ms.lpop(from - to);
+
+        if (!rd.ms.lsize) {
+                read_cycle(rd);
+		return;
+	}
+	
+        mload(make_objects, rd, rd.hashes);
+	return;
+}
+
+(volatile stateful reader rd, const any objs, int status) -> () read_mbox {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received a mail in object_read, service stopped");
+		write_log(rd.data, m, 2);
+		return;
+	}
+
+        int i;
+        int size = objs.lsize;
+        for (i = 0; i < size; i += 1) {
+		p2pmess mess;
+		if (mess.type == objs.l[i].type) {
+			objcopyto(mess, objs.l[i]);
+                        if (mess.task == P2P_BROADOBJS) {
+                            deserialize1(rd.hashes, mess.data, 1);
+                            rd.ms.lpush(mess);
+                            log_obj(rd, mess, "received by reader", 9);
+                            rd.nReceived += 1;
+                        } else if (mess.task == P2P_STOCKOBJS) {
+                            rd.nPopped -= rd.objects.lsize;
+                            cacheObj.popObjs(rd.cache, rd.objects, chars2ints(mess.data, 0, mess.data.csize));
+                            rd.nPopped += rd.objects.lsize;
+                        }
+		} else {
+			char m[];
+			strcat(m, "Dropped mailbox message of illegal format");
+			write_log(rd.data, m, 5);
+		}
+	}
+
+        size = rd.objects.lsize;
+        for (i = 0; i < size; i += 1) {
+            p2pmess mess;
+            mess.data = rd.objects[i];
+            deserialize1(rd.hashes, mess.data, 1);
+            rd.ms.lpush(mess);
+            log_obj(rd, mess, "popped from cache", 9);
+        }
+        rd.objects.lpop(rd.objects.lsize);
+
+        mload(premake, rd, rd.hashes);
+	return;
+}
+
+(const stateful p2pdata d, const int values[]) -> () {
+	p2pdata data;
+	objcopyto(data, d);
+
+	data.func = read_mbox;
+	data.thread_id = -2;
+
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+	addr.service = P2P_READOBJ;
+	addr.task_id = data.task_id;
+	data.mboxaddr = addr;
+
+	reader rd;
+	rd.data = data;
+        cacheObj.init(rd.cache);
+
+        read_cycle(rd);
+	return;
+}

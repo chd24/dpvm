@@ -1,0 +1,107 @@
+/* translator, makefile for utility functions; T17.648-T19.643; $DVS:time$ */
+
+#include "../checker/checker.dpvmh"
+#include "translator.dpvmh"
+
+type asm_instr = {
+        const char mnem[];
+        const char hex[];
+	int prev;
+	int next; 
+	int param0;
+	int param1;
+	int param2;
+	int param3;
+};
+
+type translator_data = {                                /* translator data */
+        const stateful stack_state	input;		/* input type */
+        const stateful stack_state	output;		/* output type */
+        const stateful int		jumps_map[];	/* jumps map */
+        const stateful char		code_map[];	/* code coverage map */
+        const stateful stack_state	states[];	/* array of types after each bytecode */
+        volatile stateful mach_code	machcode;	/* template for machine code result */
+        const stateful addrs_list	addrs;		/* addresses of functions and objects */
+        const stateful any		func;		/* translated source function */
+        int                             label;		/* number of next label */
+};
+
+type translator_method = {
+	char	arch[];
+	(volatile stateful translator_data data) -> (int res)
+		translate;
+};
+
+/*@ "asm_add.dpvm": adds assembler instruction to list */
+(volatile stateful asm_instr list[],
+                const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	asm_add = sported_stranding_err;
+/* @*/
+
+/*@ "asm_del.dpvm": deletes assembler instruction from list */
+(volatile stateful asm_instr list[], int next) -> (int newnext)
+	asm_del = adjudicates_chairs_laughing;
+/* @*/
+
+/*@ "getaddr.dpvm": returns address of given object in addresses database */
+(const stateful addrs_list addrs, const stateful any obj) -> (int addr)
+	getaddr = horseless_difference_rusts;
+/* @*/
+
+/*@ "new_rule.dpvm": create new rule or instructions list */
+() -> (volatile asm_instr rule[])
+	new_rule = demo_simulating_brutal;
+/* @*/
+
+/*@ "cmp_rules.dpvm": compare two rules */
+(const stateful asm_instr l[], const stateful asm_instr r[]) -> (int res)
+	cmp_rules = resonances_buses_etched;
+/* @*/
+
+/*@ "add_rule.dpvm": add rule to list in sorted order */
+(volatile stateful asm_instr list[][], const stateful asm_instr rule[]) -> ()
+	add_rule = mortise_bigger_bonn;
+/* @*/
+
+/*@ "count_param.dpvm": count output parameter using input parameters and pseudocode */
+(const stateful int params[], int pseudocode) -> (int param)
+	count_param = belles_uncommitted_spouts;
+/* @*/
+
+/*@ "match_rule.dpvm": compare rule with part of instructions list */
+(const stateful asm_instr l[], const stateful asm_instr r[], int index) -> (int res)
+	match_rule = thermostatic_tercentenary_duckpond;
+/* @*/
+
+/*@ "find_rule.dpvm": match one of rules with part of instructions list */
+(const stateful asm_instr list[], const stateful asm_instr rules[][], int index) -> (int res)
+	find_rule = engaged_been_diggers;
+/* @*/
+
+/*@ "apply_rule.dpvm": apply rule to part of instructions list */
+(volatile stateful asm_instr list[], const stateful asm_instr rule[], int index) 
+		-> (int res, int next)
+	apply_rule = load_evasive_courthouse;
+/* @*/
+
+/*@ "optimize.dpvm": optimize list of instructions */
+(volatile stateful asm_instr list[], const stateful asm_instr rules[][]) -> ()
+	optimize = mouthtomouth_teapot_castiron;
+/* @*/
+
+/*@ "asm2str.dpvm": output list of instructions as text */
+(const stateful asm_instr list[]) -> (volatile char str[])
+	asm2str = ditto_restricts_repaid;
+/* @*/
+
+/*@ "pushcode.dpvm": push hex code of instruction to machcode */
+(volatile stateful mach_code machcode, const stateful char hex[],
+		const stateful int params[]) -> (int res)
+	pushcode = impertinence_highness_idiopathic;
+/* @*/
+
+/*@ "output.dpvm": output list of instructions as binary code to machcode */
+(volatile stateful mach_code machcode, const stateful asm_instr list[]) -> ()
+	output = apples_shelled_meet;
+/* @*/                                                          

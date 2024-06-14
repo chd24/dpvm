@@ -1,0 +1,22 @@
+/* write log of dnet; T17.534-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const stateful dnet_context ctx, const char mess[], int level) -> () {
+	if (level > ctx.data.log_level) return;
+
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.thread_id = DNET_THREAD_ID_LOGGER;
+	addr.service = DNET_SERVICE_LOG;
+
+	dnet_mess m;
+	m.request = level;
+	m.thread_id = ctx.conns[0].thread_id;
+	m.mess = mess;
+
+	msendp("", "", addr, m);
+	return;
+}

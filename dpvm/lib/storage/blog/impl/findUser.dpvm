@@ -1,0 +1,19 @@
+/* blog class, findUser internal method, T18.716-T18.721; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "blog.dpvmake"
+
+(volatile stateful blogData data, const char name[]) -> (volatile blogUser user, const char error[]) findUser = {
+    int i;
+    for (i = 0; i < data.users.lsize; i += 1) {
+        if (data.users[i].name == name)
+            return (data.users[i], "");
+    }
+
+    blogUser user;
+    char mess[];
+    strcat(mess, "User '");
+    strcat(mess, name);
+    strcat(mess, "' not found");
+    return (user, mkError(mess, "findUser"));
+};

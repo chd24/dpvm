@@ -1,0 +1,87 @@
+/* dfs class, buildInVolume method implementation, T19.168-T19.168; $DVS:time$ */
+
+#include "../../../utils/utils.dpvmake"
+#include "dfs.dpvmake"
+
+type buildInVolumeData = {
+	const char error[];
+};
+
+(volatile stateful buildInVolumeData data, volatile stateful int volume[], volatile stateful int mask[], int offset, int nSector, int level) -> () buildInVolumeRecurse = {
+	int i, pos = nSector << 6;
+	level -= 1;
+
+	for (i = 0; i < 0x40; i += 1) {
+		nSector = volume[pos + i];
+		if (nSector) {
+			if (nSector < 0 || nSector >= volume.isize >> 6) {
+				data.error = mkError("link to file subtree out of build-in volume", "buildInVolumeRecurse");
+				return;
+			}
+			if (mask[nSector >> 6] >> (nSector & 0x3f) & 1) {
+				data.error = mkError("illegal link to file subtree", "buildInVolumeRecurse");
+				return;
+			}
+			if (level >= 2) {
+				code(data, volume, mask, offset, nSector, level);
+				if (data.error.csize)
+					return;
+			}
+			volume[pos + i] += offset;
+		}
+	}
+
+	return;
+};
+
+(volatile stateful buildInVolumeData data, volatile stateful int volume[], int offset) -> () buildInVolumeWorker = {
+	int maskSize = -(-(volume.isize >> 6) & -0x40) >> 6, mask[] = intsArray(maskSize), todo[], i, j, k;
+
+	todo.ipush(1);
+	mask[0] = 2;
+
+	for (i = 0; i < todo.isize; i += 1) {
+		int pos = todo[i] << 6;
+		for (j = 0; j < 0x40; j += 1) if (j & 3) {
+			int nSector = volume[pos + j], typ = volume[(pos + j) & -0x4] >> ((j & 3) << 3) & 0x1f;
+			if (typ & 0x10) {
+				if (nSector <= 0 || nSector >= volume.isize >> 6) {
+					data.error = mkError("link to sector out of build-in volume", "buildInVolumeWorker");
+					return;
+				}
+				if (!(mask[nSector >> 6] >> (nSector & 0x3f) & 1)) {
+					mask[nSector >> 6] |= 1 << (nSector & 0x3f);
+					todo.ipush(nSector);
+				}
+				volume[pos + j] += offset;
+			} else if (typ) {
+				if (nSector <= 0 || nSector >= volume.isize >> 6) {
+					data.error = mkError("link to file tree out of build-in volume", "buildInVolumeWorker");
+					return;
+				}
+				if (mask[nSector >> 6] >> (nSector & 0x3f) & 1) {
+					data.error = mkError("illegal link to file tree", "buildInVolumeWorker");
+					return;
+				}
+				if (typ > 9) {
+					data.error = mkError("file tree depth not supported", "buildInVolumeWorker");
+					return;
+				}
+				volume[pos + j] += offset;
+				if (typ >= 2) {
+					buildInVolumeRecurse(data, volume, mask, offset, nSector, typ);
+					if (data.error.csize)
+						return;
+				}
+			}
+		}
+	}
+
+	return;
+};
+
+(volatile stateful int volume[], int offset) -> (const char error[]) buildInVolume = {
+	buildInVolumeData data;
+	buildInVolumeWorker(data, volume, offset);
+	return data.error;
+};

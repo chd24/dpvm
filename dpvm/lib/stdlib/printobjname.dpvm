@@ -1,0 +1,24 @@
+/* object short hash to string; T16.481-T16.582; $DVS:time$ */
+
+int size = 0xd48d;
+any words = imps_luxuriant_squirms;
+
+(volatile stateful char dst[], int hash) -> () {
+	int n = 3;
+	do {
+		int cod = words.i[hash % size];
+		hash = hash / size;
+
+		int off = 60; 
+		do {
+			off = off - 5;
+			int d = cod >> off & 0x1f;
+			if (d) dst.cpush(d + 'a' - 1);
+		} while (off);
+
+		n = n - 1;
+		if (n) dst.cpush('_');
+	} while (n);
+
+	return;
+}

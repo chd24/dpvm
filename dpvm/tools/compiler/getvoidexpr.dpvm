@@ -1,0 +1,305 @@
+/* dpvm: void expression; T15.573-T20.113; $DVS:time$ */
+
+/* (multiexpr) [= (multiexpr)] [,...] */
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "compiler.dpvmake"
+#include "lexems.dpvmh"
+#include "operators.dpvmh"
+
+(volatile stateful compdata data, const Instr instr) -> (int status) {
+	int iter, status;
+	do {
+		type res;
+		int segments[], ndst = data.ndst;
+
+		data.nlinks = 0;
+		data.nints = 0;
+		data.nfloats = 0;
+		data.nchars = 0;
+
+		type castto;
+
+		(res, segments, status) = getmultiexpr(data, instr, getexpr, castto, 0);
+		if (status < 0) {
+			if (iter && status == -1) {
+				data.mess = "multi expression expected after ,";
+				status = -2;
+			}
+			return status;
+		}
+		if (status < 4) {
+			type res0;
+			res0.i[8 + status] = 1;
+			res = res0;
+		}
+
+		int pos, end;
+		(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+
+		/* multiexpr [op]= multiexpr */
+
+		if (status == LEX_ASSIGN || status >= LEX_OP_EQ && status < LEX_OP_EQ_END) {
+			int op = status, sum = res.i[8] + res.i[9] + res.i[10] + res.i[11], k = segments.isize;
+			if (!sum) k = 0;
+			if (sum << 1 != k) {
+				data.mess = "type of multi expression mismatches number of lvalues";
+				return -2;
+			}
+
+			data.pos = pos;
+			type res1;
+			data.dst.cpop(data.ndst - ndst);
+			data.ndst = ndst;
+
+			data.nlinks = 0;
+			data.nints = 0;
+			data.nfloats = 0;
+			data.nchars = 0;
+
+			if (op == LEX_PLUS_PLUS || op == LEX_MINUS_MINUS) {
+				data.dst.cpush(1);
+				data.ndst++;
+				data.nints++;
+				op = op == LEX_PLUS_PLUS ? LEX_PLUS_EQ : LEX_MINUS_EQ;
+				status = 1;
+			} else {
+				int segments1[];
+
+				(res1, segments1, status) = getmultiexpr(data, instr, getexpr, castto, 0);
+				if (status < 0) {
+					if (status == -1)
+						data.mess = "multi expression expected";
+					return -2;
+				}
+			}
+			if (status < 4) {
+				type res0;
+				res0.i[8 + status] = 1;
+				res1 = res0;
+			}
+			if (res1.i[8] + res1.i[9] + res1.i[10] + res1.i[11] != sum) {
+				data.mess = "number of lvalues mismatches number or rvalues";
+				return -2;
+			}
+			
+			int i = 3, j, i1 = 3, j1;
+			while (k) {
+				k -= 2;
+				int f = 1;
+				while (i >= 0 && f) {
+					if (j >= res.i[8 + i]) i -= 1, j = 0;
+					else j += 1, f = 0;
+				}
+				f = 1;
+				while (i1 >= 0 && f) {
+					if (j1 >= res1.i[8 + i1]) i1 -= 1, j1 = 0;
+					else j1 += 1, f = 0;
+				}
+
+				int srctype = i1, dsttype = i, optype;
+				if (op >= LEX_OP_EQ) {
+					if (srctype == 2 || dsttype == 2)
+						optype = 2;
+					else
+						optype = 1;
+				} else
+					optype = dsttype;
+				if (srctype != optype) {
+					status = typecast(data, optype, srctype);
+					if (status < 0) return status;
+				}
+
+				int pos0 = data.pos, end0 = data.end;
+				data.pos = segments[k];
+				data.end = segments[k + 1];
+				type res2;
+				(res2, status) = getexpr(data, instr);
+				if (status != dsttype) {
+					data.mess = "internal error on getvoidexpr";
+					return -2;
+				}
+				any dst = data.dst;
+				int size = dst.csize;
+				if (size <= 2) {
+					data.mess = "expected non-empty expression";
+					return -2;
+				}
+				int c = dst.c[size - 1];
+				if (c != DPVM_CODE_LLOAD + dsttype && c != DPVM_CODE_LGET + dsttype) {
+					data.mess = "lvalue expected";
+					return -2;
+				}
+
+				int localvar = -1;
+				if (c < DPVM_CODE_LGET) {
+					localvar = dst.c[size - 2];
+					if (!localvar && optype == dsttype) {
+						data.mess = "incorrect local variable";
+						return -2;
+					}
+				}
+
+				if (op >= LEX_OP_EQ) {
+					int offsets[4];
+					if (localvar >= 128) {
+						dst.cpop(1);
+						dst.cpush(0);
+						dst.cpush(DPVM_CODE_ILOAD);
+						data.ndst += 2;
+						if (dsttype == 1) {
+							dst.cpush(1);
+							dst.cpush(DPVM_CODE_ADD);
+							data.ndst += 2;
+						}
+						dst.cpush(c);
+						offsets[1] = 1;
+					} else if (localvar < 0) {
+						dst.cpop(1);
+						dst.cpush(0);
+						dst.cpush(DPVM_CODE_LLOAD);
+						dst.cpush(0);
+						dst.cpush(DPVM_CODE_ILOAD);
+						data.ndst += 4;
+						dst.cpush(c);
+						offsets[0] = 1;
+						offsets[1] = 1;
+					}
+					if (dsttype != optype) {
+						status = typecast(data, optype, dsttype);
+						if (status < 0) return status;
+					}
+					dst.cpush(offsets[optype] + 1);
+					dst.cpush(DPVM_CODE_LLOAD + optype);
+					data.ndst += 2;
+
+					if (optype == 2) {
+						if (op == LEX_PLUS_EQ)
+							dst.cpush(DPVM_CODE_FADD);
+						else if (op == LEX_MINUS_EQ)
+							dst.cpush(DPVM_CODE_FSUB);
+						else if (op == LEX_MULTIPLY_EQ)
+							dst.cpush(DPVM_CODE_FMUL);
+						else if (op == LEX_DIVIDE_EQ)
+							dst.cpush(DPVM_CODE_FDIV);
+						else {
+							data.mess = "operation not supported for float values";
+							return -2;
+						}
+					} else {
+						if (op == LEX_PLUS_EQ)
+							dst.cpush(DPVM_CODE_ADD);
+						else if (op == LEX_MINUS_EQ)
+							dst.cpush(DPVM_CODE_SUB);
+						else if (op == LEX_MULTIPLY_EQ)
+							dst.cpush(DPVM_CODE_MUL),
+							dst.cpush(DPVM_CODE_IPOPS),
+							data.ndst++;
+						else if (op == LEX_DIVIDE_EQ)
+							dst.cpush(DPVM_CODE_DIV),
+							dst.cpush(0),
+							dst.cpush(DPVM_CODE_ISTORE),
+							data.ndst += 2;
+						else if (op == LEX_AND_EQ)
+							dst.cpush(DPVM_CODE_AND);
+						else if (op == LEX_OR_EQ)
+							dst.cpush(DPVM_CODE_OR);
+						else if (op == LEX_XOR_EQ)
+							dst.cpush(DPVM_CODE_XOR);
+						else if (op == LEX_REMAINDER_EQ)
+							dst.cpush(DPVM_CODE_DIV),
+							dst.cpush(DPVM_CODE_IPOPS),
+							data.ndst++;
+						else if (op == LEX_SHIFT_L_EQ)
+							dst.cpush(DPVM_CODE_SHL);
+						else if (op == LEX_SHIFT_R_EQ)
+							dst.cpush(DPVM_CODE_SHR);
+					}
+					data.ndst++;
+
+					if (dsttype != optype) {
+						status = typecast(data, dsttype, optype);
+						if (status < 0) return status;
+					}
+
+					if (optype == dsttype) {
+						dst.cpush(offsets[dsttype]);
+						dst.cpush(DPVM_CODE_LSTORE + dsttype);
+						data.ndst += 2;
+					} else {
+						if (offsets[optype]) {
+							dst.cpush(0);
+							dst.cpush(DPVM_CODE_LSTORE + optype);
+							data.ndst += 2;
+						} else {
+							dst.cpush(DPVM_CODE_LPOPS + optype);
+							data.ndst++;
+						}
+
+						if (offsets[dsttype]) {
+							dst.cpush(1);
+							dst.cpush(DPVM_CODE_LLOAD + dsttype);
+							dst.cpush(1);
+							dst.cpush(DPVM_CODE_LLOAD + dsttype);
+							dst.cpush(2);
+							dst.cpush(DPVM_CODE_LSTORE + dsttype);
+							dst.cpush(0);
+							dst.cpush(DPVM_CODE_LSTORE + dsttype);
+							data.ndst += 8;
+						}
+					}
+
+					if (localvar >= 0 && localvar < 128)
+						dst.cpush(localvar),
+						data.ndst++;
+
+					dst.cpush(c);
+					data.ndst++;
+					size = dst.csize;
+				}
+
+				dst.c[size - 1] = c + 4;
+				if (localvar >= 0) {
+					if (localvar < 128) 
+						dst.c[size - 2] = localvar - (optype == dsttype);
+					else {
+						dst.cpush(DPVM_CODE_SUB);
+						dst.cpush(dst.c[size - 1]);
+						dst.c[size - 1] = 1;
+						data.ndst += 2;
+					}
+				}
+				data.pos = pos0;
+				data.end = end0;
+				data.i[optype]--;
+				data.i[dsttype]--;
+			}
+
+
+		/* multiexpr */
+
+		} else {
+			int i;
+			for (i = 0; i < 4; i++) {
+				int n = data.i[i];
+				if (n == 1) {
+					data.dst.cpush(DPVM_CODE_LPOPS + i);
+					data.ndst++;
+				} else if (n > 1) {
+					putint(data, n);
+					data.dst.cpush(DPVM_CODE_LPOPN + i); /* *popn */
+					data.ndst++;
+				}
+			}
+		}
+		
+		(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+		if (status == LEX_COMMA) data.pos = pos, iter = 1;
+
+	} while (status == LEX_COMMA);
+
+	return 0;
+}

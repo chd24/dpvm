@@ -1,0 +1,18 @@
+/* returns end of code segment where extension works; T19.506-T19.695; $DVS:time$ */
+
+int allowed_codes[] = {0xffffffffffffffff, 0xffffffffffffffff,
+                       0x00467777ff000006, 0x00000000bc01f3f3};
+
+(const stateful any func, int begin) -> (int end) {
+	int size = func.csize;
+	int i;
+
+	for (i = begin; i < size; i += 1) {
+		int c = func.c[i];
+
+		if (!(allowed_codes[c >> 6] >> (c & 0x3f) & 1))
+			return i;
+	}
+
+	return i;
+}

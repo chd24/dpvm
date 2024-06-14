@@ -1,0 +1,415 @@
+/* forex class */
+
+int _Z = 0;
+#include "../../../common/sysParams.dpvmh"
+#include "../../../common/taskFlags.dpvmh"
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../lib/math/rand/rand.dpvmake"
+#include "../forex.dpvmake"
+
+const char version[]	= "exchangeTrade demo, T19.772-T20.047"; /* $DVS:time$ */
+
+int DUMP_CYCLES		= 144;
+int CYCLE_PERIOD_LOG	= 600000000000;
+int CYCLE_PERIOD_CSV	= 900000000000;
+int CYCLE_PERIOD_GAP	= 10000000000;
+
+/* flags bit mask */
+int FLAGS_OFFSET	= 0;
+int FLAGS_MASK		= 0xff;
+int OUTPUT_ALGO_OFFSET	= 8;
+int OUTPUT_ALGO_MASK	= 0xff;
+int ORDER_ALGO_OFFSET	= 16;
+int ORDER_ALGO_MASK	= 0xff;
+
+type constDemoData = {
+	const any demo;
+	const any registry;
+	const char exchangeName[];
+	const char publicKey[];
+	const char logName[];
+	const char fileName[];
+	const char neuronNet[];
+	const float training_params[];
+	const char currencies[][];
+	int nCurrency;
+	int graphX;
+	int graphY;
+	int neuronFlags;
+	int flags;
+	int cyclePeriod;
+	int dataSetPart;
+	float volume;
+	float downRateCoeff;
+	float upRateCoeff;
+};
+
+type demoData = {
+	const constDemoData cd;
+	volatile forexClass forexObj;
+	volatile stateful inputFile fl;
+	volatile randData rand;
+	int startTime;
+	int time;
+	int cycle;
+	int phase;
+	int testPart;
+	int oldValues;
+	int sumOrdersCycles;
+};
+
+
+/********************
+ * OUTPUT CALLBACKS *
+ ********************/
+
+(const any data, const stateful float inputData[], int end, int inputDataSize) -> (int output)
+infinityLimitLossOutputCallback = {
+	constDemoData arr[];
+	pushObject(data, arr);
+	constDemoData d = arr[0];
+	float base = inputData[end - 1], downLimit = base * d.downRateCoeff, upLimit = base * d.upRateCoeff;
+	int i, size = inputDataSize;
+	for (i = end; i < size; i += 1) {
+		if (inputData[i] >= upLimit)
+			return 2;
+		if (inputData[i] <= downLimit)
+			return 1;
+	}
+	return 0;
+
+},
+outputCallbacks[] = {
+	infinityLimitLossOutputCallback
+};
+
+
+/********************
+ * ORDER ALGORITHMS *
+ ********************/
+
+(volatile stateful demoData d, int output) -> (const char error[])
+infinityLimitStopLossOrderAlgo = {
+	int currencyFrom = 1 - output, currencyTo = output, expirationTime, orders, ordersMax, ordersPending,
+		ordersClosed;
+	float amountFrom, amountTo, rate, volume = d.cd.volume, upVolume = volume, downVolume = volume;
+	char error[];
+
+	(error, amountFrom) = d.forexObj.methods.getBalance(d.forexObj, currencyFrom, BALANCE_TYPE_FREE);
+	if (error.csize) return error;
+	(error, amountTo) = d.forexObj.methods.getBalance(d.forexObj, currencyTo, BALANCE_TYPE_FREE);
+	if (error.csize) return error;
+	(error, rate) = d.forexObj.methods.getCurrentRate(d.forexObj, currencyFrom, currencyTo);
+	if (error.csize) return error;
+	(error, expirationTime) = d.forexObj.methods.getCurrentTime(d.forexObj);
+	if (error.csize) return error;
+	(error, orders, ordersMax, ordersPending, ordersClosed) = d.forexObj.methods.getOrdersStatistics(d.forexObj);
+	if (error.csize) return error;
+
+	d.sumOrdersCycles += orders;
+	int sumOrdersCycles = d.sumOrdersCycles;
+	if (sumOrdersCycles <= 0) sumOrdersCycles = 1;
+	int nOrders = (orders + ordersClosed) * 2 / 3;
+	if (nOrders <= 0) nOrders = 1;
+	float prob = nOrders * 1.0 / sumOrdersCycles * ordersMax / 2;
+	float rnd = (randObj.getFloat(d.rand) + 1) / 2;
+
+	if (!output) {
+		amountTo *= rate;
+		rate = 1 / rate;
+	} else {
+		amountFrom /= rate;
+	}
+	float downRate = rate * d.cd.downRateCoeff, upRate = rate * d.cd.upRateCoeff;
+	int result = (amountFrom >= 2 * volume && amountTo >= 2 * volume && orders + ordersPending + 2 <= ordersMax
+			&& rnd <= prob);
+	char out[];
+	printf(out, "OrderAlgo: dir=%d down/rate/up=%8.2f/%8.2f/%8.2f from/vol/to=%8.5f/%8.5f/%8.5f ord/max/pend/clos=%d/%d/%d/%d rand/pr/res=%.4f/%.4f/%d",
+		{output, orders, ordersMax, ordersPending, ordersClosed, result,
+		downRate + 0.004, rate + 0.004, upRate + 0.004,
+		amountFrom + 0.0000004, volume + 0.0000004, amountTo + 0.0000004, rnd, prob});
+	d.forexObj.methods.logOutput(d.forexObj, out, 8);
+	if (!result)
+		return "";
+	if (!output) {
+		(downRate, upRate) = (1 / upRate, 1 / downRate);
+		upVolume /= upRate;
+		downVolume /= downRate;
+	} else {
+		volume *= rate;
+		rate = 1 / rate;
+	}
+
+	const type orderData = {
+		const forexMethods methods;
+		int flags;
+		int currencyFrom;
+		int currencyTo;
+		int expirationTime;
+		int limitOrderId;
+		int stopLossOrderId;
+		float downVolume;
+		float upVolume;
+		float downRate;
+		float upRate;
+	};
+
+	const (volatile stateful any forexObj, const stateful any order, int action) -> ()
+	callbackSellLimit = {
+		if (action == ORDER_ACTION_EXECUTED) {
+			forexOrder oarr[];
+			pushObject(order, oarr);
+			forexOrder ord = oarr[0];
+
+			orderData darr[];
+			pushObject(ord.data, darr);
+			orderData data = darr[0];
+
+			data.methods.cancelOrder(forexObj, data.stopLossOrderId);
+		}
+		return;
+	},
+	callbackSellStopLoss = {
+		if (action == ORDER_ACTION_EXECUTED) {
+			forexOrder oarr[];
+			pushObject(order, oarr);
+			forexOrder ord = oarr[0];
+
+			orderData darr[];
+			pushObject(ord.data, darr);
+			orderData data = darr[0];
+
+			data.methods.cancelOrder(forexObj, data.limitOrderId);
+		}
+		return;
+	},
+	callbackBuy = {
+		if (action == ORDER_ACTION_EXECUTED) {
+			forexOrder oarr[];
+			pushObject(order, oarr);
+			forexOrder ord = oarr[0];
+
+			orderData darr[];
+			pushObject(ord.data, darr);
+			orderData data = darr[0];
+
+			forexOrder orderSellLimit = {callbackSellLimit, darr[0], "", 0, ORDER_TYPE_LIMIT,
+					data.currencyTo, data.currencyFrom, data.expirationTime,
+					data.upVolume, data.upRate};
+			forexOrder orderSellStopLoss = {callbackSellStopLoss, darr[0], "", 0, ORDER_TYPE_STOP_LOSS,
+					data.currencyTo, data.currencyFrom, data.expirationTime,
+					data.downVolume, data.downRate};
+
+			char error[] = data.methods.putOrderExt(forexObj, orderSellLimit);
+			if (error.csize) return;
+			error = data.methods.putOrderExt(forexObj, orderSellStopLoss);
+			if (error.csize) data.methods.cancelOrder(forexObj, orderSellLimit.id);
+			else {
+				data.limitOrderId = orderSellLimit.id;
+				data.stopLossOrderId = orderSellStopLoss.id;
+			}
+		}
+		return;
+	};
+
+	orderData data = {d.forexObj.methods, d.cd.flags, currencyFrom, currencyTo, -1 >> 1, 0, 0,
+			downVolume, upVolume, downRate, upRate};
+
+	forexOrder orderBuy = {callbackBuy, data, "", 0, ORDER_TYPE_MARKET, currencyFrom, currencyTo,
+			expirationTime, volume, rate};
+
+	return d.forexObj.methods.putOrderExt(d.forexObj, orderBuy);
+},
+orderAlgorithms[] = {
+	infinityLimitStopLossOrderAlgo
+};
+
+
+/*****************
+ * MAIN ROUTINES *
+ *****************/
+
+(volatile stateful any data, const char error[]) -> () callback = {
+	demoData darr[];
+	pushObject(data, darr);
+	demoData d = darr[0];
+
+	if (error.csize) {
+		char out[];
+		printf(out, "%s\r\n", {error});
+		d.forexObj.methods.logOutput(d.forexObj, out, 4);
+	}
+
+	d.phase += 1;
+
+	if (d.phase == 1) {
+		d.forexObj.methods.syncExchange(d.forexObj, code, d,
+			SYNC_SET_TEST_ALL | SYNC_CANCEL_ALL * (d.cycle == 0));
+		return;
+
+	} else if (d.phase == 3) {
+		d.time += d.cd.cyclePeriod;
+		const int vars[] = {DPVM_SYS_PARAM_TIME};
+		int values[] = {d.time};
+		setsysp("", "", vars, values);
+
+		d.phase = 0;
+		d.cycle += 1;
+
+		if (d.cd.nCurrency >= 0)
+			d.forexObj.methods.readCryptoLog(d.forexObj, code, d, d.fl, d.cd.nCurrency);
+		else
+			d.forexObj.methods.readCsvData(d.forexObj, code, d, d.fl, -d.cd.nCurrency);
+		return;
+	}
+
+	if (!(d.cycle % DUMP_CYCLES)) {
+		char out[];
+		int level = 7;
+		error = d.forexObj.methods.dump(out, d.forexObj, d.cd.graphX, d.cd.graphY);
+		if (error.csize)
+			printf(out, "%s\r\n", {error}), level = 4;
+		d.forexObj.methods.logOutput(d.forexObj, out, level);
+	}
+
+	if (d.fl.values > d.oldValues) {
+		if (!d.oldValues) {
+			d.testPart = -1;
+		} else
+			d.testPart = d.oldValues - d.fl.values;
+		d.oldValues = d.fl.values;
+	}
+
+	error = d.forexObj.methods.neuronTraining(d.forexObj, d.cd.neuronNet, d.cd.training_params,
+			0, d.cd.dataSetPart, d.cd.neuronFlags);
+	if (error == "0" || error == "1" || error == "2" || error == "3") {
+		int output = (error[0] - '0'), orderAlgo = d.cd.flags >> ORDER_ALGO_OFFSET & ORDER_ALGO_MASK;
+		error = "";
+		if (output & 1)
+			error = orderAlgorithms[orderAlgo](d, 0);
+		if (!error.csize && output & 2)
+			error = orderAlgorithms[orderAlgo](d, 1);
+	} else if (!error.csize)
+		error = "No expected prediction from neuron net";
+
+	if (error.csize) {
+		char out[];
+		printf(out, "%s\r\n", {error}),
+		d.forexObj.methods.logOutput(d.forexObj, out, 4);
+	}
+
+	d.forexObj.methods.syncExchange(d.forexObj, code, d, 0);
+	return;
+};
+
+(volatile stateful demoData d, const int values[]) -> () getsysCallback = {
+	constDemoData cd = d.cd;
+	d.time = values[0];
+	d.startTime = d.time;
+	randObj.initObj(d.rand, {d});
+
+	char error[] = d.forexObj.methods.setFlags(d.forexObj, cd.flags >> FLAGS_OFFSET & FLAGS_MASK);
+	if (error.csize) {
+		d.forexObj.methods.logOutput(d.forexObj, error, 1);
+		return;
+	}
+
+	error = d.forexObj.methods.setRegistry(d.forexObj, cd.registry);
+	if (error.csize) {
+		d.forexObj.methods.logOutput(d.forexObj, error, 1);
+		return;
+	}
+
+	error = d.forexObj.methods.runLogger(d.forexObj, cd.logName, values[1]);
+	if (error.csize) {
+		d.forexObj.methods.logOutput(d.forexObj, error, 1);
+		return;
+	}
+
+	char out[];
+	printf(out, "Starting %s (%p) based on %s", {version, cd.demo, d.forexObj.methods.version});
+	d.forexObj.methods.logOutput(d.forexObj, out, 6);
+
+	int outputAlgo = cd.flags >> OUTPUT_ALGO_OFFSET & OUTPUT_ALGO_MASK;
+	if (outputAlgo < 0 || outputAlgo >= outputCallbacks.lsize) {
+		d.forexObj.methods.logOutput(d.forexObj, "Error: illegal output algo field in flags", 1);
+		return;
+	}
+
+	int orderAlgo = cd.flags >> ORDER_ALGO_OFFSET & ORDER_ALGO_MASK;
+	if (orderAlgo < 0 || orderAlgo >= orderAlgorithms.lsize) {
+		d.forexObj.methods.logOutput(d.forexObj, "Error: illegal order algo field in flags", 1);
+		return;
+	}
+
+	error = d.forexObj.methods.setOutputCallback(d.forexObj, outputCallbacks[outputAlgo], cd);
+	if (error.csize) {
+		d.forexObj.methods.logOutput(d.forexObj, error, 1);
+		return;
+	}
+
+	if (cd.nCurrency >= 0)
+		d.forexObj.methods.readCryptoLog(d.forexObj, callback, d, d.fl, cd.nCurrency);
+	else
+		d.forexObj.methods.readCsvData(d.forexObj, callback, d, d.fl, -cd.nCurrency);
+	return;
+};
+
+(volatile stateful demoData d, const char text[], int status) -> () inputPassword = {
+	msendp("", "", d.cd, "");
+
+	char error[];
+	if (status <= 0)
+		error = "Error: empty private key.";
+	else
+		error = d.forexObj.methods.setExchange(d.forexObj, d.cd.exchangeName, d.cd.publicKey, text, d.cd.currencies);
+
+	if (error.csize) {
+		d.forexObj.methods.logOutput(d.forexObj, error, 1);
+		return;
+	}
+
+	const int vars[] = {DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ID};
+	getsys(getsysCallback, d, vars);
+	return;
+};
+
+(const constDemoData cd, const any objs, int status) -> () checkAddress = {
+	if (status) {
+		outputp("", "", "Error: address is still in use, kill previous exchangeTrade demo.\r\n");
+		return;
+	}
+
+	inputFile f = {cd.fileName};
+	demoData d = {cd, forexCreate(), f};
+
+	const int vars[] = {DPVM_SYS_PARAM_FLAGS};
+	const int flag = DPVM_TASK_FLAG_NO_INPUT_HISTORY + DPVM_TASK_FLAG_NO_INPUT_ECHO;
+	const int values[] = {flag};
+	setsysp("", "", vars, values);
+
+	outputp("", "", "Private key: ");
+
+	input(inputPassword, d, 256, -1);
+	return;
+};
+
+(const any registry, const char exchangeName[], const char publicKey[], const char logname[], const char filename[],
+		const char neuronNet[], const float training_params[], const char currencies[][],
+		int nCurrency, int graphX, int graphY, int neuronFlags, int flags, int dataSetPart, float volume,
+		float downRateCoeff, float upRateCoeff) -> () exchangeTrade = {
+	int cyclePeriod = CYCLE_PERIOD_LOG;
+	if (nCurrency < 0)
+		cyclePeriod = CYCLE_PERIOD_CSV;
+	if (dataSetPart > 1)
+		dataSetPart = -dataSetPart;
+	constDemoData cd = {code, registry, exchangeName, publicKey, logname, filename,
+		neuronNet, training_params, currencies, nCurrency, graphX, graphY,
+		neuronFlags, flags, cyclePeriod, dataSetPart, volume, downRateCoeff, upRateCoeff};
+
+	mrecvp("", "", cd, 0);
+	mrecvp(checkAddress, cd, cd, 0);
+	mrecvp("", "", cd, -1);
+	return;
+};

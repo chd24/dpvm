@@ -1,0 +1,10 @@
+/* monitor, external header; T18.350-T18.000; $DVS:time$ */
+
+type monitorClass = {
+        const char version[];
+	const (const stateful any registry, const (const any arg, const char text[]) -> () callback,
+	        const any arg, const any address, const char cmd[]) -> () executeCommand;
+	const (const char startcmd[], int port) -> () monitorMain;
+};
+
+type monitorType = monitorClass;

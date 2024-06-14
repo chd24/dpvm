@@ -1,0 +1,6 @@
+/* creates array of floats of given size; T18.974-T18.974; $DVS:time$ */
+
+(int size) -> (volatile float array[]) floatsArray = {
+	float array[];
+	asm { info 8 iload 1 istore new ret }
+};

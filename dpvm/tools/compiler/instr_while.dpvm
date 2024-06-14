@@ -1,0 +1,86 @@
+/* dpvm: while statement; T16.521-T20.114; $DVS:time$ */
+
+/* while (expr) instr */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const Instr instr) -> (int status) {
+	int pos;
+	int end;
+	int status;
+	char c;
+
+
+	/* read 'while' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 19) return -1;
+
+	data.pos = pos;
+
+
+	/* read '(' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status) {
+		data.mess = "( expected after while";
+		return -2;
+	}
+	data.pos = pos;
+
+	
+	/* push 'lb' bytecode */
+	c = 0x90; data.dst.push(c);
+	data.ndst++;
+
+
+	/* read expr */
+	data.nlinks = 0;
+	data.nints = 0;
+	data.nfloats = 0;
+	data.nchars = 0;
+	type res;
+	(res, status) = getexpr(data, instr);
+	if (status != 1) {
+		data.mess = "integer expression expected after (";
+		return -2;
+	}
+
+
+	/* read ')' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 1) {
+		data.mess = ") expected after expression";
+		return -2;
+	}
+	data.pos = pos;
+
+
+	/* push '0 iload jzf ipops' bytecodes */
+	c =    0; data.dst.push(c);
+	c = 0xA1; data.dst.push(c);
+	c = 0x96; data.dst.push(c);
+	c = 0xA9; data.dst.push(c);
+	data.nints--;
+	data.ndst += 4;
+
+
+	/* compile instruction */
+	status = instr(data);
+	if (status) {
+		if (status == -1)
+			data.mess = "instruction expected after )";
+		return -2;
+	}
+
+
+	/* push '1 lf jnzb' bytecodes */
+	c =    1; data.dst.push(c);
+	c = 0x94; data.dst.push(c);
+	c = 0x93; data.dst.push(c);
+	data.ndst += 3;
+
+
+	return 0;
+}

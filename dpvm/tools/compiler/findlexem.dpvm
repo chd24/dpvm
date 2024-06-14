@@ -1,0 +1,21 @@
+/* find lexem in int[][] array; T16.529-T20.056; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/algorithms/vectorset/vectorset.dpvmake"
+#include "compiler.dpvmake"
+
+(const stateful int lexems_[][], int lexem) -> (int narr, int npos) {
+	lexem &= -maxnames;
+
+	int i; 
+	for (i = 0; i < lexems_.lsize; i += 1) {
+		int arr[] = lexems_[i];
+		int pos = findint(arr, lexem);
+		if (pos < 0) pos = ~pos;
+		if (pos < arr.isize)
+			if (lexem == (arr[pos] & -maxnames)) 
+				return (i, arr[pos] & (maxnames - 1));
+	}
+	
+	return (-1, -1);
+}

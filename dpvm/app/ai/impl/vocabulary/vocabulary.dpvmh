@@ -1,0 +1,26 @@
+/* aiVocabulary class, internal header, T18.397-T18.400; $DVS:time$ */
+
+#include "../../vocabulary.dpvmh"
+
+int AIV_HALF_HASH_SIZE		= 0x80000;
+int AIV_HASH_SIZE		= AIV_HALF_HASH_SIZE + AIV_HALF_HASH_SIZE;
+int AIV_LOG_HASH_SIZE		= 20;
+
+type aiVocabularyData = {
+	volatile int hashIndexes[];
+	volatile int wordsHigh[];
+	volatile int wordsLow[];
+	volatile int wordsCount[];
+	volatile float wordsWeight[];
+	const int statistics[];
+	const float logStatistics[];
+	int nLetters;
+	int nWords;
+	int totalSymbols;
+	float logTotalSymbols;
+};
+
+type aiVocabularyImpl = {
+	volatile aiVocabularyData data;
+	const aiVocabularyMethods methods;
+};

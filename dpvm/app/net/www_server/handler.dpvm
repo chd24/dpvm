@@ -1,0 +1,36 @@
+/* www_server: error handler; T17.039-T18.884; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(const stateful www_data arg, const stateful int values[]) -> () {
+	char str[];
+
+	strcat(str, "- - - [");
+	strftime(str, "%Y-%m-%d:%H:%M:%S +", values[4], arg.offset);
+	strcat(str, "00.00] \"");
+	strcat(str, arg.version);
+	strcat(str, " crashed with error ");
+	int cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+	strcat(str, "\" 0 0 \"-\" \"-\"\r\n");
+
+	write("", "", arg.log, str, -1);
+	return;
+}

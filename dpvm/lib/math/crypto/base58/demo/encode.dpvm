@@ -1,0 +1,12 @@
+/* base58 class, encode demo, T19.570-T19.570; $DVS:time$ */
+
+#include "../base58.dpvmake"
+
+(const stateful char in[]) -> (volatile char out[]) encode = {
+	base58Class base58Obj = base58Create();
+
+	char out[];
+	base58Obj.methods.encode(out, in, 0, in.csize);
+
+	return out;
+};

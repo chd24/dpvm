@@ -1,0 +1,22 @@
+/* version and history for floats computations translator */
+
+const char floatsShortVersion[] = "floats 0.1.4";
+const char floatsVersion[] = "float computations translator for amd64, ver. 0.1.4; T19.506-T20.125"; /* $DVS:time$
+
+History:
+
+T20.125 ver 0.1.4: fixed bug in counting fexp
+
+T19.695 ver 0.1.3: added bytecodes feq, flt, fgt
+
+T19.668 ver 0.1.2: added bytecodes fsqrt, fexp, flog, fsincos, fatan
+
+T19.586 ver 0.1.1: added support for bytecodes l/i/fpops/popn, iget, itof
+
+T19.512 ver 0.1.0: implemented bytecodes functions, first full version
+
+T19.509 ver 0.0.2: implemented preamble, finish and error processing functions
+
+T19.506 ver 0.0.1: project started, template with basic checks created
+
+*/

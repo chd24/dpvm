@@ -1,0 +1,43 @@
+/* test for temporary transactions; T19.616-T19.616; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+
+(const stateful char str[]) -> (int res) worker0 = {
+	char arr[][];
+	pushObject(str, arr);
+	arr[0].cpush('0');
+	strcat(arr[0], ".\r\n");
+	outputp("", "", arr[0]);
+	return 0;
+};
+
+(volatile stateful char str[]) -> (int res) worker1 = {
+	char arr[][];
+	pushObject(str, arr);
+	arr[0].cpush('1');
+	strcat(arr[0], ".\r\n");
+	outputp("", "", arr[0]);
+	return 1;
+};
+
+(volatile char str[]) -> (int res) worker2 = {
+	str.cpush('2');
+	strcat(str, ".\r\n");
+	outputp("", "", str);
+	return 2;
+};
+
+(const stateful char str[]) -> (int res) temporary = {
+	char str0[], str1[], str2[];
+	strcat(str0, str);
+	strcat(str1, str);
+	strcat(str2, str);
+	int res;
+	[
+		res = worker0(str0);
+		res = worker1(str1);
+		res = worker2(str2);
+	]
+	return res;
+};

@@ -1,0 +1,42 @@
+/* p2p mailbox messages; T16.954-T18.043; $DVS:time$ */
+
+/* address for sending mailbox messages */
+type p2paddr = {
+        const char module[];	/* P2P_MODULE */
+        const char host[];	/* host, if service is host-specific */
+        int task_id;            /* task id of p2p process */
+        int service;            /* service id, see below */
+        int port;               /* port of host */
+};
+
+/* message to send to p2p mailbox address */
+type p2pmess = {
+        const char data[];	/* data in string format */
+        const any obj;          /* object(s) */
+        const char host[];      /* host origin of object */
+        const char newhost[];   /* new host for RENHOST task */
+        int task;               /* task id, see below */
+        int port;               /* port of the host */
+        int newport;            /* new port for RENHOST task */
+};
+
+/* name of p2p module */
+char P2P_MODULE[] = "p2p";
+
+/* service ids */
+int P2P_BROADCAST = 0; /* save and broadcast objects via network, broadcast requests */
+int P2P_READOBJ   = 1; /* deserialize object and then save/broadcast it via network */
+int P2P_ADDRMAN   = 2; /* address book manager: add host, notify disconnect,
+			  broadcast messages to all connected hosts */
+int P2P_SENDOBJ   = 3; /* send object to specific host */
+int P2P_LOGGER	  = 4; /* write message to log file, task id = level, port = thread id */
+
+/* task ids */
+int P2P_BROADOBJS = 0; /* broadcast serialized object */
+int P2P_ADDHOST   = 1; /* add host */
+int P2P_ADDONE    = 2; /* add already connected host, delete it on disconnect */
+int P2P_DELHOST   = 3; /* delete host */
+int P2P_DISCONN   = 4; /* notify host disconnect */
+int P2P_RENHOST   = 5; /* rename host */
+int P2P_REQOBJS   = 6; /* request unknown objects */
+int P2P_STOCKOBJS = 7; /* take into consideration recently saved objects */

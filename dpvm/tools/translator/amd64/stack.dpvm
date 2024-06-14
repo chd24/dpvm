@@ -1,0 +1,70 @@
+/* dpvm byte code translator, amd64 stack operations; T16.081-T18.397; $DVS:time$ */
+
+/* 
+ 	rsi = ints stack end
+*/
+
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> ()
+	ld = amd64_load;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		int datatype, int reg, int i, int n) -> ()
+	st = amd64_store;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res) {
+	int r;
+	int n;
+	int j;
+
+	c &= 0xf;
+
+	if ((c >> 2) == 2) { /* *pops */
+		if (c == 8) {
+			r = amd64_unlink(data, list, endlist, i, 0);
+			if (r < 0) return r;
+		}
+		return 0;
+	}
+
+	if (!i) { return -1; }
+	n = data.func.c[i - 1];
+	if (n >= 0x80) { return -1; }
+	asm_del(list, 0);
+	asm_del(list, 0);
+
+	if ((c >> 2) == 3) { /* *popn */
+		if (c == 12) {
+			for (j = 0; j < n ; j += 1) {
+				r = amd64_unlink(data, list, endlist, i, -j);
+				if (r < 0) return -1;
+			}
+		}
+
+	} else if (!(c >> 2)) { /* *load */
+		ld(data, list, "cp", "48 8B", c & 3, 0, 0, i, n + 2);
+		if (!c) {
+			as(list, "mov rcx,d", "48 C7 C1 124", 0, 0, 1, 0, 0);
+			as(list, "lock xadd [rax+b],rcx", "F0 48 0F C1 48 111", 0, 0x78, 0, 0, 0);
+		}
+		st(data, list, c & 3, 0, i, 0);
+
+	} else if ((c >> 2) == 1) { /* *store */
+		if (c == 4) {
+			r = amd64_unlink(data, list, endlist, i, n + 1);
+			if (r < 0) return -1;
+		}
+		ld(data, list, "mov", "48 8B", c & 3, 0, 0, i, 0);
+		st(data, list, c & 3, 0, i, n);
+	}
+
+	return 0;
+}

@@ -1,0 +1,68 @@
+/* aiAlphabet class, utf-8.ru.fb2 codetable */
+
+#include "../../../alphabet.dpvmh"
+#include "codetables.dpvmh"
+
+char version[] = "utf-8.ru.fb2 codetable, ver 0.1.1, T18.383-T18.388"; /* $DVS:time$
+
+history:
+
+T18.388 ver 0.1.1 - added <p>, </p>, skipped symbols and paragraph
+
+T18.383 ver 0.1.0 - first version without any html/xml format interpreting
+
+*/
+
+aiAlphabetLettersArray
+small = {
+	{ "а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я" },
+	AI_ALPHABET_SMALL
+},
+big = {
+	{ "А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я" },
+	AI_ALPHABET_BIG
+},
+accents = {
+	{ "`", "'" },
+	AI_ALPHABET_ACCENT
+},
+spaces = {
+	{
+	  " ", "\t", "\r", "\n", ",", ":", "-", "(", ")", "\"",
+	  "<p>","</p>","<emphasis>","</emphasis>"
+	},
+	AI_ALPHABET_SPACE
+},
+skipped = {
+	{
+	  "[", "]", "{", "}", "...", "--", "*", "/", "=", "╟",
+	  "0","1","2","3","4","5","6","7","8","9",
+	  "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z",
+	  "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
+	  "à","â","ç","Ç","è","Ê","é","ê","ë","í","î","ô","œ","ù","û",
+	  "&gt;", "&lt;"
+	},
+	AI_ALPHABET_SKIPPED
+},
+dots = {
+	{ ".", ";", "?", "!" },
+	AI_ALPHABET_DOT
+},
+paragraph = {
+	{ ".</p>", "<empty-line/>" },
+	AI_ALPHABET_PARAGRAPH
+};
+
+aiAlphabetPredefinedCodeTable ai_utf_8_ru_fb2 = {
+	"utf-8.ru.fb2",
+	version,
+	{
+		small,
+		big,
+		accents,
+		spaces,
+		skipped,
+		dots,
+		paragraph
+	}
+};

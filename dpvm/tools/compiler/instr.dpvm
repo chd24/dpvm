@@ -1,0 +1,81 @@
+/* dpvm: instruction; T15.437-T20.114; $DVS:time$ */
+
+/* <instruction> */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data) -> (int status) {
+	int pos;
+	int end;
+	int status;
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+
+	/* { instr... } */
+
+        if (status == 4 || status == 2) {
+		status = instr_block(data, code);
+
+
+	/* if (expr) instr [else instr] */
+
+	} else if (status == 17) {
+		status = instr_if(data, code);
+
+
+	/* for (voidexpr; expr; voidexpr) instr */
+
+	} else if (status == 63) {
+		status = instr_for(data, code);
+
+
+	/* while (expr) instr */
+
+	} else if (status == 19) {
+		status = instr_while(data, code);
+
+
+	/* do instr while (expr); */
+
+	} else if (status == 18) {
+		status = instr_do(data, code);
+
+
+	/* return multiexpr; */
+
+	} else if (status == 16) {
+		status = instr_return(data, code);
+
+
+	/* asm { ... } */
+
+	} else if (status == 13) {
+		(pos, end, status) = instr_asm(data.src, data.dst, data.pos, data.end);
+		if (!status) data.pos = pos;
+
+
+	/* use objname; */
+
+	} else if (status == 14) {
+		status = instr_use(data);
+
+
+	/* type var [= value]; */
+
+	} else if (status >= 8 && status <= 12 || status >= 57 && status <= 61) {
+		status = instr_decl(data, code, 1);
+
+
+	} else {
+		status = instr_decl(data, code, 1);
+
+
+		/* voidexpr; */
+
+		if (status == -1)
+			status = instr_expr(data, code);
+	}
+
+	return status;
+}

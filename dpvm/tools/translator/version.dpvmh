@@ -1,0 +1,28 @@
+/* translator, version */
+
+char version[] = "translator 0.6.3, T16.070-T20.135"; /* $DVS:time$
+
+History:
+
+T20.135 ver 0.6.3 - support translation to final ret where is no branching over
+
+T20.125 ver 0.6.2 - fixed bug in counting fexp()
+
+T20.100 ver 0.6.1 - added support for ?: operator
+
+T19.643 ver 0.6.0 - translatorObj created and included into registry
+
+T19.632 ver 0.5.9 - implement memory quota changes
+
+T19.616 ver 0.5.8 - separate fixing object from counting its hash
+
+T19.605 ver 0.5.7 - add thread as parameter to dpvm_check_function()
+
+T19.575 ver 0.5.6 - added unfix bytecode
+
+T18.397 ver 0.5.5 - added fexp, flog, fatan bytecodes
+
+...
+
+*/
+

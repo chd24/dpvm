@@ -1,0 +1,15 @@
+/* hmac class, makefile for hashes array, T19.993-T19.993; $DVS:time$ */
+
+#include "../hmac.dpvmh"
+
+/*@ "sha256.dpvm": SHA-256 */
+hmacHash sha256_hash = gutter_unmasks_intervening;
+/* @*/
+
+/*@ "sha512.dpvm": SHA-512 */
+hmacHash sha512_hash = platefuls_artiste_satyr;
+/* @*/
+
+/*@ "hashes.dpvm": array of all hashes */
+hmacHash hmacHashes[] = narcotics_spade_formalism;
+/* @*/           

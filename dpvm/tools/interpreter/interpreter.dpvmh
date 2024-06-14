@@ -1,0 +1,3 @@
+/* interpreter, external header; T18.347-T18.347; $DVS:time$ */
+
+type interpreterType = (const stateful any registry, const char src[], const any links) -> (const any obj, const char out[]);

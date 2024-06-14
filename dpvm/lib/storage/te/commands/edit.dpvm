@@ -1,0 +1,205 @@
+/* edit current entry command, T18.320-T18.336; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../internal.dpvmh"
+
+type editData = {
+	volatile stateful teData data;
+	volatile int oldField[][];
+	int n;
+        int changed;
+};
+
+(volatile stateful editData d, const int values[]) -> () getTime {
+	if (d.data.pos == d.data.ctx.sector0Pos) {
+		int sector0[];
+		copyints(sector0, d.data.file, d.data.pos + 16, d.data.pos + 144);
+
+		teContext ctx2;
+		objcopyto(ctx2, d.data.ctx);
+		d.data.utilities.teContextInit(ctx2, "", sector0);
+		d.data.ctx = ctx2;
+	}
+
+	d.data.utilities.teEntryCorrect(d.data.ctx, d.data.file, "", d.data.pos, values[0], 0, d.data.extension);
+
+	int j;
+	for (j = 0; j < 4; j += 1) {
+		if (d.changed & 1 << j) {
+			int index = d.data.pos / 36 + j;
+			int index0;
+			int found;
+			int field[];
+			copyints(field, d.data.file, d.data.pos + j * 32 + 16, d.data.pos + j * 32 + 48);
+
+			if (field != d.data.emptyField) {
+				any indexObj;
+				(indexObj, found) = hashObj.findGetValue(d.data.hash, field);
+				index0 = indexObj.i[0];
+				if (!found) {
+					int newIndexObj[];
+					newIndexObj.ipush(index);
+					hashObj.findAddKeyValue(d.data.hash, field, newIndexObj);
+				}
+			}
+
+			if (!j) {
+				hashObj.remove(d.data.hash, d.oldField[0]);
+
+				int ind;
+				for (ind = d.data.nextIndexes[index]; ind != index; ind = d.data.nextIndexes[ind]) {
+					int pos = (ind >> 2) * 144 + 16 + (ind & 3) * 32;
+					int i;
+					for (i = 0; i < 32; i += 1)
+						d.data.file[pos + i] = field[i];
+
+					d.data.utilities.teEntryCorrect(d.data.ctx, d.data.file, "", (ind >> 2) * 144, values[0], 0, d.data.extension);
+				}
+
+				if (found) {
+					int nextIndex = d.data.nextIndexes[index0];
+					int prevIndex = d.data.prevIndexes[index];
+					d.data.nextIndexes[index0] = index;
+					d.data.prevIndexes[index] = index0;
+					d.data.nextIndexes[prevIndex] = nextIndex;
+					d.data.prevIndexes[nextIndex] = prevIndex;
+				}
+			} else {
+				int prevIndex = d.data.prevIndexes[index];
+				int nextIndex = d.data.nextIndexes[index];
+				d.data.prevIndexes[nextIndex] = prevIndex;
+				d.data.nextIndexes[prevIndex] = nextIndex;
+
+				if (found) {
+					prevIndex = d.data.prevIndexes[index0];
+					d.data.prevIndexes[index0] = index;
+					d.data.nextIndexes[prevIndex] = index;
+					d.data.prevIndexes[index] = prevIndex;
+					d.data.nextIndexes[index] = index0;
+				} else {
+					d.data.prevIndexes[index] = index;
+					d.data.nextIndexes[index] = index;
+				}
+			}
+		}
+	}
+
+	output(d.data.command, d.data, "Entry changed.\r\n");
+	return;
+}
+
+(volatile stateful editData d, const char text[], int status) -> () inputField {
+	if (d.n >= 0) {
+		int size = text.csize;
+		if (size && text[size - 1] == '\n')
+			size -= 1;
+		if (size && text[size - 1] == '\r')
+			size -= 1;
+
+		if (size) {
+			while (size && text[size - 1] == ' ')
+				        size -= 1;
+
+			int base = d.data.pos + 16 + d.n * 32;
+			int pos;
+			int j;
+			for (j = 0; j < 64; j += 1) {
+				int uni0 = d.data.file[base + (j >> 1)] >> ((j & 1) << 4) & 0xffff;
+				int uni;
+
+				if (pos < size) {
+					(uni, pos) = scanutf8(text, pos, size);
+					if (uni < 0) {
+						outputp("", "", "Error parsing utf8 string.\r\n");
+						uni = '?';
+						pos += 1;
+					} else if (uni > 0xffff) {
+						outputp("", "", "Unsupported unicode symbol.\r\n");
+						uni = '?';
+					}
+				} else
+					uni = 0xffff;
+
+				if (uni != uni0) {
+					d.data.file[base + (j >> 1)] &= ~(0xffff << ((j & 1) << 4));
+					d.data.file[base + (j >> 1)] |= uni << ((j & 1) << 4);
+					d.changed |= 1 << d.n;
+				}
+			}
+
+			if (pos < size)
+				outputp("", "", "Too long string, truncated to 64 symbols.\r\n");
+		}
+
+		if (d.n == 3) {
+			if (d.changed) {
+				const int vars[] = {0};
+				getsys(getTime, d, vars);
+			} else
+				output(d.data.command, d.data, "Entry not changed.\r\n");
+			return;
+		}
+	}
+
+	d.n += 1;
+
+	char res[];
+	res.cpush("10LE"[d.n]);
+	strcat(res, "> ");
+
+	int j;
+	int lastSpaces;
+	int base = d.data.pos + 16 + d.n * 32;
+	for (j = 0; j < 64; j += 1) {
+		int uni = d.data.file[base + (j >> 1)] >> ((j & 1) << 4) & 0xffff;
+		if (uni == 0xffff)
+			uni = ' ', lastSpaces += 1;
+		else {
+			lastSpaces = 0;
+			if (uni < ' ')
+				uni = '.';
+		}
+		printutf8(res, uni);
+	}
+
+	if (lastSpaces)
+		res.cpop(lastSpaces);
+
+	int size = res.csize - 3;
+	while (size) {
+		res.cpush('\b');
+		size -= 1;
+	}
+
+	outputp("", "", res);
+	input(code, d, 0x100, -1);
+	return;
+}
+
+(volatile stateful teData data) -> (const char result[]) commandEdit {
+	if (data.pos + 144 > data.file.isize)
+		return "End of database.\r\n";
+
+	outputp("", "", "Press Arrow Uo to start editing, or press Enter to remain the field unchanged.\r\n");
+
+	editData d;
+	d.data = data;
+	int j;
+	for (j = 0; j < 4; j += 1) {
+		int field[];
+		copyints(field, data.file, data.pos + j * 32 + 16, data.pos + j * 32 + 48);
+		d.oldField.lpush(field);
+	}
+	d.n = -1;
+
+	inputField(d, "", 0);
+	return "";
+}
+
+teCommand cmdEdit = {
+	"edit",
+	"edit current database entry",
+	commandEdit
+};
+
+

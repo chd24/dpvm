@@ -1,0 +1,261 @@
+/* monitor: init; T15.570-T19.704; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "../registry/consts.dpvmh"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+#include "monitor.dpvmake"
+#include "version.dpvmh"
+
+char profileName[] = ".dpvm_profile.txt";
+int handler_params[] = {DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ERROR, DPVM_SYS_PARAM_CODE, DPVM_SYS_PARAM_POS,
+			DPVM_SYS_PARAM_FUNC_SHORT, DPVM_SYS_PARAM_ID};
+
+(const stateful mondata data, int port, int ipaddr0, int ipaddr1) -> () work {
+	if (ipaddr1 || ipaddr0 && ipaddr0 != 0x7f000001)
+		return;
+
+	mondata data1;
+	objcopyto(data1, data);
+	any addr;
+	objcopyto(addr, data1.address);
+	addr.ipush(port);
+	addr.ipush(ipaddr0);
+	addr.ipush(ipaddr1);
+        data1.address = addr;
+
+	mrecvp("", "", addr, 0);
+	out_result(data1, version);
+	return;
+}
+
+(volatile stateful mondata data) -> (int res) setEnd {
+	char mess[] = monitorRegistryObj.check(data.registry, REGISTRY_CHECKER | REGISTRY_COMPILER
+			| REGISTRY_INTERPRETER | REGISTRY_MAKER | REGISTRY_MONITOR | REGISTRY_DEBUGGER);
+	if (mess.csize) {
+		char m[];
+		strcat(m, version);
+		strcat(m, ": error while checking registry: ");
+		strcat(m, mess);
+		strcat(m, "\r\n");
+		outputp("", "", m);
+		return -1;
+	}
+
+	mess = prepareDebugger(data);
+	if (mess.csize) {
+		char m[];
+		strcat(m, version);
+		strcat(m, ": error while preparing debugger: ");
+		strcat(m, mess);
+		strcat(m, "\r\n");
+		outputp("", "", m);
+		return -1;
+	}
+
+	const int vars[] = {DPVM_SYS_PARAM_MEMORY_QUOTA};
+	int values[] = {data.registry.totalMemory};
+	setsysp("", "", vars, values);
+
+	int port = data.task;
+	data.task = 0;
+	data.mode = 0;
+	char text[];
+	data.text = text;
+	char name[];
+	data.name = name;
+
+	/* set default handler */
+
+	mondata data1;
+	objcopyto(data1, data);
+	getsysp(handler, data1, handler_params);
+
+
+	/* bind to port and listen connections; port | TCP_code << 16 | IPv4_code << 24 */
+
+	mondata data2;
+	objcopyto(data2, data);
+	bindp(work, data2, port | 0x4060000, 0, 0);
+
+	return 0;
+}
+
+(volatile any data0, const char err[]) -> () setCallback {
+	if (err.csize) {
+		char mess[];
+		strcat(mess, version);
+		strcat(mess, ": error in 'set' profile command: ");
+		strcat(mess, err);
+		strcat(mess, "\r\n");
+		outputp("", "", mess);
+		return;
+	}
+
+	mondata data;
+	objcopyto(data, data0);
+
+	char text[] = data.text;
+	int begin = data.mode;
+	int end = text.csize;
+	int interactive = !data.name.csize;
+	int setend;
+
+	while (begin < end) {
+		int pos1 = substrchr(text, begin, end, '\n');
+		int pos2 = substrchr(text, begin, end, ';');
+		if (pos1 < 0) pos1 = end;
+		if (pos2 < 0) pos2 = end;
+		int pos = pos1;
+		if (pos2 < pos) pos = pos2;
+
+		int l;
+		int r;
+		(l, r) = strtostr(text, begin, pos);
+		begin = pos + 1;
+
+		if (!setend && r == l + 3 && text[l] == 's' && text[l + 1] == 'e' && text[l + 2] == 't') {
+			char env[];
+			substrcat(env, text, r, pos);
+			data.mode = begin;
+			monitorRegistryObj.set(data.registry, code, data, env, 0);
+			return;
+		} else if (l < r) {
+			if (!setend) {
+				if (setEnd(data))
+					return;
+
+				setend = 1;
+			}
+
+			r = pos;
+			while (r > l && (text[r - 1] == '\n' || text[r - 1] == '\r'))
+				r -= 1;
+
+			char cmd[];
+			substrcat(cmd, text, l, r);
+
+			int hashes[] = text2hashes(cmd);
+
+			mondata data1;
+			objcopyto(data1, data);
+			data1.name = cmd;
+			data1.mode = -1;
+
+			(const stateful mondata data, const any objs) -> () interpret0 = {
+				mondata data1;
+				objcopyto(data1, data);
+				char txt[];
+				strcat(txt, data.name);
+				data1.text = txt;
+				interpret(data1, objs);
+				return;
+			};
+
+			mloadp_p2p(interpret0, data1, hashes, 0);
+		}
+	}
+
+	if (!setend && setEnd(data))
+		return;
+
+	if (interactive) {
+		/* run interactive environment */
+		work(data, 0, 0, 0);
+	}
+
+	return;
+}
+
+(volatile mondata data, const char text[], int status) -> () profileLoaded {
+	char cmd[];
+	strcat(cmd, text);
+	if (text.csize && data.name.csize)
+		strcat(cmd, "\n");
+	strcat(cmd, data.name);
+	data.text = cmd;
+
+	setCallback(data, "");
+	return;
+}
+
+(const char startcmd[], int port) -> () monitorMain {
+	mondata data;
+	data.command = command;
+	data.name = startcmd;
+	data.task = port;
+
+        any addr;
+        addr.lpush(version);
+        addr.ipush(port);
+        data.address = addr;
+
+	/* set command line of monitor task */
+
+	int vars[];
+	int values[];
+	int i;
+	int var = DPVM_SYS_PARAM_NAME;
+	int value;
+	int shift;
+
+	for (i = 0; i < version.csize; i += 1) {
+		value |= version[i] << shift;
+		shift += 8;
+		if (shift == 64 || i == version.csize - 1) {
+			vars.ipush(var);
+			values.ipush(value);
+			var += 1;
+			value = 0;
+			shift = 0;
+		}
+	}
+
+	setsysp("", "", vars, values);
+
+	read(profileLoaded, data, profileName, 0, 0x100000);
+	return;
+}
+
+(const stateful any registry, const (const any arg, const char text[]) -> () callback,
+                const any arg, const any address, const char cmd[]) -> () executeCommand {
+	mondata data;
+
+	data.registry = monitorRegistryObj.copy(registry);
+	char mess[] = monitorRegistryObj.check(data.registry, REGISTRY_CHECKER | REGISTRY_COMPILER
+			| REGISTRY_INTERPRETER | REGISTRY_MAKER | REGISTRY_MONITOR | REGISTRY_DEBUGGER | REGISTRY_CHECK);
+	if (mess.csize) {
+		char err[];
+		strcat(err, version);
+		strcat(err, ": error while checking registry: ");
+		strcat(err, mess);
+		callback(arg, err);
+		return;
+	}
+
+	mess = prepareDebugger(data);
+	if (mess.csize) {
+		char err[];
+		strcat(err, version);
+		strcat(err, ": error while preparing debugger: ");
+		strcat(err, mess);
+		callback(arg, err);
+		return;
+	}
+
+	data.out_func = callback;
+	data.out_data = arg;
+	data.address = address;
+	data.command = command;
+
+	command(data, cmd, cmd.csize);
+	return;
+}
+
+monitorClass monitorObj = {
+        version,
+        executeCommand,
+        monitorMain
+};

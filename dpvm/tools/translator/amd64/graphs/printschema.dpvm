@@ -1,0 +1,115 @@
+/* creates schema of code segment; T16.570-T17.981; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "graphs.dpvmake"
+
+int startreg		= 0x4000000000000000;
+
+(volatile stateful char text[], const stateful gate g, int right) -> () printvar {
+	text.cpush('x');
+	printint(text, g.depth, 1);
+	text.cpush('[');
+	int pos;
+	if (right) pos = g.stackpos1;
+	else pos = g.stackpos0;
+	if (pos >= startreg)
+		text.cpush('r'),
+		pos = pos - startreg;
+	printint(text, pos, 1);
+	text.cpush(']');
+	return;
+}
+
+(volatile stateful char text[], int n) -> () printconst {
+	if (n > -0x1000 & n < 0x1000)
+		printint(text, n, 1);
+	else
+		strcat(text, "0x"),
+		printhex(text, n, 1, 0);
+	return;
+}
+
+(volatile stateful schema s) -> (const char text[]) {
+	char text[];
+	gate g;
+	int i;
+
+	s.base.depth = -1;
+
+	for (g = s.base.next, i = 0; g.depth >= 0; g = g.next, i += 1)
+		g.depth = i;
+
+	strcat(text, "inputs = (");
+	for (i = 0, g = s.base; i < s.inputs.lsize; i += 1, g = g.next) {
+		if (i) strcat(text, ", ");
+		printvar(text, s.inputs[i], 0);
+	}
+	strcat(text, ")\r\n");
+
+	for (g = g.next; g.depth >= 0; g = g.next) {
+		if (g.stackpos0 >= 0 & g.stackpos1 >= 0) {
+			text.cpush('(');
+			printvar(text, g, 0);
+			text.cpush(',');
+			text.cpush(' ');
+			printvar(text, g, 1);
+			text.cpush(')');
+		} else if (g.stackpos0 >= 0)
+			printvar(text, g, 0);
+		else if (g.stackpos1 >= 0)
+			printvar(text, g, 1);
+
+		text.cpush(' ');
+		text.cpush('=');
+		text.cpush(' ');
+
+		if (g.op == op_neg) text.cpush('-');
+		else if (g.op == op_not) text.cpush('~');
+
+		if (g.edgesmask & 1)
+			printvar(text, g.in0, g.flags & flag_in0right);
+		else
+			printconst(text, g.value);
+
+		if (g.op == op_add) strcat(text, " + ");
+		else if (g.op == op_sub) strcat(text, " - ");
+		else if (g.op == op_mul) strcat(text, " * ");
+                else if (g.op == op_div) strcat(text, " / ");
+		else if (g.op == op_and) strcat(text, " & ");
+		else if (g.op == op_or ) strcat(text, " | ");
+		else if (g.op == op_xor) strcat(text, " ^ ");
+		else if (g.op == op_shl) strcat(text, " << ");
+		else if (g.op == op_shr) strcat(text, " >> ");
+		else if (g.op == op_rol) strcat(text, " <<o ");
+		else if (g.op == op_ror) strcat(text, " o>> ");
+                else if (g.op == op_eq ) strcat(text, " == ");
+                else if (g.op == op_lt ) strcat(text, " < ");
+                else if (g.op == op_gt ) strcat(text, " > ");
+                else if (g.op == op_neq) strcat(text, " != ");
+                else if (g.op == op_leq) strcat(text, " <= ");
+                else if (g.op == op_geq) strcat(text, " >= ");
+                else if (g.op == op_fullmul) strcat(text, " ** ");
+
+                if ((g.op >> 4) >= 2) {
+			if (g.edgesmask & 2)
+				printvar(text, g.in1, g.flags & flag_in1right);
+			else
+				printconst(text, g.value);
+		}
+
+		strcat(text, ", flags = 0x");
+		printhex(text, g.flags, 2, 0);
+		strcat(text, ", edges = 0x");
+		printhex(text, g.edgesmask, 1, 0);
+		strcat(text, "\r\n");
+	}
+
+	strcat(text, "outputs = (");
+	for (i = 0; i < s.outputs.lsize; i += 1) {
+		if (i) strcat(text, ", ");
+		printvar(text, s.outputs[i], s.outright[i]);
+	}
+	strcat(text, ")\r\n");
+
+	return text;	
+}

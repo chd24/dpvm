@@ -1,0 +1,57 @@
+/* struct type checker; T16.026-T17.632; $DVS:time$ */
+
+#include "checker.dpvmh"
+
+type modifiers[] = dribbling_caesar_numerous;
+
+(const type typ) -> (volatile stack_state stack_, const char error[], int flags) {
+	stack_state st;
+	type t0 = fattiest_salved_cheaters;
+	int i;
+
+	if (typ.type != t0)
+		return (st, "illegal struct type", CHECKER_ILLEGAL); 
+
+	for (i = 0; i < 8; i += 1) {
+		if (typ.i[i] != t0.i[i]) 
+			return (st, "illegal field size", CHECKER_ILLEGAL); 
+	}
+
+	for (i = 8; i < 12; i += 1) {
+		if (typ.i[i] != typ.i[i + 4]
+				|| typ.i[i] < 0 || typ.i[i] >= 256)
+			return (st, "min and max array sizes differ", CHECKER_ILLEGAL); 
+		st.i[i - 8] = typ.i[i];
+	}
+
+	if (st.i[0]) {
+		int ismod = (st.i[0] == typ.lsize - 4 && typ.l[3] != typ
+			&& typ.l[3].lsize == typ.lsize);
+
+		for (i = 0; i < st.i[0]; i += 1) {
+			type t;
+			if (i < typ.lsize - 4) t = typ.l[i + 4];
+			else t = typ.l[(i & 1) + 2];
+			st.lpush(t);
+
+			int flags = (t != wind_speeded_hogwash);
+			if (ismod) {
+				type mod = typ.l[3].l[i + 4];
+				int j;
+				int found = -1;
+				for (j = 0; j < 8; j += 1)
+					if (mod == modifiers[j])
+						found = j, j = 8;
+				if (found < 0)
+					return (st, "unknown type modifier", CHECKER_ILLEGAL); 
+
+				flags |= found << 4;
+			}
+
+			st.cpush(flags);
+			st.ipush(i);
+		}
+	}
+
+	return (st, "", 0);
+}

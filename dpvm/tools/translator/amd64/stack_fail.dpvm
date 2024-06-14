@@ -1,0 +1,32 @@
+/* dpvm byte code translator, amd64 stack restore in the case of fail; T16.141-T18.397; $DVS:time$ */
+
+/* 
+ 	rdi = links stack end
+*/
+
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[], int i)
+		-> () {
+	amd64_stack_top(data, list, i, 0);
+
+	as(list, "mov rax,[r8]", "49 8B 00", 0, 0, 0, 0, 0);
+	as(list, "mov rax,[rax]", "48 8B 00", 0, 0, 0, 0, 0);
+	as(list, "sub rdi,[rax+b]", "48 2B 78 111", 0, 0x00, 0, 0, 0);
+	as(list, "sub rsi,[rax+b]", "48 2B 70 111", 0, 0x08, 0, 0, 0);
+	as(list, "sub rdx,[rax+b]", "48 2B 50 111", 0, 0x10, 0, 0, 0);
+	as(list, "sub rcx,[rax+b]", "48 2B 48 111", 0, 0x18, 0, 0, 0);
+	as(list, "shr rdi,b", "48 C1 EF 121", 0, 0, 3, 0, 0);
+	as(list, "shr rsi,b", "48 C1 EE 121", 0, 0, 3, 0, 0);
+	as(list, "shr rdx,b", "48 C1 EA 121", 0, 0, 3, 0, 0);
+	as(list, "mov [rax+b],rdi", "48 89 78 111", 0, 0x20, 0, 0, 0);
+	as(list, "mov [rax+b],rsi", "48 89 70 111", 0, 0x28, 0, 0, 0);
+	as(list, "mov [rax+b],rdx", "48 89 50 111", 0, 0x30, 0, 0, 0);
+	as(list, "mov [rax+b],rcx", "48 89 48 111", 0, 0x38, 0, 0, 0);
+
+	return;
+}

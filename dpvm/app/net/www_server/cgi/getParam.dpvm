@@ -1,0 +1,26 @@
+/* cgi interface, get query parameter, T18.753-T18.884; $DVS:time$ */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "modules.dpvmake"
+
+(volatile stateful char out[], const stateful char env[][], const stateful char name[]) -> (int status) getParam = {
+    char query[];
+    if (!getEnv(query, env, "QUERY_STRING"))
+        return 0;
+
+    int qsize = query.csize, size = name.csize, i;
+
+    for (i = 0; i < qsize; i += 1) {
+        if (qsize - i > size && substrstr(query, name, i, i + size) == i && query[i + size] == '=') {
+            i += size + 1;
+            int j = substrchr(query, i, qsize, '&');
+            if (j < 0) j = qsize;
+            substrcat(out, query, i, j);
+            return 1;
+        }
+        i = substrchr(query, i, qsize, '&');
+        if (i < 0) i = qsize;
+    }
+
+    return 0;
+};

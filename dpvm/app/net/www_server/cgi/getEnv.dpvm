@@ -1,0 +1,16 @@
+/* cgi interface, get environment variable, T18.753-T18.884; $DVS:time$ */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+
+(volatile stateful char out[], const stateful char env[][], const stateful char var[]) -> (int status) getEnv = {
+    int size = var.csize, i;
+
+    for (i = 0; i < env.lsize; i += 1) {
+        if (env[i].csize > size && !substrstr(env[i], var, 0, size) && env[i][size] == '=') {
+            substrcat(out, env[i], size + 1, env[i].csize);
+            return 1;
+        }
+    }
+
+    return 0;
+};

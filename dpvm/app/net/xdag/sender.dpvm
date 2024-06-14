@@ -1,0 +1,121 @@
+/* thread collecting and sending shares; T16.656-T19.568; $DVS:time$ */
+
+#include "../../utils/utils.dpvmake"
+#include "../../stdlib/stdlib.dpvmake"
+#include "xdag.dpvmake"
+
+int zz = 0x8000000000000000;
+
+(volatile stateful xdagdata data, const any mess, int status) -> () recvshares {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received a mail in sender, service stopped");
+		write_log(data, m, 2);
+		return;
+	}
+
+	int i;
+	int done;
+
+	for (i = 0; i < mess.lsize; i += 1) {
+		xdagshare s;
+		objcopyto(s, mess.l[i]);
+		int useShare;
+
+		if (s.taskseq == -1) {
+			write_log(data, "Sender stopped by receiver's request", 5);
+			outputp("", "", "");
+			return;
+		} else if (s.taskseq <= -2) {
+			data.clientId = s.clientId;
+			data.jobId = s.jobId;
+			s.taskseq = ~s.taskseq;
+			done = 0;
+			useShare = 1;
+		} else if ((data.cdata.method & 0xff) >= 16 && s.taskseq == data.share.taskseq
+				&& s.hashhigh - zz < data.share.hashhigh - zz) {
+			s.clientId = data.clientId;
+			s.jobId = data.jobId;
+			s.hashhigh = data.share.hashhigh;
+			done = 1;
+			useShare = 1;
+		} else if ((data.cdata.method & 0xff) < 16 && (s.taskseq < data.share.taskseq ||
+				(s.taskseq == data.share.taskseq && s.hashhigh - zz < data.share.hashhigh - zz))) {
+			done = 1;
+			useShare = 1;
+		}
+
+		if (useShare)
+			data.share = s;
+	}
+
+	if (done) {
+		int arr[];
+		objcopyto(arr, data.share.share);
+		char raw[] = encrypt(data, arr), raw0[] = raw;
+
+		int method = data.cdata.method & 0xff;
+		if (method >= 16) {
+			jsonMethods j = data.cdata.json.methods;
+
+			data.sendseq += 1;
+			jsonObject t = j.makeObject("", JSON_OBJECT),
+			o = j.makeObject("id", JSON_INT|JSON_NAME); j.setInt(o, data.sendseq); j.addObject(t, o);
+			o = j.makeObject("jsonrpc", JSON_STRING|JSON_NAME), j.setString(o, "2.0"); j.addObject(t, o);
+			o = j.makeObject("method", JSON_STRING|JSON_NAME), j.setString(o, "submit"); j.addObject(t, o);
+
+			jsonObject p = j.makeObject("params", JSON_OBJECT|JSON_NAME);
+			o = j.makeObject("id", JSON_STRING|JSON_NAME); j.setString(o, data.share.clientId); j.addObject(p, o);
+			o = j.makeObject("job_id", JSON_STRING|JSON_NAME); j.setString(o, data.share.jobId); j.addObject(p, o);
+			o = j.makeObject("nonce", JSON_STRING|JSON_NAME);
+			char nonce[]; printf(nonce, "%08x", {htonl(arr[7])}); j.setString(o, nonce); j.addObject(p, o);
+			o = j.makeObject("result", JSON_STRING|JSON_NAME);
+			char result[];
+			for (i = 0; i < 8; i += 1)
+				printf(result, "%08x", {data.share.reshash[i]});
+			j.setString(o, result); j.addObject(p, o);
+
+			j.addObject(t, p);
+
+			char raw3[];
+			j.serialize(raw3, t);
+			raw3.cpush('\n');
+			raw = raw3;
+
+		} else if (method >= 3) {
+			char raw3[];
+			raw3.cpush(raw.csize);
+			raw3.cpush(raw.csize >> 8);
+			raw3.cpush(raw.csize >> 16);
+			raw3.cpush(raw.csize >> 24);
+			strcat(raw3, raw);
+			raw = raw3;
+		}
+
+		outputp("", "", raw);
+		log_block(data, data.share.reshash, "Share", 7);
+		int rawint[] = chars2ints32(raw0, 0, raw0.csize);
+		for (i = 0; i < rawint.isize; i += 1)
+			rawint[i] = htonl(rawint[i]);
+		log_block(data, rawint, "Raw", 9);
+	}
+
+	mrecv(code, data, data.addr, -1);
+	return;	
+}
+
+(const xdagdata data, const any mess, int status) -> () recvshares0 {
+	xdagdata d = xdagcopy(data);
+	recvshares(d, mess, status);
+	return;
+}
+
+(const stateful xdagdata data) -> () {
+	xdagdata d = xdagcopy(data);
+	d.addr.threadid = -1;
+
+	mrecvp(recvshares0, d, d.addr, -1);
+	return;
+}

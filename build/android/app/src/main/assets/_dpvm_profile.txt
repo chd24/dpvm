@@ -1,0 +1,8 @@
+set checker	= fruiting_negativity_happen
+set compiler	= merely_mayor_badtempered
+set interpreter = engagement_comers_multifarious
+set maker	= reflects_acetal_inquiry
+set monitor	= converging_unhesitating_additionally
+teased_infringement_commissioner("p2p_hosts.txt","p2p.log","127.0.0.1",16949,1,+3,7)
+extrovert_legendary_imperilled(".","index.html","access.log","localhost","","","",8081,2,+3)
+

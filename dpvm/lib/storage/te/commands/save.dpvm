@@ -1,0 +1,41 @@
+/* save command, T18.323-T18.328; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/crypto/base64/base64.dpvmake"
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandSave {
+	char res[];
+
+	int i;
+	int j;
+	for (i = 0; i < data.file.isize; i += 144) {
+		int arr[];
+		copyints(arr, data.file, i, i + 144);
+		if (i != data.ctx.sector0Pos) {
+			int metaData[];
+			copyints(metaData, data.file, i, i + 16);
+			int Nsector = arr[12] | arr[13] << 32;
+			data.utilities.dfsEncryptInts32(data.ctx, arr, metaData, 16, 128, Nsector, data.extension);
+		}
+		char base64[] = base64_encode_substr(ints32_2chars(arr, 0, 144), 0, 576);
+
+		for (j = 0; j < 12; j += 1) {
+			substrcat(res, base64, j << 6, (j + 1) << 6);
+			strcat(res, "\r\n");
+		}
+	}
+
+	writep("", "", data.filename, res, 0);
+
+	return "Database saved to original file.\r\n";
+}
+
+teCommand cmdSave = {
+        "save",
+        "save the database into source file",
+        commandSave
+};
+
+

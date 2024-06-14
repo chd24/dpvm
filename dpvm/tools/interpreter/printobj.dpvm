@@ -1,0 +1,41 @@
+/* dpvm print object; T15.525-T18.019; $DVS:time$ */
+
+#include "interpreter.dpvmake"
+
+(volatile stateful char arr[], const any obj) -> () {
+	int on;
+	int i;
+
+	printlink(arr, obj, obj.type);
+
+	arr.cpush(' ');
+	arr.cpush('(');
+
+	for (i = 0; i < obj.lsize; i += 1) {
+		if (on) arr.cpush(',');
+		on = 1;
+		printlink(arr, obj, obj.l[i]);
+	}
+
+	for (i = 0; i < obj.isize; i += 1) {
+		if (on) arr.cpush(',');
+		on = 1;
+		print_int(arr, obj.i[i]);
+	}
+
+	for (i = 0; i < obj.fsize; i += 1) {
+		if (on) arr.cpush(',');
+		on = 1;
+		print_float(arr, obj.f[i]);
+	}
+
+	for (i = 0; i < obj.csize; i += 1) {
+		on = printchar(arr, on, obj.c[i]);
+		if (i == 0 && on > 0) on = 2;
+	}
+
+	if (on < 0) arr.cpush('"');
+	arr.cpush(')');
+	
+	return;
+}

@@ -1,0 +1,10 @@
+/* find c in str from end, return index or -1; T15.554-T16.599; $DVS:time$ */
+	
+(const stateful char str[], char c) -> (int index) {
+	int i;
+
+	for (i = str.csize - 1; i >= 0; i = i - 1)
+		if (str[i] == c) return i;
+
+	return -1;
+}

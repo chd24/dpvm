@@ -1,0 +1,31 @@
+/* example of (int)->(int) function for run/wait test; T17.909-T17.909; $DVS:time$ */
+
+#include "../../utils/utils.dpvmake"
+#include "../../math/long/long.dpvmake"
+
+(volatile stateful int rand[4], int n) -> (volatile int rand[]) rand_array {
+    int arr[];
+    int i;
+
+    for (i = 0; i < n; i += 1) {
+        (rand[0], rand[1], rand[2], rand[3]) = getfullhash(rand);
+        int r = rand[0];
+        if (!i) r |= 1;
+        arr.ipush(r);
+    }
+
+    return arr;
+}
+
+(int n) -> (int r) {
+    int rand[4];
+
+    rand[0] = n;
+
+    int base[] = rand_array(rand, n);
+    int exp[] = rand_array(rand, n);
+    int mod[] = rand_array(rand, n);
+
+    int res[] = pow_mod_long(base, exp, mod);
+    return res[0];
+}

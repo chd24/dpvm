@@ -1,0 +1,10 @@
+/* creates new rule or instructions list; T17.662-T18.018; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+() -> (volatile asm_instr rule[]) {
+	asm_instr rule[];
+	asm_instr instr;
+	rule.lpush(instr);
+	return rule;
+}

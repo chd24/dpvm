@@ -1,0 +1,20 @@
+/* set random int32 data[128] to dfs crypt context; T16.506-T16.508; $DVS:time$ */
+
+#include "dfs.dpvmake"
+
+int ff = 0xffffffff;
+
+(volatile stateful int ctx[], const stateful int data[]) -> () {
+	int i;
+
+	for (i = 0xffff; i >= 0; i -= 1) {
+		int n = i + (i >> 9);
+		ctx[i] = (data[n & 0x7f] | data[(n + 1) & 0x7f] << 32) 
+			>> ((i >> 4) & 24) & ff;
+	}
+
+	for (i = 0; i < 0x200; i += 1)
+		dfs_encrypt(ctx, ctx, i << 7, 0x80, i);
+
+	return;
+}

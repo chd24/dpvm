@@ -1,0 +1,143 @@
+/* removes leaf and transit nodes from schema; T16.576-T16.613; $DVS:time$ */
+
+#include "graphs.dpvmake"
+
+(volatile stateful schema s) -> () {
+	gate g = s.base;
+	gate gprev = g.prev;
+	g.depth = -1;
+
+	for (g = gprev; g.depth >= 0; g = gprev) {
+		gprev = g.prev;
+
+		int outused0 = !!(g.flags & flag_output0) << 1 | !!(g.edgesmask & 4);
+		int outused1 = !!(g.flags & flag_output1) << 1 | !!(g.edgesmask & 8);
+		int inused = g.edgesmask & 1;
+
+		g.depth = -2;
+
+		int todel;
+		if (g.flags & flag_input) ;
+		else if (!outused0 & !outused1)
+			todel = 1;
+		else if ((!outused0 | !outused1) & inused & g.op == op_none) {
+			gate up = g.in0;
+			gate down;
+			
+			if (outused0 & 1) down = g.out0;
+			else if (outused1 & 1) down = g.out1;
+
+			if ((outused0 | outused1) & 1) {
+				if (g.flags & flag_in0right) {
+					up.out1 = down;
+					if (down.in0.depth == -2)
+						down.in0 = up,
+						down.flags = down.flags | flag_in0right;
+					else
+						down.in1 = up,
+						down.flags = down.flags | flag_in1right;
+				} else {
+					up.out0 = down;
+					if (down.in0.depth == -2)
+						down.in0 = up,
+						down.flags = down.flags & ~flag_in0right;
+					else
+						down.in1 = up,
+						down.flags = down.flags & ~flag_in1right;
+				}
+				g.in0 = g;
+				g.edgesmask = g.edgesmask & ~1;
+
+			} else {
+				int i;
+				for (i = 0; i < s.outputs.lsize; i = i + 1) {
+					if (s.outputs[i].depth == -2) {
+						s.outputs[i] = up;
+						s.outright[i] = !!(g.flags & flag_in0right);
+						i = s.outputs.lsize;
+					}
+				}
+				if (g.flags & flag_in0right)
+					up.flags = up.flags | flag_output1;
+				else
+					up.flags = up.flags | flag_output0;
+			}
+
+			todel = 1;
+
+		} else if (!outused0) {
+			(g.stackpos0, g.stackpos1) = (g.stackpos1, g.stackpos0);
+			if (outused1 & 1) {
+				gate down = g.out1;
+				g.out0 = down;
+				g.out1 = g;
+				g.edgesmask = g.edgesmask & ~8 | 4;
+				if (down.in0.depth == -2)
+					down.flags = down.flags ^ flag_in0right;
+				else
+					down.flags = down.flags ^ flag_in1right;
+			} else {
+				int i;
+				for (i = 0; i < s.outputs.lsize; i = i + 1) {
+					if (s.outputs[i].depth == -2) {
+						s.outright[i] = s.outright[i] ^ 1;
+						i = s.outputs.lsize;
+					}
+				}
+				g.flags = g.flags & ~flag_output1 | flag_output0;
+			}
+		}
+
+		if (!todel & g.op > 0 & g.op < op_shr & (g.edgesmask & 4) != 0
+				& (g.out0.flags & flag_32bit) != 0) {
+			if (g.op == op_shl & g.value >= 32)
+				g.op = op_const,
+				g.value = 0;
+			g.flags = g.flags | flag_32bit;
+			g.value = g.value & 0xffffffff;
+		} else if (!todel & (g.edgesmask & 0xC) == 0xC
+				& (g.out0.flags & g.out1.flags & flag_32bit) != 0) {
+			g.flags = g.flags | flag_32bit;
+		}
+
+		if (todel | g.op == op_const) {
+			if (g.edgesmask & 1) {
+				gate p = g.in0;
+				if (g.flags & flag_in0right)
+					p.out1 = p,
+					p.edgesmask = p.edgesmask & ~8;
+				else
+					p.out0 = p,
+					p.edgesmask = p.edgesmask & ~4;
+				g.in0 = g;
+				g.edgesmask = g.edgesmask & ~1;
+			}
+
+			if (g.edgesmask & 2) {
+				gate p = g.in1;
+				if (g.flags & flag_in1right)
+					p.out1 = p,
+					p.edgesmask = p.edgesmask & ~8;
+				else
+					p.out0 = p,
+					p.edgesmask = p.edgesmask & ~4;
+				g.in1 = g;
+				g.edgesmask = g.edgesmask & ~2;
+			}
+		}
+
+		if (todel) {
+			g.out0 = g;
+			g.out1 = g;
+
+			gprev.next = g.next;
+			g.next.prev = gprev;
+			g.next = g;
+			g.prev = g;
+		}
+
+		g.depth = 0;
+	}
+
+	return;
+}

@@ -1,0 +1,107 @@
+/* overcats module, makefile; T17.457-T18.054; $DVS:time$ */
+
+type overcats_data = { /* overcats client data structure */
+        const char version[];	/* overcats version */
+        const char log_file[];	/* file for logging */
+        const char out_host[];	/* hostname to connect to */
+        const any func;		/* function for recursive call */
+	int	out_port;	/* port to connect to */
+	int	in_port;	/* port to listen incoming connections */
+	int	mode;		/* 0 - proxy, 1 - client, 2 - server */
+	int	timezone;	/* local timezone */
+	int	log_level;	/* max level of log messages output to logfile */
+	int	in_limit;	/* limit for input message size */
+	int	out_limit;	/* limit for output message size */
+	int	task_id;	/* task id of process */
+	int	conn_id;	/* connection id (start time of connection) */
+	int	thread_id;	/* thread id inside task */
+	int	state;		/* state for decoding procedures */
+};
+
+int OVERCATS_PROXY	= 0;
+int OVERCATS_CLIENT	= 1;
+int OVERCATS_SERVER	= 2;
+
+type overcats_addr = { /* address for internal messages inside client */
+        const char	version[];
+	int	task_id;
+	int	conn_id;
+	int	service;
+};
+
+int OVERCATS_SERVICE_IN		= 1; /* incomming messages */
+int OVERCATS_SERVICE_OUT	= 2; /* outcoming messages */
+int OVERCATS_SERVICE_LOG	= 3; /* logging system */
+int OVERCATS_SERVICE_CONNECT	= 4; /* outcoming connect service */
+
+type overcats_mess = { /* message for internal messaging */
+        const char data[];
+	int	request;
+	int	thread_id;
+};
+
+int OVERCATS_REQUEST_CONNECT 	= 1;
+int OVERCATS_REQUEST_DISCONNECT = 2;
+int OVERCATS_REQUEST_SEND	= 3;
+
+int TIMEOUT = 60000000000; /* 1 min */
+
+/*@ "version.dpvm": returns version of overcats */
+() -> (const char version[]) version = soler_complexly_keeper;
+/* @*/
+
+/*@ "write_log.dpvm": write log message to queue for logging */
+(const stateful overcats_data data, const char mess[], int level) -> ()
+	write_log = agonised_aversion_masted;
+/* @*/
+
+/*@ "log_packet.dpvm": output packet for tracing purpose */
+(const stateful overcats_data data, const stateful char mess[], 
+		const stateful char packet[]) -> ()
+	log_packet = humbleness_telethon_divots;
+/* @*/
+
+/*@ "handler.dpvm": crash handler */
+(const stateful overcats_data data, const int values[]) -> ()
+	handler = policing_oinked_alias;
+/* @*/
+
+/*@ "logger.dpvm": logging service */
+(const stateful overcats_data d, const int values[]) -> () 
+	logger = contesting_bathwater_aching;
+/* @*/
+
+/*@ "out_encode.dpvm": encode output message for client */
+(const stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () 
+	out_encode = hawkish_horrendously_prisons;
+/* @*/                                
+
+/*@ "in_encode.dpvm": encode output message for server */
+(const stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () 
+	in_encode = dairies_slipup_placidly;
+/* @*/                                
+
+/*@ "out_decode.dpvm": encode output message for client */
+(volatile stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () 
+	out_decode = annulus_medals_marring;
+/* @*/                                
+
+/*@ "in_decode.dpvm": decode output message for server */
+(volatile stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () 
+	in_decode = necking_codfish_bounding;
+/* @*/                                
+
+/*@ "out_connect.dpvm": output connection */
+(const stateful overcats_data d, const int values[]) -> ()
+	out_connect = galena_cripple_stimulated;
+/* @*/                                
+
+/*@ "main.dpvm": main function of overcats client/server */
+(const char log_file[], const char out_host[], int out_port, int in_port, 
+	int mode, int timezone, int log_level) -> (const char out[])
+	overcats = aglow_chunk_abrasion;
+/* @*/                                                         

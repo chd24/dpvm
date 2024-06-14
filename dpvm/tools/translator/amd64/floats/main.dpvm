@@ -1,0 +1,71 @@
+/* main routine for amd64 floats computations translation; T19.506-T20.125; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/bytecodes.dpvmh"
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "floats.dpvmake"
+
+int DEBUG_OUTPUT	= 1;
+int SIZE_MAX		= 0xfffffff;
+
+(volatile stateful translator_data d) -> (int res) floatsMain = {
+	type fin = d.func.type.l[0];
+	int nInputs = fin.i[8], i, links[], ints[];
+	floatsData data = {d, links, ints, getaddr(d.addrs, "code"), nInputs, getaddr(d.addrs, "debug")};
+
+	if (fin != d.func.type.l[1])
+		return mkError(data, "floatsMain", "function inputs not matched its outputs");
+
+	if (fin.i[9] || fin.i[10] || fin.i[11])
+		return mkError(data, "floatsMain", "scalar type is inside input argument list of the function");
+
+	if (fin.lsize != nInputs + 4)
+		return mkError(data, "floatsMain", "incorrect number of links in function inputs's type");
+
+	for (i = 0; i < nInputs; i += 1) {
+		type t = fin.l[i + 4];
+		if (t.i[8] || t.i[9] || t.i[11] || t.i[12] || t.i[13] || t.i[15] || t.i[10] != t.i[14])
+			return mkError(data, "floatsMain", "input parameter differ from floats array of fixed size");
+	}
+
+	data.debugOutput = DEBUG_OUTPUT;
+
+	if (!nInputs)
+		return mkError(data, "floatsMain", "function has no inputs");
+
+	if (nInputs >= asmRegs.lsize)
+		return mkError(data, "floatsMain", "too large number of function's inputs");
+
+	if (d.machcode.i[2] > STACK_MAX)
+		return mkError(data, "floatsMain", "maximum stack size larger than float processor has");
+
+	for (i = 0; i < nInputs; i += 1) {
+		type t = fin.l[i + 4];
+		if (t.i[10] > SIZE_MAX)
+			return mkError(data, "floatsMain", "too large size of floats array");
+	}
+
+	int end = findend(d.func, 0);
+
+	if (end == d.func.csize || d.func.c[end] != DPVM_CODE_RET)
+		return mkError(data, "floatsMain", "no ret bytecode at the end of floats-translated segment of function");
+
+	preamble(data);
+
+	int res;
+	for (i = 0; i <= end; i += res) {
+		data.pos = i;
+		res = bytecodes[d.func.c[i]](data);
+		if (res <= 0) {
+			if (!res && data.debugOutput) {
+				char mess[];
+				printf(mess, "translated %d bytecodes to %d bytes", {d.func.csize, d.machcode.csize});
+				data.debugLevel = -3;
+				res = mkError(data, "floatsMain", mess);
+			}
+			return res;
+		}
+	}
+
+	return mkError(data, "floatsMain", "translation continues after ret bytecode");
+};

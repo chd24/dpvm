@@ -1,0 +1,29 @@
+/* registry version and history, header */
+
+char registryVersion[] = "registry 0.1.9, T18.314-T20.171"; /* $DVS:time$
+
+history:
+
+T20.171 - ver. 0.1.9: added support for long object names
+
+T19.646 - ver. 0.1.8: added debugger
+
+T19.643 - ver. 0.1.7: added translator
+
+T19.638 - ver. 0.1.6: added int fields to registry data
+
+T18.355 - ver. 0.1.5: fixed bug in check() method for composite objects
+
+T18.352 - ver. 0.1.4: added monitor
+
+T18.349 - ver. 0.1.3: added maker
+
+T18.347 - ver. 0.1.2: added interpreter
+
+T18.317 - ver. 0.1.1: registry header divided into several files; added compiler
+
+T18.315 - ver. 0.1.0: added methods copy, check, set and print
+
+T18.314 - ver. 0.0.1: first version with checker program
+
+*/

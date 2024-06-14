@@ -1,0 +1,221 @@
+/* dpvm compiler; T16.046-T20.097; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "compiler.dpvmake"
+#include "version.dpvmh"
+
+(const stateful any registry, const stateful compsrc files[]) -> (volatile any func) compile {
+	compdata data;
+	int pos;
+	int end;
+	int status;
+	int i;
+
+	(data.registry, data.mess) = registryPrepare(registry);
+	if (data.mess.csize) {
+		char err[];
+		strcat(err, version);
+		strcat(err, ": error while preparing registry: ");
+		strcat(err, data.mess);
+		return err;
+	}
+
+	compsrc fstack[];
+	int pstack[];
+	fstack.lpush(files[0]);
+	pstack.ipush(0);
+
+	char used[];
+	used.cpush(1);
+	for (i = 1; i < files.lsize; i += 1)
+		used.cpush(0);
+
+	while (!status) {
+		compsrc f = fstack[fstack.lsize - 1];
+		data.file = f;
+		data.src = f.file;
+		data.pos = pstack[pstack.isize - 1];
+		data.end = data.src.csize;
+
+		int done;
+		(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+		
+		if (status == 56) { /* # */
+			data.pos = pos;
+			(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+			if (status != 66) /* include */
+				data.mess = "include expected after #",
+				status = -2;
+			else {
+				char str[];
+				char c;
+				data.pos = pos;
+				(str, pos, status, c) = getconststring(data.src, data.pos, data.end);
+				if (status)
+					data.mess = "string expected after include",
+					status = -2;
+				else {
+					data.pos = pos;
+					char name[];
+					strcat(name, f.name);
+					pathcat(name, str);
+					int found;
+					for (i = 0; i < files.lsize && !found; i += 1)
+						if (files[i].name == name)
+							found = 1, i -= 1;
+					if (!found) {
+						char mess[];
+						strcat(mess, "included file '");
+						strcat(mess, name);
+						strcat(mess, "' not found");
+						data.mess = mess;
+						status = -2;
+					} else if (name == f.name)
+						data.mess = "file self included",
+						status = -2;
+					else {
+						pstack[pstack.isize - 1] = data.pos;
+						if (!used[i]) {
+							used[i] = 1;
+							fstack.lpush(files[i]);
+							pstack.ipush(0);
+						}
+						status = 0;
+					}
+				}
+			}
+		} else
+			status = instr_decl(data, instr, 0),
+			pstack[pstack.isize - 1] = data.pos;
+
+		if (status == -1) {
+			(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+			if (status >= 0)
+				data.mess = "symbols not compiled in the rest of source file",
+				status = -2;
+			else if (fstack.lsize > 1)
+				fstack.lpop(1),
+				pstack.ipop(1),
+				status = 0;
+		}
+	}
+
+	if (status == -1) {
+		if (!data.consts.lsize) 
+			data.mess = "object not found in result of compilation";
+		else 
+			status = 0;
+	}
+
+
+	/* in the case of error, find position in source */
+	if (status < 0) {
+		char src[] = fstack[fstack.lsize - 1].file;
+		pos = data.pos;
+		char c;
+
+		if (pos > src.csize) pos = src.csize;
+
+		status = 0;
+		if (pos < src.csize) {
+			c = src.c[pos];
+			if (c == ' ' | c == '\t' | c == '\r' | c == '\n')
+				status = 1;
+			if (c == '/' & pos + 1 < src.csize) {
+				if (src.c[pos + 1] == '*') status = 1;
+			}
+		}
+
+		if (status) {
+			(pos, end, status) = getlexem(src, lexems, pos, data.end);
+
+			if (pos > src.csize) pos = src.csize;
+		
+			if (status != -1) { do {
+				status = 0;
+				if (pos >= 1) {
+					status = 1;
+					c = src.c[pos - 1];
+					if (c == ' ' | c == '\t' | c == '\r' | c == '\n')
+						status = 0;
+					if (status & c == '/' & pos >= 2) {
+						if (src.c[pos - 2] == '*') status = 0;
+					}
+					if (status) pos = pos - 1;
+				}
+			} while (status); }
+		}
+
+		int line;
+		int col;
+
+		for (i = 0; i < pos; i = i + 1) {
+			c = src.c[i];
+			if (c == '\n')
+				line = line + 1,
+				col = 0;
+			else if (c == '\t')
+				col = (col | 7) + 1;
+			else
+				col = col + 1;
+		}
+
+		char err[];
+
+		strcat(err, version);
+		strcat(err, ": error in file '");
+		strcat(err, fstack[fstack.lsize - 1].name);
+		strcat(err, "', line ");
+		printint(err, line, 1);
+		strcat(err, ", col ");
+		printint(err, col, 1);
+		strcat(err, ": ");
+		strcat(err, data.mess);
+		err.push('.');
+
+		for (i = 0; i < files.lsize; i += 1) {
+			if (files[i].file == "/*@ saveBytecodeHere @*/") {
+				char dst[];
+				int j;
+				for (j = 0; j < data.dst.csize; j += 1)
+					dst.cpush(data.dst.c[j]);
+				writep("", "", files[i].name, dst, 0);
+				writep("", "", files[i].name, "", dst.csize);
+				printf(err, " Partial compiled bytecode saved to file '%s'.", {files[i].name});
+			}
+		}
+
+		return err;
+	}
+
+	return data.consts.l[data.consts.lsize - 1];
+}
+
+(const char expr[], const any links, int begin, int end) -> (const type t, const char err[], int status) getMultiExprType {
+	compdata data;
+
+	data.src = expr;
+	data.pos = begin;
+	data.end = end;
+
+	data.file.name = "[expression]";
+	data.file.file = expr;
+	data.file.links = links;
+
+	int segments[];
+	type t;
+	int status;
+	(t, segments, status) = getmultiexpr(data, instr, getexpr, t, 0);
+
+	return (t, data.mess, status);
+}
+
+compilerClass compilerObj = {
+        version,
+        lexems,
+        getlexem,
+        getconststring,
+        getMultiExprType,
+        compile
+};

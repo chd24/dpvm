@@ -1,0 +1,54 @@
+/* newslog: add lines from file to db; T15.589-T19.591; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "newslog.dpvmake"
+
+(volatile stateful news_data data, const stateful char text[], int status) -> () {
+	if (status > 0) {
+		strcat(data.text, text);
+
+		int begin = data.begin + data.text.csize;
+		int end = data.end;
+		if (begin < end) {
+			read(code, data, data.name, begin, end - begin);
+			return;
+		}
+	}
+
+	text = data.text;
+
+	int depth;
+	char rdelim[];
+	char ldelim[];
+	any db;
+
+	if (data.time) {
+		rdelim = "\n";
+		db = data.feeds_db; 
+		depth = 3;
+	} else { 
+		ldelim = "  "; rdelim = "\r\n"; 
+		db = data.news_db; 
+		depth = 4; 
+	}
+
+	data.last_read = data.time;
+	data.seed += data.time;
+
+	int l;
+	int r;
+	do {
+		(l, r) = get_fragment(text, ldelim, rdelim, r, text.csize);
+		if (l != -1) {
+			char str[];
+			substrcat(str, text, l, r);
+			if (db_find(db, str, depth) == -1)
+				db_add(db, str, depth, 0);
+
+			r += 1;
+		}
+	} while (l != -1);
+		
+	delay(data);
+	return;
+}

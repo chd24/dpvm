@@ -1,0 +1,31 @@
+/* return version of overcats vpn module */
+	
+char version[] = "overcats version 0.2.5, T17.457-T18.054"; /* $DVS:time$ */
+
+() -> (const char version[]) {
+	return version;
+}
+
+/* history:
+
+T18.054 ver 0.2.5: checked with new checker 0.2.8
+
+T17.685 ver 0.2.4: passed through new checker 0.2
+
+T17.627 ver 0.2.3: applied new rules for mailbox messaging
+
+T17.490 ver 0.2.2: fixed error in incoming packet decoding
+
+T17.490 ver 0.2.1: packet transmission and outcoming packet encoding optimized
+
+T17.476 ver 0.2: added server output messages encoding/decoding, first working version
+
+T17.473 ver 0.1.2: added client output messages decoding
+
+T17.471 ver 0.1.1: added client output messages encoding
+
+T17.468 ver 0.1: first working version of proxy without data encoding
+
+T17.457	Overcats vpn project started, version 0.0.1
+
+*/

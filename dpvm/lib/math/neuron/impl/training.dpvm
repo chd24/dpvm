@@ -1,0 +1,47 @@
+/* neuron class, training method implementation, T19.382-T19.744"; /* $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "neuron.dpvmake"
+
+(volatile stateful any neuronObj, const stateful float inputs[], volatile stateful float outputs[],
+		const trainingParams params) -> (const char error[], float res) training = {
+	if (neuronObj.type != neuronImpl && (neuronObj.type != neuronClass || neuronObj.l[0].type != neuronData)) {
+		return (mkError("neuronObj has illegal type", "training"), 0);
+	}
+
+	neuronData arr[];
+	pushObject(neuronObj.l[0], arr);
+	neuronData data = arr[0];
+	neuronNet net = data.cdata.net;
+	neuronNetRuntime netR = data.net;
+
+
+	/* net validity checks */
+
+	if (net.layers.lsize < 2)
+		return (mkError("number of layers less than 2", "training"), 0);
+
+	neuronLayer layerFirst = net.layers[0], layerLast = net.layers[net.layers.lsize - 1];
+	neuronLayerRuntime layerFirstR = netR.layers[0];
+
+	if (inputs.fsize != layerFirst.nNeurons)
+		return (mkError("number of inputs mismatches number of neurons on first layer", "training"), 0);
+
+	if (outputs.fsize != layerLast.nNeurons)
+		return (mkError("number of outputs mismatches number of neurons on last layer", "training"), 0);
+
+
+	/* put inputs to first layer */
+
+	int i;
+	for (i = 0; i < inputs.fsize; i += 1) {
+		neuron n = net.neurons[i];
+		layerFirstR.groups[n.groupId].outputs.l[0].f[n.outputStartId] = inputs[i];
+	}
+
+
+	/* compute all */
+
+	return ("", netR.training(netR.data, outputs, params));
+};

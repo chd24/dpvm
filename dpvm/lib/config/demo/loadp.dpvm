@@ -1,0 +1,122 @@
+/* config class, loadp demo, T20.065-T20.065; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/sysParams.dpvmh"
+#include "../../../common/taskFlags.dpvmh"
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../tools/registry/registry.dpvmake"
+#include "../config.dpvmake"
+#include "loadp.dpvmh"
+
+(const char error[]) -> () printError = {
+	outputp("", "", error);
+	outputp("", "", "\r\n");
+	return;
+};
+
+(const loadpConfig config, const char text[], int status) -> () inputCallback = {
+	if (status < 0)
+		return printError("Input error");
+
+	registryData registry = registryObj.copy(config.registry);
+	char error[] = registryObj.check(registry, 0);
+	if (error.csize) return printError(error);
+
+	char timestr[];
+	strftime(timestr, "%Y-%m-%d %H:%M:%S", config.time, registry.timeZone);
+
+	configClass configObjs[];
+	pushObject(config.configObj, configObjs);
+	configClass configObj = configObjs[0];
+
+	int flags;
+	(error, flags) = configObj.methods.getFlags(configObj);
+	if (error.csize) return printError(error);
+
+	char m[];
+	printf(m, "Configuration:\r\n", {});
+	printf(m, "-----------------------------------------\r\n", {});
+	printf(m, "configObj   = %p\r\n", {config.configObj});
+	printf(m, "configFlags = %x\r\n", {flags});
+	printf(m, "program     = %p\r\n", {config.program});
+	printf(m, "registry    = %p\r\n", {config.registry});
+	printf(m, "login       = \"%s\"\r\n", {config.login});
+	printf(m, "password    = \"%s\"\r\n", {text});
+	printf(m, "taskid      = %04x\r\n", {config.taskid});
+	printf(m, "time        = \"%s\"\r\n", {timestr});
+	printf(m, "delay       = %d sec\r\n", {config.delay / 1000000000});
+	printf(m, "id          = %d\r\n", {config.id});
+	printf(m, "rating      = %f%%\r\n", {config.rating});
+	printf(m, "-----------------------------------------\r\n", {});
+
+	outputp("", "", m);
+
+	if (flags & CONFIG_FLAG_INPUT) {
+		error = configObj.methods.endInput(configObj);
+		if (error.csize) return printError(error);
+
+		const int vars[] = {DPVM_SYS_PARAM_TIME};
+		int values[] = {config.time + config.delay};
+		setsysp("", "", vars, values);
+	}
+
+	return;
+};
+
+(const any cfg, const char error[]) -> () loadpCallback = {
+	if (error.csize)
+		return printError(error);
+
+	loadpConfig configs[];
+	pushObject(cfg, configs);
+	loadpConfig config = configs[0];
+
+	configClass configObjs[];
+	pushObject(config.configObj, configObjs);
+	configClass configObj = configObjs[0];
+
+	int flags;
+	(error, flags) = configObj.methods.getFlags(configObj);
+	if (error.csize) return printError(error);
+
+	if (flags & CONFIG_FLAG_INPUT) {
+		const int vars[] = {DPVM_SYS_PARAM_FLAGS};
+		const int flag = DPVM_TASK_FLAG_NO_INPUT_HISTORY + DPVM_TASK_FLAG_NO_INPUT_ECHO;
+		const int values[] = {flag};
+		setsysp("", "", vars, values);
+
+		outputp("", "", "Password: ");
+
+		input(inputCallback, config, 256, -1);
+	} else
+		inputCallback(config, config.password, config.password.csize);
+
+	return;
+};
+
+(const any registry, const char configFile[], int configFlags) -> () loadp = {
+	configClass configObj = configCreate();
+
+	char error[] = configObj.methods.setFlags(configObj, configFlags);
+	if (!error.csize) error = configObj.methods.setRegistry(configObj, registry);
+	if (!error.csize) error = configObj.methods.setFunction(configObj, code);
+	if (!error.csize) error = configObj.methods.addHeader(configObj, "../dpvm/lib/config/demo/loadp.dpvmh");
+	if (!error.csize) error = configObj.methods.addConfigFile(configObj, "[defaultConfig]", "
+/* default configuration */
+configObj = __CONFIG__
+program = __FUNCTION__
+registry = __REGISTRY__
+login = \"admin\"
+password = \"admin\"
+taskid = __TASKID__
+time = __TIME__
+delay = 10000000000 /* 10 sec */
+id = 1
+rating = 100.0");
+	if (!error.csize) error = configObj.methods.addConfig(configObj, configFile);
+
+	if (error.csize) return printError(error);
+
+	return configObj.methods.loadp(configObj, loadpCallback, "loadpConfig");
+};

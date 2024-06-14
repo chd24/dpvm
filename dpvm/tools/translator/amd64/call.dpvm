@@ -1,0 +1,25 @@
+/* dpvm byte code translator, amd64 function call; T16.141-T18.397; $DVS:time$ */
+
+/* 
+ 	rdi = links stack
+*/
+
+#include "../translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(volatile stateful asm_instr list[], int addr) -> () {
+	if (addr != -1) {
+		as(list, "mov rax,q", "48 B8 128", 0, 0, addr, 0, 0);
+		as(list, "call rax", "FF D0", 0, 0, 0, 0, 0);
+	}
+	as(list, "pop r8", "41 58", 0, 0, 0, 0, 0);
+	as(list, "pop r10", "41 5A", 0, 0, 0, 0, 0);
+	as(list, "pop r11", "41 5B", 0, 0, 0, 0, 0);
+	as(list, "pop rsi", "5E", 0, 0, 0, 0, 0);
+	as(list, "pop rdi", "5F", 0, 0, 0, 0, 0);
+	
+	return;
+}

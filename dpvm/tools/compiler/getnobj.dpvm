@@ -1,0 +1,53 @@
+/* dpvm: get nobj: get number of object by name; T16.043-T20.171; $DVS:time$ */
+
+#include "../../lib/utils/utils.dpvmake"
+#include "../../lib/math/crypto/base58/base58.dpvmake"
+
+/* obj_name */
+
+(const stateful char src[], const stateful any dst, int end) -> (int number, int begin) {
+	/* find beginning of lexem */
+	int pos = 0;
+	int ptr = end;
+	int ptr1;
+	int n;
+	do {
+		ptr1 = ptr - 1;
+		if (ptr != pos) {
+			if (ptr1 >= src.csize)
+				return (-1, ptr);
+			n = src[ptr1];
+			if ((n >= 'a' && n <= 'z') || (n >= 'A' && n <= 'Z') || (n >= '0' && n <= '9') || n == '_')
+				ptr = ptr1;
+		}
+	} while (ptr == ptr1);
+
+	/* test if lexem is object name and obtain its hash */
+	int status = name2hash(src, ptr, end);
+	if (status >= 0) {
+		/* find object with such a hash */
+		for (n = 0; n < dst.lsize; n++)
+			if (dst.l[n] == status)
+				return (n, ptr);
+
+		return (-2, ptr);
+	}
+
+	if (end - ptr != 47)
+		return (-1, ptr);
+
+	base58Class base58Obj = base58Create();
+	int hashes[], h0, h1, h2, h3;
+
+	if (base58Obj.methods.decodeHash(hashes, base58Obj, src, ptr, end))
+		return (-1, ptr);
+
+	/* find object with such a hash */
+	for (n = 0; n < dst.lsize; n++) {
+		(h0, h1, h2, h3) = getfullhash(dst.l[n]);
+		if (h0 == hashes[0] && h1 == hashes[1] && h2 == hashes[2] && h3 == hashes[3])
+			return (n, ptr);
+	}
+
+	return (-2, ptr);
+}

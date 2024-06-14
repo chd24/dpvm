@@ -1,0 +1,14 @@
+/* newslog: delay 5 sec at the end of cycle; T15.588-T17.050; $DVS:time$ */
+	
+#include "newslog.dpvmake"
+
+int SLEEP_TIME = 5000000000; /* 5 sec */
+
+(volatile stateful news_data data) -> () {
+	const int vars[] = {0};
+	int values[];
+	values.push(data.time + SLEEP_TIME);
+
+	setsys(data.work, data, vars, values);
+	return;
+}

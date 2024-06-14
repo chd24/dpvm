@@ -1,0 +1,16 @@
+/* dpvm print int; T15.525-T19.640; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+
+int LIMIT = 0x2000;
+
+(volatile stateful char arr[], int n) -> () {
+	if (n > -LIMIT && n < LIMIT)
+		printint(arr, n, 1);
+	else {
+		strcat(arr, "0x");
+		printhex(arr, n, 1, 0);
+	}
+
+	return;
+}

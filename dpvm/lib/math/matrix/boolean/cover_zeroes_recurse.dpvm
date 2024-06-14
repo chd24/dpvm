@@ -1,0 +1,40 @@
+/* recurse cover zeroes by groups of independent zeroes; T16.484-T16.485; $DVS:time$ */
+
+(int matrix[], int mcopy[], int colsmin, int colsmax, int rowsmin, int rowsmax, 
+		int ngroups, int nzeroes) -> (int covered) {
+	int zmask;
+	int omask;
+	int res;
+	int i;
+	int j;
+	int k;
+
+	if (ngroups >= nzeroes) { res = 1; return (res); }
+
+	if (colsmin == colsmax) {
+		if (!ngroups) { return (res); }
+		ngroups = ngroups - 1; 
+	}
+
+	if (colsmin != 0 & rowsmin != 0) {
+		i = 0; do { if (rowsmin & 1 << i) {
+			zmask = colsmin & ~mcopy.i[i]; 
+			if (zmask) { j = 0; do { if (zmask & 1 << j) {
+				omask = 0; k = 0; do { if (rowsmin & 1 << k) {
+					omask = omask | (matrix.i[k] >> j & 1) << k;
+				} k = k + 1; } while (1 << k <= rowsmin);
+				mcopy[i] = mcopy.i[i] | 1 << j;
+				(res) = code(matrix, mcopy, colsmin & matrix.i[i], 
+					colsmax, omask, rowsmax, ngroups, nzeroes - 1);
+				mcopy[i] = mcopy.i[i] & ~(1 << j);
+				if (res | colsmin == colsmax) { return (res); }
+			} j = j + 1; } while (1 << j <= zmask); }
+		} i = i + 1; } while (1 << i <= rowsmin);
+	}
+
+	if (colsmin == colsmax) { return (res); }
+	
+	(res) = code(matrix, mcopy, colsmax, colsmax, rowsmax, rowsmax,
+		ngroups, nzeroes);
+	return (res);
+}

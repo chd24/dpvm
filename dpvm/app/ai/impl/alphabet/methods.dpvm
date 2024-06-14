@@ -1,0 +1,410 @@
+/* aiAlphabet class, mathods implementation, T18.379-T18.413; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "alphabet.dpvmh"
+#include "version.dpvmh"
+#include "codetables/codetables.dpvmake"
+
+char asciiSmallBigTable[256] = photostat_kindnesses_silken;
+
+(const char mess[], const char func[]) -> (const char err[]) mkError = {
+	char err[];
+	strcat(err, version);
+	strcat(err, ": Error in function ");
+	strcat(err, func);
+	strcat(err, "(): ");
+	strcat(err, mess);
+	return err;
+};
+
+(volatile stateful aiAlphabetImpl impl, const stateful any aiAlphabetObj, const char func[]) -> (const char error[]) convertObjToImpl = {
+	if (aiAlphabetObj.type != aiAlphabetImpl && (aiAlphabetObj.type != aiAlphabet || aiAlphabetObj.l[0].type != aiAlphabetData)) {
+		return mkError("aiAlphabetObj has illegal type", func);
+	}
+	objcopyto(impl, aiAlphabetObj);
+	return "";
+}
+
+(volatile any node, const char letter[], int index, int flags) -> (const char error[]) addLetterWorker = {
+	int i, size = letter.csize - 1;
+
+	for (i = 0; i < size; i += 1) {
+		int c = letter[i];
+		if (!(node.i[c >> 6] >> (c & 0x3f) & 1)) {
+			aiAlphabetLookupTree subnode;
+			int j;
+			for (j = 0; j < 0x100; j += 1)
+				subnode.c[j] = AI_ALPHABET_EMPTY;
+			node.l[c] = subnode;
+			node.i[c >> 6] |= 1 << (c & 0x3f);
+		}
+		node = node.l[c];
+	}
+
+	int c = letter[size];
+	if (node.c[c] != AI_ALPHABET_EMPTY) {
+		char mess[];
+		strcat(mess, "letter '");
+		strcat(mess, letter);
+		strcat(mess, "' (index ");
+		printint(mess, index, 1);
+		strcat(mess, ", flags 0x");
+		printhex(mess, flags, 2, 0);
+		strcat(mess, ") already exists");
+		return mkError(mess, "addLetterWorker");
+	}
+
+	if (flags > AI_ALPHABET_BIG)
+		index = 0;
+
+	node.c[c] = index | flags;
+
+	return "";
+};
+
+(volatile aiAlphabetCodeTable table, const char letter[], int index, int flags) -> (const char error[]) addLetter = {
+	if (!letter.csize) {
+		char mess[];
+		strcat(mess, "letter of index ");
+		printint(mess, index, 1);
+		strcat(mess, ", flags 0x");
+		printhex(mess, flags, 2, 0);
+		strcat(mess, " is empty");
+		return mkError(mess, "addLetter");
+	}
+
+	char err[] = addLetterWorker(table.root, letter, index, flags);
+
+	if (!err.csize) {
+		if (flags == AI_ALPHABET_SMALL || flags == AI_ALPHABET_BIG) {
+			if (index >= table.nLetters) {
+				table.nLetters = index + 1;
+				while (table.smallLetters.lsize < table.nLetters)
+					table.smallLetters.lpush("");
+				while (table.bigLetters.lsize < table.nLetters)
+					table.bigLetters.lpush("");
+				while (table.statistics.isize < table.nLetters + 1)
+					table.statistics.ipush(0);
+			}
+
+			if (flags == AI_ALPHABET_SMALL)
+				table.smallLetters[index] = letter;
+			else
+				table.bigLetters[index] = letter;
+		}
+	}
+
+	return err;
+}
+
+(volatile stateful any aiAlphabetObj, const char codeTableName[], const char letters[][], int flags) -> (const char error[]) addLetters = {
+	aiAlphabetImpl impl;
+	char err[] = convertObjToImpl(impl, aiAlphabetObj, "addLetters");
+	if (err.csize) return err;
+
+	int n, found = -1;
+	for (n = 0; n < impl.data.tables.lsize && found < 0; n += 1) {
+		if (impl.data.tables[n].name == codeTableName)
+			found = n;
+	}
+
+	if (found < 0) {
+		aiAlphabetCodeTable table;
+		int j;
+		for (j = 0; j < 0x100; j += 1)
+			table.root.c[j] = AI_ALPHABET_EMPTY;
+		table.name = codeTableName;
+		found = impl.data.tables.lsize;
+		impl.data.tables.lpush(table);
+	}
+
+	int i;
+	for (i = 0; i < letters.lsize; i += 1) {
+		err = addLetter(impl.data.tables[found], letters[i], i, flags);
+		if (err.csize) return err;
+	}
+
+	return "";
+};
+
+(const stateful any aiAlphabetObj, const char codeTableName[], int flags) -> (const char letters[][], const char error[]) getLetters = {
+	char letters[][];
+	aiAlphabetImpl impl;
+	char err[] = convertObjToImpl(impl, aiAlphabetObj, "getLetters");
+	if (err.csize) return (letters, err);
+
+	int n, found = -1;
+	for (n = 0; n < impl.data.tables.lsize && found < 0; n += 1) {
+		if (impl.data.tables[n].name == codeTableName)
+			found = n;
+	}
+
+	if (found < 0) {
+		char mess[];
+		strcat(mess, "codetable '");
+		strcat(mess, codeTableName);
+		strcat(mess, "' not found");
+		return (letters, mkError(mess, "getLetters"));
+	}
+
+	if (flags == AI_ALPHABET_SMALL) {
+		objcopyto(letters, impl.data.tables[found].smallLetters);
+		return (letters, "");
+	}
+
+	if (flags == AI_ALPHABET_BIG) {
+		objcopyto(letters, impl.data.tables[found].bigLetters);
+		return (letters, "");
+	}
+
+	return (letters, mkError("flags not suported", "getLetters"));
+};
+
+(volatile stateful any aiAlphabetObj, const char codeTableName[]) -> (const char error[]) addPredefinedCodeTable = {
+	aiAlphabetImpl impl;
+	char err[] = convertObjToImpl(impl, aiAlphabetObj, "addPredefinedCodeTable");
+	if (err.csize) return err;
+
+	int n, found = -1;
+	for (n = 0; n < impl.data.tables.lsize && found < 0; n += 1) {
+		if (impl.data.tables[n].name == codeTableName)
+			found = n;
+	}
+
+	if (found >= 0) {
+		char mess[];
+		strcat(mess, "codetable '");
+		strcat(mess, codeTableName);
+		strcat(mess, "' already added");
+		return mkError(mess, "addPredefinedCodeTable");
+	}
+
+	for (n = 0; n < aiAlphabetPredefinedCodeTables.lsize && found < 0; n += 1) {
+		if (aiAlphabetPredefinedCodeTables.l[n].name == codeTableName)
+			found = n;
+	}
+
+	if (found < 0) {
+		char mess[];
+		strcat(mess, "codetable '");
+		strcat(mess, codeTableName);
+		strcat(mess, "' not found");
+		return mkError(mess, "addPredefinedCodeTable");
+	}
+
+	for (n = 0; n < aiAlphabetPredefinedCodeTables[found].letters.lsize; n += 1) {
+		err = addLetters(impl, codeTableName, aiAlphabetPredefinedCodeTables[found].letters[n].letters,
+				aiAlphabetPredefinedCodeTables[found].letters[n].flags);
+		if (err.csize) return err;
+	}
+
+	return "";
+};
+
+(volatile stateful any aiAlphabetObj, const char codeTableName[]) -> (const char defaultCodeTableName[], const char error[]) getDefaultCodeTable = {
+	aiAlphabetImpl impl;
+	char err[] = convertObjToImpl(impl, aiAlphabetObj, "getDefaultCodeTable");
+	if (err.csize) return (codeTableName, err);
+
+	char defCodeTableName[];
+	int begin = strchr(codeTableName, '.'), end = strrchr(codeTableName, '.');
+	if (begin >= 0) {
+		if (begin == end) end = codeTableName.csize;
+		begin += 1;
+		strcat(defCodeTableName, "utf-8.");
+		substrcat(defCodeTableName, codeTableName, begin, end);
+	} else
+		defCodeTableName = codeTableName;
+
+	int n;
+	for (n = 0; n < impl.data.tables.lsize; n += 1)
+		if (impl.data.tables[n].name == defCodeTableName)
+			return (defCodeTableName, "");
+
+	return (defCodeTableName, addPredefinedCodeTable(impl, defCodeTableName));
+};
+
+(const any root, const char text[], int nLetters, int begin, int end) -> (const char indexes[], const int statistics[]) parseTextWorker = {
+	char indexes[];
+	int statistics[];
+	int i;
+	for (i = 0; i <= nLetters; i += 1)
+		statistics.ipush(0);
+
+	any node = root;
+	int index = AI_ALPHABET_EMPTY, nextpos = begin, spaces, pos;
+
+	for (pos = begin; pos < end; pos += 1) {
+		int c = text[pos];
+		int ind = node.c[c];
+
+		if (ind != AI_ALPHABET_EMPTY) {
+			index = ind;
+			nextpos = pos;
+		}
+
+		if (node.i[c >> 6] >> (c & 0x3f) & 1) {
+			node = node.l[c];
+		} else {
+			if (index >= AI_ALPHABET_EMPTY) {
+				spaces |= 1 << (index - AI_ALPHABET_EMPTY);
+			} else {
+				if (spaces) {
+					ind = AI_ALPHABET_EMPTY;
+					while (!(spaces & 1)) spaces >>= 1, ind += 1;
+					indexes.cpush(ind);
+					if (ind != AI_ALPHABET_ACCENT)
+						statistics[nLetters] += 1;
+					spaces = 0;
+				}
+				indexes.cpush(index);
+				statistics[index & ~AI_ALPHABET_BIG] += 1;
+			}
+			node = root;
+			index = AI_ALPHABET_EMPTY;
+			pos = nextpos;
+			nextpos += 1;
+		}
+	}
+
+	if (spaces) {
+		int ind = AI_ALPHABET_EMPTY;
+		while (!(spaces & 1)) spaces >>= 1, ind += 1;
+		if (ind != AI_ALPHABET_ACCENT && indexes.csize && (indexes[0] < AI_ALPHABET_EMPTY || indexes[0] == AI_ALPHABET_ACCENT))
+			statistics[nLetters] += 1;
+		indexes.cpush(ind);
+	} else if (indexes.csize && (indexes[0] < AI_ALPHABET_EMPTY || indexes[0] == AI_ALPHABET_ACCENT))
+		statistics[nLetters] += 1;
+
+	return (indexes, statistics);
+};
+
+(volatile stateful any aiAlphabetObj, const char codeTableName[], const char text[]) -> (const char indexes[], const char error[]) parseText = {
+	aiAlphabetImpl impl;
+	char err[] = convertObjToImpl(impl, aiAlphabetObj, "parseText");
+	if (err.csize) return ("", err);
+
+	int n, found = -1;
+	for (n = 0; n < impl.data.tables.lsize && found < 0; n += 1) {
+		if (impl.data.tables[n].name == codeTableName)
+			found = n;
+	}
+
+	if (found < 0 && !addPredefinedCodeTable(impl, codeTableName).csize) {
+		found = impl.data.tables.lsize - 1;
+	}
+
+	if (found < 0) {
+		int pos, minpos = (1 << 63) - 1;
+
+		for (n = 0; n < impl.data.tables.lsize; n += 1) {
+			char name[];
+			pos = strchr(impl.data.tables[n].name, ".");
+			if (pos >= 0)
+				substrcat(name, impl.data.tables[n].name, 0, pos);
+			else
+				name = impl.data.tables[n].name;
+
+			pos = strstrtable(text, name, asciiSmallBigTable);
+			if (pos >= 0 && pos < minpos) {
+				minpos = pos;
+				found = n;
+			}
+		}
+	}
+
+	if (found < 0) {
+		char mess[];
+		strcat(mess, "codetable '");
+		strcat(mess, codeTableName);
+		strcat(mess, "' not found");
+		return ("", mkError(mess, "parseText"));
+	}
+
+	char indexes[];
+	int statistics[];
+	(indexes, statistics) = parseTextWorker(impl.data.tables[found].root, text, impl.data.tables[found].nLetters, 0, text.csize);
+
+	int i;
+	for (i = 0; i < statistics.isize; i += 1)
+		impl.data.tables[found].statistics[i] += statistics[i];
+
+	return (indexes, "");
+};
+
+(volatile stateful any aiAlphabetObj, const char codeTableName[], const char indexes[]) -> (const char text[], const char error[]) restoreText = {
+	char text[];
+	aiAlphabetImpl impl;
+	char err[] = convertObjToImpl(impl, aiAlphabetObj, "restoreText");
+	if (err.csize) return (text, err);
+
+	int n, found = -1;
+	for (n = 0; n < impl.data.tables.lsize && found < 0; n += 1) {
+		if (impl.data.tables[n].name == codeTableName)
+			found = n;
+	}
+
+	if (found < 0 && !addPredefinedCodeTable(impl, codeTableName).csize) {
+		found = impl.data.tables.lsize - 1;
+	}
+
+	if (found < 0) {
+		char mess[];
+		strcat(mess, "codetable '");
+		strcat(mess, codeTableName);
+		strcat(mess, "' not found");
+		return ("", mkError(mess, "restoreText"));
+	}
+
+	char small[][] = impl.data.tables[found].smallLetters,
+	       big[][] = impl.data.tables[found].bigLetters;
+
+	int i, size = indexes.csize;
+	for (i = 0; i < size; i += 1) {
+		const char specialSymbols[][] = { ".\r\n\r\n", ".\r\n", ". ", "... ", " ", "'" };
+		int c = indexes[i];
+		if (c >= AI_ALPHABET_EMPTY)
+			strcat(text, specialSymbols[c - AI_ALPHABET_EMPTY]);
+		else if (c & AI_ALPHABET_BIG)
+			strcat(text, big[c & ~AI_ALPHABET_BIG]);
+		else
+			strcat(text, small[c]);
+	}
+
+	return (text, err);
+};
+
+(const stateful any aiAlphabetObj, const char codeTableName[]) -> (const int statistics[], const char error[]) getStatistics = {
+	int statistics[];
+	aiAlphabetImpl impl;
+	char err[] = convertObjToImpl(impl, aiAlphabetObj, "getStatistics");
+	if (err.csize) return (statistics, err);
+
+	int n, found = -1;
+	for (n = 0; n < impl.data.tables.lsize && found < 0; n += 1) {
+		if (impl.data.tables[n].name == codeTableName)
+			found = n;
+	}
+
+	if (found < 0) {
+		char mess[];
+		strcat(mess, "codetable '");
+		strcat(mess, codeTableName);
+		strcat(mess, "' not found");
+		return (statistics, mkError(mess, "getStatistics"));
+	}
+
+	objcopyto(statistics, impl.data.tables[found].statistics);
+	return (statistics, "");
+};
+
+aiAlphabetMethods aiAlphabetMethodsImpl = {
+        version,
+	addLetters,
+	getLetters,
+	addPredefinedCodeTable,
+	getDefaultCodeTable,
+	parseText,
+	restoreText,
+	getStatistics
+};

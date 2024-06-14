@@ -1,0 +1,119 @@
+/* blog internal cgi module, main function; T18.762-T19.050; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/sysParams.dpvmh"
+#include "../../../../stdlib/stdlib.dpvmake"
+#include "internal.dpvmake"
+
+(volatile stateful blogObj blog, const int values[]) -> () getTimeCallback = {
+	blog.randomValues = values;
+	blog.time = values[0];
+
+	char password[], err[];
+	getParamExt(password, blog.env, blog.fields, "p");
+
+	(blog.users[0].password, err) = blog.obj.methods.addUser(blog.obj, blog.users[0].name, password, blog.time);
+	if (err.csize) return blogOutObj.outError(blog, err);
+
+	int created;
+	(err, created) = blogActionObj.createMessage(blog);
+	if (err.csize) return blogOutObj.outError(blog, err);
+
+	int tmp[];
+	readFileCallback(blog, tmp, "");
+	return;
+};
+
+(const char path[], const char env[][], const cgiFormField fields[]) -> (int status) blogCgiInternal = {
+	blogObj blog;
+
+	blog.server = "dmitrych.me";
+	blog.path = path;
+	blog.env = env;
+	blog.fields = fields;
+
+	char program[];
+	int pos = strrchr(path, '/');
+	substrcat(program, path, pos + 1, path.csize - 4);
+	blog.program = program;
+
+	blogUser user;
+
+	char userName[];
+	if (!getParamExt(userName, env, fields, "u"))
+		userName = "guest";
+	user.name = userName;
+
+	if (userName == "test")
+		return testCgiModule.function(path, env);
+
+	char timeStr[];
+	if (!getParamExt(timeStr, env, fields, "t"))
+		timeStr = "0";
+	int error, next;
+	(blog.postTime, error, next) = strtoi(timeStr, 0, timeStr.csize, 16);
+	if (error) {
+		blogOutObj.outError(blog, "Illegal message id");
+		return 200;
+	}
+
+	blog.users.lpush(user);
+
+	pos = path.csize;
+	while (pos && path[pos - 1] != '/') pos -= 1;
+	if (pos) pos -= 1;
+	while (pos && path[pos - 1] != '/') pos -= 1;
+
+	char root[];
+	substrcat(root, path, 0, pos);
+
+	char dir[];
+	printf(dir, "%sarchives/blog", {root});
+	blog.root = dir;
+
+	blogClass obj = blogCreate();
+
+	char err[] = obj.methods.setRoot(obj, blog.root);
+	if (err.csize) {
+		blogOutObj.outError(blog, err);
+		return 200;
+	}
+
+	blog.obj = obj;
+
+	char cookieStr[];
+	if (getEnv(cookieStr, env, "HTTP_COOKIE")) {
+		char cookies[][] = splitString(cookieStr, "; ");
+		int i;
+		for (i = 0; i < cookies.lsize; i += 1)
+			if (!strstr(cookies[i], "__udch=")) {
+				char cookie[];
+				substrcat(cookie, cookies[i], 7, cookies[i].csize);
+				blog.cookie = cookie;
+				i = cookies.lsize;
+			}
+	}
+
+	char ipStr[];
+	if (getEnv(ipStr, env, "REMOTE_ADDR"))
+		(blog.ipaddr0, blog.ipaddr1, error, next) = strtoip(ipStr, 0, ipStr.csize);
+
+	blogActionObj.parseFilename(blog);
+
+	int vars[] = {DPVM_SYS_PARAM_TIME};
+	if (blog.mode == BLOG_MKUSER || blog.mode == BLOG_CHANGEPWD) {
+		int v[], i;
+		for (i = 0; i < DPVM_SYS_PARAM_END; i += 1) {
+			if (i < DPVM_SYS_PARAM_ERROR || i >= DPVM_SYS_PARAM_ERROR_END)
+				v.ipush(i);
+		}
+		vars = v;
+	}
+	getsys(getTimeCallback, blog, vars);
+	return 200;
+};
+
+(const char path[], const char env[][]) -> (int status) blogCgi = {
+	readQuery(blogCgiInternal, path, env);
+	return 200;
+};

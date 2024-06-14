@@ -1,0 +1,33 @@
+/* finalize sha256 computation; T16.493-T17.687; $DVS:time$ */
+
+#include "sha256.dpvmake"
+
+(volatile stateful int ctx[]) -> () {
+	char str[];
+	int n;
+	int i;
+	char c;
+
+	c = 0x80; str.cpush(c);
+
+	n = ctx.i[72] + 1;
+	if ((n & 0x3f) != 0x38) {
+		c = 0;
+		do {
+			str.cpush(c);
+			n = n + 1;
+		} while ((n & 0x3f) != 0x38);
+	}
+
+	n = ctx.i[72] << 3;
+	i = 64; do {
+		i = i - 8;
+		c = n >> i;
+		str.cpush(c);
+	} while (i);
+
+	sha256_addSubstr(ctx, str, 0, str.csize);
+
+	ctx.ipop(65);
+	return;
+}

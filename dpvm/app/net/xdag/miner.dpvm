@@ -1,0 +1,194 @@
+/* one miner thread; T16.654-T19.569; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "xdag.dpvmake"
+
+int niterstep = 0x80000; /* number of iterations to do in a single step */
+int zz = 0x8000000000000000;
+
+(volatile stateful xdagdata data, int share[], int reshash[], int hashhigh, int taskseq) 
+		-> () sendshare {
+	xdagshare s;
+	s.share = share;
+	s.reshash = reshash;
+	s.hashhigh = hashhigh;
+	s.taskseq = taskseq;
+	s.clientId = data.share.clientId;
+	s.jobId = data.share.jobId;
+	data.share = s;
+
+	xdagshare d;
+	objcopyto(d, s);
+
+	xdagaddr addr;
+	objcopyto(addr, data.addr);
+	addr.threadid = -1;
+
+	msendp("", "", addr, d);
+	return;
+}
+
+(volatile stateful xdagdata data, const char text[], int status) -> () readXres {
+	if (status != 48) {
+		write_log(data, "Error reading from randomx", 2);
+		return;
+	}
+
+	int res[] = chars2ints32(text, 0, status);
+
+	int share[];
+	int reshash[];
+	int hashhigh;
+	int ntask;
+	int i;
+
+	for (i = 0; i < 6; i = i + 1) 
+		share.ipush(htonl(data.cdata.blockhash[i])); /* swap32() */
+	share.ipush(res[8]);
+	share.ipush(res[9]);
+	for (i = 0; i < 8; i = i + 1) 
+		reshash.ipush(htonl(res[i]));
+	hashhigh = res[6] | res[7] << 32;
+	ntask = res[10] | res[11] << 32;
+
+	sendshare(data, share, reshash, hashhigh, ntask);
+	input(code, data, 48, RANDOMX_READ_TIMEOUT);
+	return;		
+}
+
+(volatile stateful xdagdata data, int status) -> () writeXtask {
+	if (status != 136) {
+		write_log(data, "Error writing to randomx", 2);
+		return;
+	}
+
+	mrecv(data.recvtask, data, data.addr, 0);
+	return;
+}
+
+(volatile stateful xdagdata data, const any mess, int status) -> () recvtask {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received a mail in miner, service stopped");
+		write_log(data, m, 2);
+		return;
+	}
+
+	int i;
+
+	if (!data.task.seq) {
+		xdagdata d = xdagcopy(data);
+		data = d;
+	}
+
+	int method = data.cdata.method & 0xff;
+
+	for (i = 0; i < mess.lsize; i = i + 1) {
+		xdagtask t;
+		objcopyto(t, mess.l[i]);
+		if (t.command == -1) return;
+		if (t.seq > data.task.seq) {
+			data.task = t;
+			data.niter = 0;
+			xdagshare s;
+			s.clientId = t.clientId;
+			s.jobId = t.jobId;
+			s.hashhigh = -1;
+			s.taskseq = t.seq;
+			data.share = s;
+		}
+	}
+
+	int todo = data.cdata.niter - data.niter;
+	if (method < 2 & todo > niterstep) todo = niterstep;
+
+	if (todo <= 0) {
+		mrecv(code, data, data.addr, -1);
+		return;
+	}
+
+	int nonce = (data.cdata.method & ~0xff) + data.niter 
+		+ (data.addr.threadid << 32);
+
+	data.niter = data.niter + todo;
+
+	if (method >= 2) { /* RandomX */
+		int task[];
+
+		for (i = 0; i < 8; i = i + 1) 
+			task.ipush(data.task.task[data.task.begin + i]);
+		for (i = 0; i < 6; i = i + 1) 
+			task.ipush(htonl(data.cdata.blockhash[i])); /* swap32() */
+		if (method >= 16) {
+			task.ipush(data.task.task[data.task.begin + 16]);
+			task.ipush((data.task.task[data.task.begin + 17] + nonce) & 0xffffffff);
+		} else {
+			task.ipush(nonce & 0xffffffff);
+			task.ipush(nonce >> 32);
+		}
+		task.ipush(data.share.taskseq & 0xffffffff);
+		task.ipush(data.share.taskseq >> 32);
+		for (i = 0; i < 8; i = i + 1) 
+			task.ipush(data.task.task[data.task.begin + i + 8]);
+		task.ipush(todo);
+		task.ipush(0);
+		if (method >= 16) {
+			task.ipush(0);
+			task.ipush(1);
+		} else {
+			task.ipush(1);
+			task.ipush(0);
+		}
+		task.ipush(data.cdata.nminers);
+		task.ipush(0);
+		task.ipush(method);
+		if (method >= 16) {
+			task.ipush(data.task.task[data.task.begin + 19]);
+		} else {
+			task.ipush(0);
+		}
+
+		char str[] = ints32_2chars(task, 0, task.isize);
+		output(writeXtask, data, str);
+		return;
+	}
+
+	int share[];
+	int reshash[];
+	int hashhigh;
+	(share, reshash, hashhigh) = process_task(data.task.task, data.cdata.blockhash, 
+			data.task.begin, nonce, todo, method); 
+
+	if (hashhigh - zz < data.share.hashhigh - zz)
+		sendshare(data, share, reshash, hashhigh, data.share.taskseq);
+	mrecv(code, data, data.addr, 0);
+	return;
+}
+
+(const xdagdata data, int status) -> () minerstart {
+	if (status == 1) {
+		xdagdata d = xdagcopy(data);
+		d.addr.threadid += 1;
+		input(readXres, d, 48, RANDOMX_READ_TIMEOUT);
+	} else
+		mrecvp(data.recvtask, data, data.addr, -1);
+	return;
+}
+
+(const stateful xdagdata data, int threadid) -> () {
+	xdagdata d = xdagcopy(data);
+	d.addr.threadid = threadid;
+	d.niter = d.cdata.niter;
+	d.recvtask = recvtask;
+
+	int method = d.cdata.method & 0xff;
+	if (method >= 2) { /* RandomX */		
+		char args[][];
+		mpopenp(minerstart, d, "/usr/local/bin/randomx", args, 3);
+	} else
+		minerstart(d, 0);
+	return;
+}

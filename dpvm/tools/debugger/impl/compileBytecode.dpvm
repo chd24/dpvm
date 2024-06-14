@@ -1,0 +1,29 @@
+/* compile function to process the given bytecode; T16.494-T20.133; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "debugger.dpvmake"
+
+(const stateful debuggerData data, int cod) -> (const (volatile stateful thread t) -> () func, const char error[]) {
+	(volatile stateful thread t) -> () farr[];
+
+	char name[];
+	strcat(name, "bytecode_");
+	print_bytecode(name, cod);
+
+	char text[] = genBytecode(cod);
+
+	compsrc src = {name, text, {thread}}, srcs[] = {src};
+	any res = data.registry.compiler.compile(data.registry, srcs);
+
+	if (res.type == "".type) {
+		(volatile stateful thread t) -> () func;
+		char err[], earr[][];
+		pushObject(res, earr);
+		printf(err, "%s\r\nSource code of function %s:\r\n%s\r\n", {earr[0], name, text});
+		return (func, err);
+	}
+
+	pushObject(res, farr);
+	return (farr[0], "");
+}

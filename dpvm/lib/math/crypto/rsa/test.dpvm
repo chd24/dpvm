@@ -1,0 +1,90 @@
+/* rsa test; T17.925-T17.982; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../long/long.dpvmake"
+#include "rsa.dpvmake"
+
+(const stateful char seed[]) -> (int data[]) {
+	char str[];
+        strcat(str, seed);
+	str.cpush(0);
+	str.cpush(0);
+
+        char out0[];
+        strcat(out0, "\r\nTest for ");
+        strcat(out0, RSA_version());
+        strcat(out0, "\r\n");
+        outputp("", "", out0);
+
+        writep("", "", "rsaTestBegin.txt", "begin", 0);
+
+	int nbits;
+        for (nbits = 32; nbits <= 8192; nbits <<= 1) {
+                char out1[];
+                strcat(out1, "nbits=");
+                printint(out1, nbits, 4);
+                strcat(out1, ": generating keys...");
+                outputp("", "", out1);
+
+		int priv[];
+		int pub[];
+
+		(priv, pub) = rsa_keygen(str, nbits);
+		str[str.csize - 2] += 1;
+                if (!priv.isize || !pub.isize) {
+                        int data[];
+                        data.ipush(nbits);
+                        data.ipush(1);
+                        outputp("", "", "\r\nFAILED!\r\n");
+                        return data;
+                }
+
+		int k;
+		for (k = 0; k < 2; k += 1) {
+                        char out2[];
+                        strcat(out2, ", encrypt/decrypt round ");
+                        printint(out2, k, 1);
+                        strcat(out2, "...");
+                        outputp("", "", out2);
+
+                        int data[];
+			int i;
+                        for (i = 0; i < 16; i += 1) {
+				int d[] = random_long(str, (nbits >> 1) - 1);
+				str[str.csize - 1] += 1;
+				copyints(data, d, 0, d.isize);
+			}
+			str[str.csize - 2] += 1;
+
+			int edata[] = rsa_crypt(priv, data);
+			int ddata[] = rsa_crypt(pub, edata);
+	
+                        if (ddata != data) {
+                            int res[];
+                            copyints(res, data, 0, data.isize);
+                            res.ipush(-1);
+                            copyints(res, edata, 0, edata.isize);
+                            res.ipush(-1);
+                            copyints(res, ddata, 0, ddata.isize);
+                            res.ipush(-1);
+                            copyints(res, priv, 0, priv.isize);
+                            res.ipush(-1);
+                            copyints(res, pub, 0, pub.isize);
+                            res.ipush(-1);
+                            res.ipush(nbits);
+                            res.ipush(2 | k);
+                            outputp("", "", "\r\nFAILED!\r\n");
+                            return res;
+                        }
+
+			(priv, pub) = (pub, priv);
+		}	
+                outputp("", "", "\r\n");
+        }
+
+        writep("", "", "rsaTestEnd.txt", "end", 0);
+
+        outputp("", "", "Passed.\r\n");
+        int zero[];
+        return zero;
+}

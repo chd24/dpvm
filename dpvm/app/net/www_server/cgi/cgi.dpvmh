@@ -1,0 +1,15 @@
+/* www server: definitions for internal cgi modules; T18.742-T18.888; $DVS:time$ */
+
+type cgiFormField = {
+	const char query[];
+	const char name[];
+	const char filename[];
+	int begin;
+	int end;
+};
+
+type cgiModule = {
+	const char path[];
+	const char version[];
+	const (const char path[], const char env[][]) -> (int status) function;
+};

@@ -1,0 +1,23 @@
+/* dpvm byte code checker, version */
+
+char version[] = "DPVM bytecode checker 0.3.4, T16.013-T20.132"; /* $DVS:time$ */
+
+/* History:
+
+T20.132 ver 0.3.4: function code is not analyzed after ret bytecode if no branching is active
+
+T20.100 ver 0.3.3: implemented separate checks for if-else branches
+
+T19.613 ver 0.3.2: run transacion regarded ad temporary if any of arguments has volatile or stateful modifier
+
+T19.550 ver 0.3.1: added support for unfix bytecode and run bytecode for functions with volatile arguments
+
+T19.487 ver 0.3.0: compute large int indexes, added extra debug output for illegal function type
+
+...
+
+*/
+
+() -> (const char version[]) {
+	return version;
+}

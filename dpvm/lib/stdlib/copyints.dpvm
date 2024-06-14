@@ -1,0 +1,9 @@
+/* copying int array; T17.925-T17.926; $DVS:time$ */
+
+(volatile stateful int res[], const stateful int src[], int begin, int end) -> () {
+        while (begin < end)
+                res.ipush(src[begin]),
+                begin += 1;
+        return;
+}
+

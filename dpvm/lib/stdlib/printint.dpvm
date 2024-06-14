@@ -1,0 +1,23 @@
+/* print int; T15.543-T16.574; $DVS:time$ */
+	
+(volatile stateful char dst[], int n, int digits) -> () {
+	if (n < 0) {
+		dst.cpush('-');
+		n = -n;
+	}
+
+	int m = 1000000000000000000;
+	int d = 19;
+	do {
+		int k = n / m;
+		n = n % m;
+		if (digits >= d | k) {
+			dst.cpush(k + '0');
+			digits = d;
+		}
+		m = m / 10;
+		d = d - 1;
+	} while (d);
+
+	return;
+}

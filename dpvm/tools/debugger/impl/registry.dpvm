@@ -1,0 +1,9 @@
+/* debugger class, registryPrepare internal method; T19.646-T19.646; $DVS:time$ */
+
+#include "../../registry/registry.dpvmake"
+
+(const stateful any regSrc) -> (volatile registryData reg, const char error[]) registryPrepare = {
+	registryData reg = registryObj.copy(regSrc);
+	char error[] = registryObj.check(reg, REGISTRY_CHECKER | REGISTRY_COMPILER | REGISTRY_INTERPRETER);
+	return (reg, error);
+};

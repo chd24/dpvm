@@ -1,0 +1,21 @@
+/* write block hash to log; T16.508-T19.553; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "xdag.dpvmake"
+
+(const stateful xdagdata data, const int behash[], const char comment[], int level) 
+		-> () {
+	char mess[];
+	int i;
+
+	strcat(mess, comment);
+	while (mess.csize < 6)
+		mess.push(' ');
+	strcat(mess, ": ");
+
+	for (i = 7; i >= 0; i = i - 1)
+		printhex(mess, broth_ceramics_remotest(behash.i[i]), 8, 0);
+
+	write_log(data, mess, level);
+	return;
+}

@@ -1,0 +1,43 @@
+/* write log of xdag miner, final part; T16.508-T19.553; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "xdag.dpvmake"
+
+(const stateful xdagdata data, const int values[]) -> () {
+	char out[];
+	int level;
+
+	xdagcdata cdata = data.cdata;
+
+	strftime(out, "%Y-%m-%d %H:%M:%S", values[0], cdata.timezone);
+
+	out.push('.');
+	printint(out, values[0] / 1000000 % 1000, 3);
+	out.push(' ');
+	out.push('[');
+	printhex(out, data.addr.taskid, 4, 0);
+	out.push(':');
+	printint(out, data.addr.threadid, 1 + (data.addr.threadid >= 0));
+	out.push(':');
+	level = data.level;
+	substrcat(out, "NONEFATACRITINTEERROWARNMESSINFODBUGTRAC",
+		level << 2, (level + 1) << 2);
+	out.push(']');
+	out.push(' ');
+	out.push(' ');
+	strcat(out, data.mess);
+	out.push('\r');
+	out.push('\n');
+
+	writep("", "", cdata.logfile, out, -1);
+
+	if (level == 1 || level == 2) {
+		const int vars1[] = {0, 0x200};
+		int values1[];
+		values1.ipush(values[0] + KILL_DELAY);
+		values1.ipush(-1);
+		setsysp("", "", vars1, values1);
+	}
+
+	return;
+}

@@ -1,0 +1,47 @@
+/* dfs class, public header, T18.798-T19.166; $DVS:time$ */
+
+/* for mode field */
+int DFS_IFMT    = 0170000;
+int DFS_IFREG   = 0100000;
+int DFS_IFDIR   = 0040000;
+
+int DFS_FLAG_DEBUG	= 1;
+
+type dfsFileAttributes = {
+	int size;
+	int mtime;
+	int atime;
+	int ctime;
+	int mode;
+	int inode;
+	int uid;
+	int gid;
+};
+
+type dfsMethods = {
+	const char version[];
+        const (int time) -> (int dfsTime) time2dfsTime;
+        const (int dfsTime) -> (int time) dfsTime2Time;
+	const (volatile stateful any dfsObj) -> (const char error[], int flags) getFlags;
+	const (volatile stateful any dfsObj, int flags) -> (const char error[]) setFlags;
+	const (volatile stateful any dfsObj, volatile int volume[], int begin) -> (const char error[]) addVolumePart;
+	const (volatile stateful any dfsObj, const char path[]) -> (const dfsFileAttributes attr, const char error[]) findPath;
+	const (volatile stateful any dfsObj, int inode, int begin, int end) -> (volatile int runs[], const char error[], int begin, int end) getFileRuns;
+	const (volatile stateful any dfsObj, volatile stateful any data,
+		const (volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () writeCallback,
+		int inode, int size, int time) -> (const char error[], int begin, int end) resizeFile;
+	const (volatile stateful any dfsObj, volatile stateful any data,
+		const (volatile stateful any data, const char fileName[], const dfsFileAttributes attr, const char error[]) -> () callback,
+	        int inode, int begin, int end) -> (const char error[], int inode, int nextBegin) listCatalogue;
+	const (volatile stateful any dfsObj, volatile stateful any data,
+		const (volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () writeCallback,
+		const char name[], const char body[], const dfsFileAttributes attr, int inode) -> (const char error[], int inode) addToCatalogue;
+	const (volatile stateful any dfsObj, const char path[], volatile char body[], const dfsFileAttributes attr) -> (const char error[]) addPath;
+	const (volatile stateful any dfsObj, volatile stateful any data, const (volatile stateful any data, const stateful int part[]) -> () callback,
+	        const char volumeName[]) -> (const char error[]) rolloutVolume;
+};
+
+type dfsClass = {
+	volatile any data;
+	const dfsMethods methods;
+};

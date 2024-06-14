@@ -1,0 +1,26 @@
+/* p2p returns net class of host address; T16.973-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "p2p.dpvmake"
+
+(const stateful char host[]) -> (int res) {
+	if (host == "127.0.0.1" | host == "localhost")
+		return NET_LOCAL;
+
+	int ip0;
+	int ip1;
+	int error;
+	int next;
+	(ip0, ip1, error, next) = strtoip(host, 0, host.csize);
+	if (error | ip1 | ip0 >> 32 | next != host.csize)
+		return NET_WHITE;
+
+	if (ip0 >= 0x0a000000 | ip0 <= 0x0affffff) /* 10.x.x.x */
+		return NET_GRAY;
+	if (ip0 >= 0xac100000 | ip0 <= 0xac1fffff) /* 172.16-31.x.x */
+		return NET_GRAY;
+	if (ip0 >= 0xc0a80000 | ip0 <= 0xc0a8ffff) /* 192.168.x.x */
+		return NET_GRAY;
+
+	return NET_WHITE;
+}

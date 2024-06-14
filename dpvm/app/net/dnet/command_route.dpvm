@@ -1,0 +1,40 @@
+/* dnet node, route command; T17.569-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) route_func {
+	int A = host_by_name(ctx, args[0]);
+	if (A < 0) {
+		char m[];
+		strcat(m, "Host '");
+		strcat(m, args[0]);
+		strcat(m, "' not found.");
+		return (m, -1);
+	}
+
+	int B = host_by_name(ctx, args[1]);
+	if (B < 0) {
+		char m[];
+		strcat(m, "Host '");
+		strcat(m, args[1]);
+		strcat(m, "' not found.");
+		return (m, -2);
+	}
+
+	ctx.hosts[A].route_crc &= -0x100000000;
+	ctx.hosts[A].route_crc += ctx.hosts[B].crc + 0x100000000;
+	ctx.hosts[A].flags |= DNET_HOST_MANUAL;
+	context_send(ctx);
+
+	return ("", 0);
+}
+
+dnet_command route_command = {
+	"route",
+	"send packets to host A via immediate peer B",
+	route_func,
+	2,
+	2		
+};

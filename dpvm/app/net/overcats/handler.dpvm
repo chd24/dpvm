@@ -1,0 +1,48 @@
+/* overcats: error handler; T17.466-T17.468; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "overcats.dpvmake"
+
+int KILL_DELAY = 5000000000; /* 5 sec */
+
+(const stateful overcats_data data, const int values[]) -> () kill {
+	/* kill work task */
+	const int vars1[] = {0x200};
+	const int values1[] = {-1};
+	setsys("", "", vars1, values1);
+	return;
+}
+
+(const stateful overcats_data data, const int values[]) -> () {
+	char str[];
+	int cod;
+	int res;
+
+	strcat(str, "Overcats crashed with error ");
+	cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+
+	write_log(data, str, 1);
+
+	const int vars1[] = {0};
+	int values1[];
+	values1.ipush(values[4] + KILL_DELAY);
+	setsys(kill, data, vars1, values1);
+	return;
+}

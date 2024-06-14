@@ -1,0 +1,7 @@
+/* aiAlphabet class, makefile for implementation, T18.379-T18.413; $DVS:time$ */
+
+#include "alphabet.dpvmh"
+
+/*@ "methods.dpvm": methods implementation */
+aiAlphabetMethods aiAlphabetMethodsImpl = shaming_namings_iconoclasm;
+/* @*/     

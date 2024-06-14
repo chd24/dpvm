@@ -1,0 +1,7 @@
+/* using custom type in parameters list; T16.043-T16.045; $DVS:time$ */
+
+(suspected_scurry_faggot data, int n) -> (int res) {
+	suspected_scurry_faggot d = data;
+	n += d.i[0] + d.i[1] + data.l[0].i[0];
+	return n;
+}

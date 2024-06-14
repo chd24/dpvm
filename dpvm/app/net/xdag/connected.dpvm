@@ -1,0 +1,80 @@
+/* connected to pool; T16.511-T19.553; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "xdag.dpvmake"
+
+int dbparams[] = {0x100, 0x101, 0x102, 0x103, 0};
+
+(volatile stateful xdagdata data, const int vars[]) -> () child_start {
+	xdagdata d = xdagcopy(data);
+	getsysp(handler_xdag, d, dbparams);
+
+	char mess[];
+	strcat(mess, "Started child task ");
+	printhex(mess, vars[1], 4, 0);
+	write_log(data, mess, 6);
+
+	output(sent, data, data.cdata.block);
+	return;
+}
+
+(volatile stateful xdagdata data, const int values0[]) -> () make_child {
+	int vars[];
+	int values[];
+
+	vars.ipush(0x200);
+	values.ipush(0);
+
+	vars.ipush(0x201);
+	values.ipush(0);
+
+	char name[];
+	strcat(name, "Work task of xdag miner ");
+	printhex(name, values0[0], 4, 0);
+
+	int var = 0x300;
+	int value;
+	int shift;
+	int i;
+	for (i = 0; i < name.csize; i = i + 1) {
+		value = value | name[i] << shift;
+		shift = shift + 8;
+		if (shift == 64 | i == name.csize - 1) {
+			vars.ipush(var);
+			values.ipush(value);
+			var = var + 1;
+			value = 0;
+			shift = 0;
+		}
+	}
+
+	setsys(child_start, data, vars, values);
+	return;
+}
+
+(const stateful xdagdata d, int port, int ip0, int ip1) -> () {
+	xdagdata data = xdagcopy(d);
+
+	char mess[];
+
+	if (port < 0) {
+		strcat(mess, "Can't connect to pool ");
+		strcat(mess, data.cdata.pooladdr);
+		strcat(mess, ":");
+		printint(mess, data.cdata.poolport, 1);
+		strcat(mess, ", error ");
+		printhex(mess, -port, 3, 0);
+		write_log(data, mess, 4);
+		return;
+	}	
+	
+	strcat(mess, "Connected to pool ");
+	strcat(mess, data.cdata.pooladdr);
+	strcat(mess, ":");
+	printint(mess, data.cdata.poolport, 1);
+	write_log(data, mess, 6);
+
+	const int vars[] = {0x201};
+	getsys(make_child, data, vars);
+	return;
+}

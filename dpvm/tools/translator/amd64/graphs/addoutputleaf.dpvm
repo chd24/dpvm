@@ -1,0 +1,57 @@
+/* adds leaf edge to output if current output preceeds input; T16.596-T16.615; $DVS:time$ */
+
+#include "graphs.dpvmake"
+
+(volatile stateful schema s) -> () {
+	gate h = s.base;
+	int i;
+
+	h.depth = -1;
+
+	for (h = h.next, i = 0; h.depth >= 0; h = h.next, i = i + 1)
+		h.depth = i;
+
+	for (i = 0; i < s.outputs.lsize; i = i + 1) {
+		int n = i + s.startout;
+		if (n < s.inputs.lsize) {
+			gate gi = s.inputs[n].out0;
+			gate go = s.outputs[i];
+
+			if (gi.depth > go.depth) {
+				gate g;
+
+				g.in0 = go;
+				g.edgesmask = 1;
+				g.stackpos1 = -1;
+				g.flags = flag_output0;
+
+				if (s.outright[i])
+					g.flags = g.flags | flag_in0right,
+					g.stackpos0 = go.stackpos1,
+					go.out1 = g,
+					go.edgesmask = go.edgesmask | 8,
+					go.flags = go.flags & ~flag_output1;
+				else
+					g.stackpos0 = go.stackpos0,
+					go.out0 = g,
+					go.edgesmask = go.edgesmask | 4,
+					go.flags = go.flags & ~flag_output0;
+
+				if (go.flags & flag_32bit)
+					g.flags = g.flags | flag_32bit;
+
+				s.outputs[i] = g;
+				s.outright[i] = 0;
+
+				g.prev = s.base.prev;
+				g.prev.next = g;
+				g.next = s.base;
+				s.base.prev = g;
+
+				g.depth = g.prev.depth + 1;
+			}
+		}
+	}
+
+	return;
+}

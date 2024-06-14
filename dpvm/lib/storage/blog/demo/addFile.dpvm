@@ -1,0 +1,124 @@
+/* blog class, addFile demo, T19.349-T19.350; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../dfs/dfs.dpvmh"
+#include "../blog.dpvmake"
+
+type addFileData = {
+	volatile stateful blogClass blogObj;
+	const char user[];
+	const char password[];
+	const char filePath[];
+	const char loadPath[];
+	volatile char content[];
+	int messageTime;
+};
+
+(const char mess[]) -> () outError = {
+	outputp("", "", mess);
+	outputp("", "", ".\r\n");
+	return;
+};
+
+(volatile stateful any arg, const char error[]) -> () writeFileCallback = {
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	outError("File added");
+	return;
+};
+
+(volatile stateful any arg, const char error[]) -> () createFileCallback = {
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	addFileData to[];
+	objcopyto(to, {arg});
+	addFileData data = to[0];
+
+	data.blogObj.methods.writeMessageFile(data.blogObj, data, writeFileCallback, data.filePath, data.content, 0, data.content.csize, data.content.csize);
+	return;
+};
+
+(volatile stateful addFileData data, const char file[], int status) -> () readFileCallback = {
+	if (status < 0) {
+		outError("Error reading file");
+		return;
+	}
+
+	if (!status && !data.content.csize) {
+		outError("File does not exists or empty file");
+		return;
+	}
+
+	strcat(data.content, file);
+
+	if (status) {
+		read(code, data, data.loadPath, data.content.csize, 0x100000);
+		return;
+	}
+
+	data.blogObj.methods.createMessageFile(data.blogObj, data, createFileCallback, data.filePath);
+	return;
+};
+
+(volatile stateful any arg, volatile int file[], const char error[]) -> () blogReadCallback = {
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	addFileData to[];
+	objcopyto(to, {arg});
+	addFileData data = to[0];
+
+	int index;
+	(error, index) = data.blogObj.methods.setMessage(data.blogObj, file, 0x80, file.isize, data.messageTime);
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	read(readFileCallback, data, data.loadPath, 0, 0x100000);
+	return;
+};
+
+(volatile stateful addFileData data, const int values[]) -> () getTimeCallback = {
+	char password[], error[];
+	(password, error) = data.blogObj.methods.addUser(data.blogObj, data.user, data.password, values[0]);
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	data.blogObj.methods.readFile(data.blogObj, data, blogReadCallback, data.user, "blog");
+	return;
+};
+
+(const char root[], const char user[], const char password[], const char messageId[], const char filePath[], const char loadPath[], int dfsFlags) -> (const char error[]) addFile = {
+	blogClass blogObj = blogCreate();
+	char error[];
+
+	error = blogObj.methods.setRoot(blogObj, root);
+	if (error.csize) return error;
+
+	error = blogObj.methods.setFlags(blogObj, dfsFlags);
+	if (error.csize) return error;
+
+	int time, err, next;
+	(time, err, next) = strtoi(messageId, 0, messageId.csize, 16);
+	if (err)
+		return "Error: illegal message id.";
+
+	addFileData data = {blogObj, user, password, filePath, loadPath};
+	data.messageTime = time;
+
+	const int vars[] = {0};
+	getsys(getTimeCallback, data, vars);
+	return "";
+};

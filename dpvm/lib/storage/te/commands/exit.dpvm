@@ -1,0 +1,16 @@
+/* exit command, T18.320-T18.320; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandExit {
+	msend("", "", data.addr, "");
+	return "";
+}
+
+teCommand cmdExit = {
+        "exit",
+	"exit the program",
+	commandExit
+};
+
+

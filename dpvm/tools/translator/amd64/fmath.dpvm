@@ -1,0 +1,181 @@
+/* dpvm byte code translator, amd64 float/char computations; T16.125-T20.125; $DVS:time$ */
+
+/* 
+ 	rsi = ints stack end
+ 	r11 = floats stack end
+ 	r10 = chars stack end
+*/
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> ()
+	ld = amd64_load;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		int datatype, int reg, int i, int n) -> ()
+	st = amd64_store;
+
+(const stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res) {
+	int r;
+
+	if (c == DPVM_CODE_ITOF) {
+		amd64_fiload(data, list, i, 0);
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_ITOC) {
+		ld(data, list, "mov", "48 8B", 1, 0, 0, i, 0);
+		st(data, list, 3, 0, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FTOI) {
+		amd64_fload(data, list, i, 0);
+		amd64_fistore(data, list, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_CTOI) {
+		ld(data, list, "mov", "48 8B", 3, 0, 0, i, 0);
+		as(list, "movzx rax,al", "48 0F B6 C0", 0, 0, 0, 0, 0);
+		st(data, list, 1, 0, i, 0);
+		return 0;
+	}
+
+	if (c >= DPVM_CODE_FEQ && c <= DPVM_CODE_FGT) {
+		c &= 3;
+
+		amd64_fload(data, list, i, -1);
+		amd64_fload(data, list, i, 0);
+		as(list, "fcomip st0,st1", "DF F1", 0, 0, 0, 0, 0);
+		as(list, "fstp st0", "DD D8", 0, 0, 0, 0, 0);
+		as(list, "setcc al", "0F 101 C0", 0x979294>>(c<<3)&0xff, 0, 0, 0, 0);
+		as(list, "movzx rax,al", "48 0F B6 C0", 0, 0, 0, 0, 0);
+		st(data, list, 1, 0, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FNEG) {
+		amd64_fload(data, list, i, 1);
+		as(list, "fchs", "D9 E0", 0, 0, 0, 0, 0);	
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}
+
+	if (c >= DPVM_CODE_FADD && c <= DPVM_CODE_FDIV) {
+		c &= 3;
+		amd64_fload(data, list, i, 1);
+		amd64_fload(data, list, i, 0);
+		as(list, "fbopp st1,st0", "DE 101", 0xF9C9E9C1>>(c<<3)&0xff, 0, 0, 0, 0);
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}	
+
+	if (c == DPVM_CODE_FSPLIT) {
+		int addr = getaddr(data.addrs, "fsplit");
+		if (addr == -1) return -1;
+
+		ld(data, list, "mov", "48 8B", 2, 0, 0, i, 0);
+		as(list, "push rax", "50", 0, 0, 0, 0, 0);
+		as(list, "cp rcx,rsp", "48 89 E1", 0, 0, 0, 0, 0);
+		as(list, "push rax", "50", 0, 0, 0, 0, 0);
+		amd64_precall(list);
+		as(list, "mov rdi,rax", "48 89 C7", 0, 0, 0, 0, 0);
+		as(list, "mov rsi,rcx", "48 89 CE", 0, 0, 0, 0, 0);
+		amd64_call(list, addr);
+		as(list, "pop rcx", "59", 0, 0, 0, 0, 0);
+		as(list, "pop rcx", "59", 0, 0, 0, 0, 0);
+		st(data, list, 1, 0, i, 1);
+		st(data, list, 1, 1, i, 0);
+		return r;
+	}
+
+	if (c == DPVM_CODE_FMERGE) {
+		int addr = getaddr(data.addrs, "fmerge");
+		if (addr == -1) return -1;
+
+		ld(data, list, "mov", "48 8B", 1, 0, 0, i, 0);
+		ld(data, list, "mov", "48 8B", 1, 0, 1, i, -1);
+		amd64_precall(list);
+		as(list, "mov rdi,rax", "48 89 C7", 0, 0, 0, 0, 0);
+		as(list, "mov rsi,rcx", "48 89 CE", 0, 0, 0, 0, 0);
+		amd64_call(list, addr);
+		st(data, list, 2, 0, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FFLOOR || c == DPVM_CODE_FCEIL) {
+		c &= 1;
+		amd64_fload(data, list, i, 1);
+		as(list, "fstcw [rsp+b]", "9B D9 7C 24 111", 0, 0xFE, 0, 0, 0);
+		as(list, "fclex", "9B DB E2", 0, 0, 0, 0, 0);
+		as(list, "mov [rsp+b],w", "66 C7 44 24 111 122", 0, 0xFC, 0x763+(c<<10), 0, 0);
+		as(list, "fldcw [rsp+b]", "D9 6C 24 111", 0, 0xFC, 0, 0, 0);
+		as(list, "frndint", "D9 FC", 0, 0, 0, 0, 0);
+		as(list, "fclex", "9B DB E2", 0, 0, 0, 0, 0);
+		as(list, "fldcw [rsp+b]", "D9 6C 24 111", 0, 0xFE, 0, 0, 0);
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FSQRT) {
+		amd64_fload(data, list, i, 1);
+		as(list, "fsqrt", "D9 FA", 0, 0, 0, 0, 0);
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FEXP) {
+		amd64_fload(data, list, i, 1);
+		as(list, "fldl2e", "D9 EA", 0, 0, 0, 0, 0);
+		as(list, "fmulp st1,st0", "DE C9", 0, 0, 0, 0, 0);
+		as(list, "fld st0", "D9 C0", 0, 0, 0, 0, 0);
+		as(list, "frndint", "D9 FC", 0, 0, 0, 0, 0);
+		as(list, "fsub st1,st0", "DC E9", 0, 0, 0, 0, 0);
+		as(list, "fxch st0,st1", "D9 C9", 0, 0, 0, 0, 0);
+		as(list, "f2xm1", "D9 F0", 0, 0, 0, 0, 0);
+		as(list, "fld1", "D9 E8", 0, 0, 0, 0, 0);
+		as(list, "faddp st1,st0", "DE C1", 0, 0, 0, 0, 0);
+		as(list, "fscale", "D9 FD", 0, 0, 0, 0, 0);
+		as(list, "fstp st1", "DD D9", 0, 0, 0, 0, 0);
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FLOG) {
+		amd64_fload(data, list, i, 1);
+		as(list, "fldln2", "D9 ED", 0, 0, 0, 0, 0);
+		as(list, "fxch st0,st1", "D9 C9", 0, 0, 0, 0, 0);
+		as(list, "fyl2x", "D9 F1", 0, 0, 0, 0, 0);
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FSINCOS) {
+		amd64_fload(data, list, i, 2);
+		as(list, "fsincos", "D9 FB", 0, 0, 0, 0, 0);
+		amd64_fstore(data, list, i, 0);
+		amd64_fstore(data, list, i, 1);
+		return 0;
+	}
+
+	if (c == DPVM_CODE_FATAN) {
+		amd64_fload(data, list, i, 1);
+		amd64_fload(data, list, i, 0);
+		as(list, "fpatan", "D9 F3", 0, 0, 0, 0, 0);
+		amd64_fstore(data, list, i, 0);
+		return 0;
+	}
+
+	return -1;
+}

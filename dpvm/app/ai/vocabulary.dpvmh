@@ -1,0 +1,26 @@
+/* aiVocabulary class, public header, T18.397-T18.437; $DVS:time$ */
+
+type aiVocabularyWordInfo = {
+	const char word[];
+	int id;
+	int count;
+	float weight;
+};
+
+type aiVocabularyMethods = {
+        const char version[];
+	const (volatile stateful any aiVocabularyObj, const char rawData[]) -> (const char error[]) loadData;
+	const (volatile stateful char rawData[], const stateful any aiVocabularyObj) -> (const char error[]) saveData;
+	const (volatile stateful any aiVocabularyObj, const int statistics[]) -> (const char error[]) setStatistics;
+	const (const stateful any aiVocabularyObj) -> (const int statistics[], const char error[], int nWords) getStatistics;
+	const (volatile stateful char words[], volatile stateful any aiVocabularyObj, const char indexes[], int begin, int end) -> (const char error[], int errorPos) parseIndexes;
+	const (volatile stateful any aiVocabularyObj) -> (const char error[]) recalculateWeights;
+	const (volatile stateful int wordIDs[], const stateful char words[], int begin, int end, int delim) -> (const char error[], int nextBegin) decodeWordIDs;
+	const (volatile stateful aiVocabularyWordInfo[], const stateful any aiVocabularyObj, const stateful int wordIDs[], int begin, int end) -> (const char error[]) getWordsInfo;
+	const (volatile stateful char output[], const stateful any aiVocabularyObj, const char letters[][], int nWords) -> (const char error[]) printTopWords;
+};
+
+type aiVocabulary = {
+        volatile any data;
+	const aiVocabularyMethods methods;
+};

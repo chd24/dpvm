@@ -1,0 +1,70 @@
+/* push fields of cobj to obj; T16.042-T16.601; $DVS:time$ */
+
+(volatile stateful any obj, const stateful any cobj) -> () {
+	any link;
+	int i;
+	int n;
+	int m;
+
+	n = cobj.lsize;
+	m = obj.lsize;
+	if (n) {
+		i = 0;
+		while (i < m) {
+			link = cobj.l[i];
+			if (link == cobj) link = obj;
+			obj.l[i] = link;
+			i = i + 1;
+		}
+		while (i < n) {
+			link = cobj.l[i];
+			if (link == cobj) link = obj;
+			obj.lpush(link);
+			i = i + 1;
+		}
+	}
+
+	n = cobj.isize;
+	m = obj.isize;
+	if (n) { 
+		i = 0; 
+		while (i < m) {
+			obj.i[i] = cobj.i[i];
+			i = i + 1;
+		}
+		while (i < n) {
+			obj.ipush(cobj.i[i]);
+			i = i + 1;
+		}
+	}
+
+	n = cobj.fsize;
+	m = obj.fsize;
+	if (n) { 
+		i = 0; 
+		while (i < m) {
+			obj.f[i] = cobj.f[i];
+			i = i + 1;
+		}
+		while (i < n) {
+			obj.fpush(cobj.f[i]);
+			i = i + 1;
+		}
+	}
+
+	n = cobj.csize;
+	m = obj.csize;
+	if (n) { 
+		i = 0; 
+		while (i < m) {
+			obj.c[i] = cobj.c[i];
+			i = i + 1;
+		}
+		while (i < n) {
+			obj.cpush(cobj.c[i]);
+			i = i + 1;
+		}
+	}
+
+	return;
+}

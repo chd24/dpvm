@@ -1,0 +1,36 @@
+/* forex class, readCryptoLog demo, T19.744-T19.771; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../forex.dpvmake"
+
+type demoData = {
+	volatile forexClass forexObj;
+	int graphX;
+	int graphY;
+};
+
+(volatile stateful any data, const char error[]) -> () callback = {
+	demoData darr[];
+	pushObject(data, darr);
+	demoData d = darr[0];
+
+	char out[];
+	if (error.csize)
+		printf(out, "%s\r\n", {error});
+
+	error = d.forexObj.methods.dump(out, d.forexObj, d.graphX, d.graphY);
+	if (error.csize)
+		printf(out, "%s\r\n", {error});
+
+	outputp("", "", out);
+	return;
+};
+
+(const char filename[], int nCurrency, int graphX, int graphY) -> () readCryptoLog = {
+	demoData d = {forexCreate(), graphX, graphY};
+
+	inputFile f = {filename};
+	d.forexObj.methods.readCryptoLog(d.forexObj, callback, d, f, nCurrency);
+	return;
+};

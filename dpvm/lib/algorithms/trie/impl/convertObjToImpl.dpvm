@@ -1,0 +1,12 @@
+/* trie class, convertObjToImpl internal method, T18.847-T18.847; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "trie.dpvmake"
+
+(volatile stateful trieImpl impl, const stateful any trieObj, const char func[]) -> (const char error[]) convertObjToImpl = {
+    if (trieObj.type != trieImpl && (trieObj.type != trieClass || trieObj.l[0].type != trieData)) {
+        return mkError("trieObj has illegal type", func);
+    }
+    objcopyto(impl, trieObj);
+    return "";
+};

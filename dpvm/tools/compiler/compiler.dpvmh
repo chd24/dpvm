@@ -1,0 +1,19 @@
+/* compiler, external header; T18.317-T18.350; $DVS:time$ */
+
+/* description of each file passed to compiler */
+type compsrc = {
+        const char name[];	/* name of source file */
+	const char file[];	/* contents of source file */
+	const any links;	/* objects named in this file */
+};
+
+type compilerClass = {
+        const char version[];
+	const int lexems[];
+	const (const stateful char src[], const stateful int lexems[], int pos, int end) -> (int new_pos, int end, int lexem) getLexem;
+	const (const stateful char src[], int pos, int end) -> (volatile char str[], int new_pos, int status, char c) getConstString;
+	const (const char expr[], const any links, int begin, int end) -> (const type t, const char err[], int status) getMultiExprType;
+	const (const stateful any registry, const stateful compsrc files[]) -> (volatile any func) compile;
+};
+
+type compilerType = compilerClass;

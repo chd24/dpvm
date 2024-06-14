@@ -1,0 +1,147 @@
+/* dpvm assembler; T15.418-T19.574; $DVS:time$ */
+
+(type in, type out, char src[], any links) -> (any func) {
+
+	use foresaw_bulges_kinetically;		/* int[], vector of compacted bytecode names */
+	use wind_speeded_hogwash;		/* any type */
+
+    asm {
+0 0 0 0
+
+0 lload info info 4 3 istore new
+
+7 iload 0 lload 0 iset
+6 iload 0 lload 1 iset
+5 iload 0 lload 2 iset
+4 iload 0 lload 3 iset
+7 iload 0 lload 4 iset
+6 iload 0 lload 5 iset
+5 iload 0 lload 6 iset
+4 iload 0 lload 7 iset
+0 0 lload 8 iset
+0 0 lload 9 iset
+0 0 lload 10 iset
+0 0 lload 11 iset
+1 63 shl 1 sub 0 lload 12 iset
+1 63 shl 1 sub 0 lload 13 iset
+1 63 shl 1 sub 0 lload 14 iset
+1 63 shl 1 sub 0 lload 15 iset
+
+4 lload 1 lload 0 lset
+3 lload 1 lload 1 lset
+code 1 lget 1 lload 2 lset
+code 1 lget 1 lload 3 lset
+
+3 iload 11 istore
+2 iload 10 istore
+1 iload 9 istore
+0 iload 8 istore
+ipops 0 new
+
+3 iload
+jzf
+	3 iload
+	lb
+		1 sub
+		0 iload 1 lload lget
+		0 iload 1 lload lset
+		0 iload		
+	jnzb
+	ipops
+lf
+
+2 iload
+jzf
+	2 iload
+	lb
+		1 sub
+		0 iload 1 lload iget
+		1 iload 0 lload iset
+		0 iload	
+	jnzb
+	ipops
+lf
+
+1 iload
+jzf
+	1 iload
+	lb
+		1 sub
+		0 iload 1 lload fget
+		0 iload 0 lload fset
+		0 iload	
+	jnzb
+	ipops
+lf
+
+2 istore 2 ipopn
+3 lstore
+1 lstore
+
+0 0
+0 lload info 7 istore 7 ipopn lpops
+code 0 lget 0 lload info 2 iload 1 sub 9 istore 8 ipopn lpops
+
+0 0
+lb
+	0
+	3 iload 3 iload eq
+	jnzf
+		ipops
+		1 iload 1 lload cget ctoi
+	lf
+	0 iload 33 lt
+	jnzf
+		1 iload 8 shl add 0 istore
+		33
+	lf
+	33 lt neg 1 iload and 
+	jzf
+		0 
+		4 iload
+		lb
+			1 iload 1 iload add 1 shr
+			0 iload 0 lload iget 
+			0 iload 8 shr
+			0 iload 6 iload lt
+			jzf
+				2 iload 1 add 4 istore
+			lf
+			0 iload 6 iload gt
+			jzf
+				2 iload 1 sub 3 istore
+			lf
+			0 iload 6 iload eq
+			jzf
+				1 iload itoc 3 lload cpush
+				3 iload 1 add 4 istore
+			lf
+			3 ipopn
+			1 iload 1 iload gt
+		jzb
+		3 ipopn
+		0
+	lf
+	2 iload 2 iload 0 iload 1 add 3 istore eq
+jzb
+2 lpopn
+4 ipopn
+
+0 iload
+jzf
+	0 iload
+	lb
+		1 iload 1 iload sub 0 lload cget 
+		1 lload cpush
+		1 sub
+		0 iload	
+	jnzb
+	ipops
+lf
+
+lpops
+ipops
+
+ret
+    }
+}

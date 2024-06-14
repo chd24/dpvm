@@ -1,0 +1,20 @@
+/* dnet node, version command; T17.534-T19.649; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) version_func {
+	char res[];
+	strcat(res, ctx.data.version);
+	strcat(res, "\r\n");
+	return (res, 0);
+}
+
+dnet_command help_command = {
+	"version",
+	"output full version string of node",
+	version_func,
+	0,
+	0		
+};

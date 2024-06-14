@@ -1,0 +1,26 @@
+/* translator, makefile; T16.609-T19.506; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+/*@ "amd64_old.dpvm": old method for x86-64 */
+translator_method amd64_old = interpreted_craft_cherries;
+/* @*/
+
+/*@ "amd64_graphs.dpvm": new graphs-based method for x86-64 */
+translator_method amd64_graphs = defilement_piecemeal_meddles;
+/* @*/
+
+/*@ "amd64_floats.dpvm": method for float computations on x86-64 */
+translator_method amd64_floats = babblers_temporal_replete;
+/* @*/
+
+/*@ "methods.dpvm": array of all translator methods */
+translator_method translator_methods[] = dictates_accelerates_beanstalk;
+/* @*/
+
+/*@ "main.dpvm": main function of translator */
+(const stateful any func, const stateful addrs_list addrs, 
+		const stateful checker_data cdata, const stateful char arch[]) -> 
+		(volatile mach_code machcode, int res)
+	translator = paperthin_tedious_dinosaurs;
+/* @*/           

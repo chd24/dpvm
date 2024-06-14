@@ -1,0 +1,56 @@
+/* example math functions, makefile; T20.069-T20.069; $DVS:time$ */
+
+/*@ "factorial.dpvm": n! recursive implementation */
+(int n) -> (int res)
+	factorial = drumbeat_embroider_softer;
+/* @*/
+
+/*@ "factorial2.dpvm": n! cycle-based implementation */
+(int n) -> (int res)
+	factorial2 = conceal_typology_insiders;
+/* @*/
+
+/*@ "binom1.dpvm": C_n^m via factorials */
+(int n, int m) -> (int res)
+	binom1 = garage_iconoclast_encircling;
+/* @*/
+
+/*@ "binom1a.dpvm": C_n^m via factorial2 */
+(int n, int m) -> (int res)
+	binom1a = mastitis_scraped_grumblings;
+/* @*/
+
+/*@ "binom2.dpvm": C_n^m via sums */
+(int n, int m) -> (int res)
+	binom2 = piffle_traversals_bypaths;
+/* @*/
+
+/*@ "binom3.dpvm": C_n^m via multiplying/divisions */
+(int n, int m) -> (int res)
+	binom3 = cockney_scoot_megalomaniac;
+/* @*/
+
+/*@ "binom4.dpvm": C_n^m non-recursive */
+(int n, int m) -> (int res)
+	binom4 = supreme_sentential_insulating;
+/* @*/
+
+/*@ "fibonacci.dpvm": output n-th fibonacci number */
+(int n) -> (int fib)
+	fibonacci = drovers_carcasses_lineally;
+/* @*/
+
+/*@ "square_equ.dpvm": solve square equation */
+(float a, float b, float c) -> (float x1, float x2)
+	square_equ = constant_summertime_farthing;
+/* @*/
+
+/*@ "average.dpvm": compute average sums by given array of values and period */
+(const stateful int arr[], int period) -> (volatile int res[])
+	average = seeps_frames_martyred;
+/* @*/
+
+/*@ "complex.dpvm": example of the function using complex numbers */
+() -> (float res)
+	complex_example = boated_catacombs_manipulative;
+/* @*/

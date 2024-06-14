@@ -1,0 +1,40 @@
+/* show current entry command, T18.320-T18.334; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandShow {
+	if (data.pos + 144 > data.file.isize)
+		return "End of database.\r\n";
+
+	char res[];
+
+	int i;
+	for (i = 0; i < 4; i += 1) {
+		res.cpush("10LE"[i]);
+		strcat(res, ": [");
+
+		int j;
+		int base = data.pos + 16 + i * 32;
+		for (j = 0; j < 64; j += 1) {
+			int uni = data.file[base + (j >> 1)] >> ((j & 1) << 4) & 0xffff;
+			if (uni < ' ')
+				uni = '.';
+			else if (uni == 0xffff)
+				uni = ' ';
+			printutf8(res, uni);
+		}
+
+		strcat(res, "]\r\n");
+	}
+
+	return res;
+}
+
+teCommand cmdShow = {
+	"show",
+        "show current database entry without hiding passwords",
+	commandShow
+};
+
+

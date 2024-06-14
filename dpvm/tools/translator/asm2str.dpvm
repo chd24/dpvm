@@ -1,0 +1,39 @@
+/* output list of asm instructions to str; T16.083-T19.643; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "translator_utils.dpvmake"
+
+(volatile stateful char dst[], const stateful char src[]) -> () outstr {
+	strcat(dst, src);
+	int s = src.csize;
+	while (s < 16) dst.cpush('\t'), s = (s | 7) + 1;
+	return;
+}
+
+(volatile stateful char dst[], int n) -> () outhex {
+	if (n < 0) {
+		n = -n;
+		dst.cpush('-');
+	}
+	printhex(dst, n, 1, 0);
+	dst.cpush('\t');
+	return;
+}
+
+(const stateful asm_instr list[]) -> (volatile char str[]) {
+	char str[];
+	int i;
+
+	for (i = list[0].next; i; i = list[i].next) {
+		outstr(str, list[i].mnem);
+		outstr(str, list[i].hex);
+		outhex(str, list[i].param0);
+		outhex(str, list[i].param1);
+		outhex(str, list[i].param2);
+		outhex(str, list[i].param3);
+		str.cpush('\r');
+		str.cpush('\n');
+	}
+
+	return str;
+}

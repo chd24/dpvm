@@ -1,0 +1,17 @@
+/* show first entry of database, T18.327-T18.334; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandHome {
+	data.pos = 0;
+
+	return "view";
+}
+
+teCommand cmdHome = {
+        "home",
+        "show first entry of database",
+        commandHome
+};
+
+

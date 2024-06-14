@@ -1,0 +1,122 @@
+/* dnet log writer; T17.534-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+type logger = {
+        volatile dnet_context ctx;
+        const any func;
+        const any objs;
+};
+
+int KILL_DELAY = 1000000000; /* 1 sec */
+
+(volatile stateful logger log, const int values[]) -> () kill {
+	/* kill this task */
+	const int vars1[] = {0x200};
+	const int values1[] = {-1};
+	setsys("", "", vars1, values1);
+	return;
+}
+
+(volatile stateful logger log, const dnet_mess mess, const int values[]) -> () 
+		log_one {
+	char out[];
+
+	strftime(out, "%Y-%m-%d %H:%M:%S", values[0], log.ctx.data.timezone);
+
+	out.push('.');
+	printint(out, values[0] / 1000000 % 1000, 3);
+	out.push(' ');
+	out.push('[');
+	printhex(out, log.ctx.data.task_id, 4, 0);
+	out.push(':');
+	if (mess.thread_id < 0 && mess.thread_id > -1000) {
+		if (mess.thread_id > -100) out.push(' ');
+		if (mess.thread_id > -10) out.push(' ');
+		printint(out, mess.thread_id, 1);
+	} else
+		printhex(out, mess.thread_id & 0xffff, 4, 0);
+	out.push('/');
+	printint(out, values[1], 3);
+	out.push(':');
+	substrcat(out, "NONEFATACRITINTEERROWARNMESSINFODBUGTRAC",
+		mess.request << 2, (mess.request + 1) << 2);
+	out.push(']');
+	out.push(' ');
+	out.push(' ');
+	strcat(out, mess.mess);
+	out.push('\r');
+	out.push('\n');
+
+	writep("", "", log.ctx.data.log_file, out, -1);
+
+	if (mess.request == 1) { /* kill task on fatal error */
+		const int vars1[] = {0};
+		int values1[];
+		values1.ipush(values[0] + KILL_DELAY);
+		setsys(kill, log, vars1, values1);
+	}
+	return;
+}
+
+(volatile stateful logger log, const int values[]) -> () log_all {
+	int i;
+
+	for (i = 0; i < log.objs.lsize; i += 1) {
+		dnet_mess mess;
+		if (mess.type != log.objs.l[i].type) {
+			mess.mess = "Dropped mailbox message of illegal format";
+			mess.request = 2;
+			mess.thread_id = log.ctx.conns[0].thread_id;
+		} else {
+			objcopyto(mess, log.objs.l[i]);
+		}
+
+		log_one(log, mess, values);
+	}
+	
+	dnet_addr addr;
+	addr.version = log.ctx.data.version;
+	addr.task_id = log.ctx.data.task_id;
+	addr.thread_id = log.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_LOG;
+
+	mrecv(log.func, log, addr, -1);
+	return;	
+}
+
+(volatile stateful logger log, const any objs, int status) -> () read_mbox {
+	if (status) {
+		any objs1;
+		dnet_mess mess;
+                char m[];
+                strcat(m, "Error ");
+                printint(m, status, 1);
+                strcat(m, " when received mail in logger");
+                mess.mess = m;
+		mess.request = 2;
+		mess.thread_id = log.ctx.conns[0].thread_id;
+		objs1.lpush(mess);
+		objs = objs1;
+	}
+
+	log.objs = objs;
+	
+	int vars[];
+	vars.ipush(0);
+	vars.ipush(log.ctx.data.task_id << 16 | 2);
+	getsys(log_all, log, vars);
+	return;
+}
+
+(const dnet_data data, const int values[]) -> () {
+	logger log;
+	
+	log.ctx.data = data;
+	log.ctx.conns[0].thread_id = DNET_THREAD_ID_LOGGER;
+	log.func = read_mbox;
+
+	read_mbox(log, "", 0);
+	return;
+}

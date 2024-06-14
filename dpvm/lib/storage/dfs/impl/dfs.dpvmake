@@ -1,0 +1,77 @@
+/* dfs class, makefile for implementation, T18.798-T19.168; $DVS:time$ */
+
+#include "dfs.dpvmh"
+
+/*@ "mkError.dpvm": compose error message */
+(const char mess[], const char func[]) -> (const char err[])
+	mkError = evaporated_backpedalled_retried;
+/* @*/
+
+/*@ "checkVolumePart.dpvm": check if given array represent correct volume part, whole not equal 0 means the part contains all the volume */
+(const stateful int volume[], int begin, int whole) -> (const char error[])
+	checkVolumePart = linoleum_flashlight_oestrogen;
+/* @*/
+
+/*@ "buildInVolume.dpvm": prepare volume to build-in into another volume */
+(volatile stateful int volume[], int offset) -> (const char error[])
+	buildInVolume = harmless_books_bogs;
+/* @*/
+
+/*@ "convertObjToImpl.dpvm": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
+(volatile stateful dfsImpl impl, const stateful any dfsObj, const char func[]) -> (const char error[])
+	convertObjToImpl = embalmer_viewpoint_outgrown;
+/* @*/
+
+/*@ "findPath.dpvm": find path in the volume and return atributes including inode; if inode located outside the given part of volume
+     return needed inode */
+(volatile stateful any dfsObj, const char path[]) -> (const dfsFileAttributes attr, const char error[])
+	findPath = etched_impair_supersedes;
+/* @*/
+
+/*@ "getFileTreeParams.dpvm": for given file size, return array of file tree level sizes, number of intermediate sectors for file tree and number of tree levels */
+(int fileSize) -> (int levelSizes[], int nLinkSectors, int nLevels)
+	getFileTreeParams = coastlines_manoeuvre_ironstone;
+/* @*/
+
+/*@ "getFileRuns.dpvm": return array of file segments (begin, end) in the volume; if stored volume space is unsifficient,
+     then returned (begin, end) or required part of the volume in 64-bit ints */
+(volatile stateful any dfsObj, int inode, int begin, int end) -> (volatile int runs[], const char error[], int begin, int end)
+	getFileRuns = haulers_bundles_dejectedly;
+/* @*/
+
+/*@ "resizeFile.dpvm": set file size to given; call writeCallback to perform actual write of segment [changeBegin, changeEnd) of array located in the volume from given beginning;
+     if stored volume space is unsifficient, then returned (begin, end) or required part of the volume in 64-bit ints */
+(volatile stateful any dfsObj, volatile stateful any data, const (volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () writeCallback,
+		int inode, int size, int time) -> (const char error[], int begin, int end)
+	resizeFile = microcosmic_incest_iciness;
+/* @*/
+
+/*@ "listCatalogue.dpvm": call callback for each item of catalogue inode within interval [begin, end) */
+(volatile stateful any dfsObj, volatile stateful any data,
+		const (volatile stateful any data, const char fileName[], const dfsFileAttributes attr, const char error[]) -> () callback,
+		int inode, int begin, int end) -> (const char error[], int inode, int nextBegin)
+	listCatalogue = puzzler_rockier_boycott;
+/* @*/
+
+/*@ "addToCatalogue.dpvm": add file/subcatalogue with name[] to existing catalogue inode; non-empty body may present only for new subcatalogue; in this case body should be
+    dfs volume which will be linked instead of this catalogue; writeCallback called for each portion of data to write; if some part of volume is not present, returns required inode */
+(volatile stateful any dfsObj, volatile stateful any data,
+		const (volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () writeCallback,
+		const char name[], const char body[], const dfsFileAttributes attr, int inode) -> (const char error[], int inode)
+	addToCatalogue = mask_deceptions_feuds;
+/* @*/
+
+/*@ "addPath.dpvm": add path (file/catalogue) to volume with given attributes, for file thd body is provided */
+(volatile stateful any dfsObj, const char path[], volatile char body[], const dfsFileAttributes attr) -> (const char error[])
+	addPath = consonants_spawns_exacting;
+/* @*/
+
+/*@ "rolloutVolume.dpvm": output the whole volume by parts via callback after files/catalogues added via addPath */
+(volatile stateful any dfsObj, volatile stateful any data, const (volatile stateful any data, const stateful int part[]) -> () callback,
+		const char volumeName[]) -> (const char error[])
+	rolloutVolume = stockpiled_lethally_deliriously;
+/* @*/
+
+/*@ "methods.dpvm": public methods implementation */
+dfsMethods dfsMethodsImpl = toasting_bewilderment_mincer;
+/* @*/                                 

@@ -1,0 +1,7 @@
+/* hash class, makefile; T18.016-T18.334; $DVS:time$ */
+
+#include "hash.dpvmh"
+
+/*@ "hash.dpvm": hash table for objects */
+hashClass hashObj = welldisposed_commercials_emasculated;
+/* @*/         

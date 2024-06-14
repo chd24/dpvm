@@ -1,0 +1,10 @@
+/* C_n^m non-recursive; T16.081-T20.069; $DVS:time$ */
+
+(int n, int m) -> (int res) binom4 = {
+	int res = 1, i;
+
+	for (i = 0; i < m; i += 1)
+		res = res * (n - i) / (i + 1);
+
+	return res;
+};

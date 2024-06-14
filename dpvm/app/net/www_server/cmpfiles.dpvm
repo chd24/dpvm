@@ -1,0 +1,13 @@
+/* www server: compare files by their stat structures; T15.554-T17.036; $DVS:time$ */
+	
+(const any a, const any b, int method) -> (int) {
+	int as = a.csize;
+	int bs = b.csize;
+	int i;
+	
+	for (i = 0; i < as & i < bs; i = i + 1)
+		if (a.c[i] - b.c[i]) 
+			return a.c[i] - b.c[i];
+
+	return as - bs;
+}

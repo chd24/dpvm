@@ -1,0 +1,17 @@
+/* cgi interface, get query parameter extended, T18.888-T18.888; $DVS:time$ */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "modules.dpvmake"
+
+(volatile stateful char out[], const stateful char env[][], const stateful cgiFormField fields[], const stateful char name[])
+		-> (int status) getParamExt = {
+	int i;
+	for (i = 0; i < fields.lsize; i += 1) {
+		if (fields[i].name == name) {
+			substrcat(out, fields[i].query, fields[i].begin, fields[i].end);
+			return ~i;
+		}
+	}
+
+	return getParam(out, env, name);
+};

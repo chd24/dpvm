@@ -1,0 +1,27 @@
+/* decode base64 to string; T17.468-T17.470; $DVS:time$ */
+
+(volatile stateful char dst[], const stateful char src[], int bits) -> (int bits) {
+	const char mime[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	char decode[256];
+
+	int i;
+	for (i = 0; i < 64; i += 1)
+		decode[mime[i]] = i;
+
+	int d = bits & 0xf;
+	int c = bits >> 4;
+
+	for (i = 0; i < src.csize; i += 1) {
+		int b = decode[src[i]];
+		if (b < 64) {
+			c = c << 6 | b;
+			d += 6;
+			if (d >= 8) {
+				d -= 8; 
+				dst.cpush(c >> d);
+			}
+		}
+	}
+	
+	return c << 4 | d;
+}

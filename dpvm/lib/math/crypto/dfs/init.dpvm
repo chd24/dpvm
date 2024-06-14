@@ -1,0 +1,30 @@
+/* initialize dfs crypt context; T16.506-T16.507; $DVS:time$ */
+
+(const stateful char password[]) -> (volatile int ctx[]) {
+	int ctx[];
+	int i;
+	int j;
+
+	for (i = 0; i < 0x10000; i += 1)
+		ctx.ipush(0);
+	
+	ctx.ipush(572035291);
+	ctx.ipush(2626708081);
+	ctx.ipush(2471573851);
+	ctx.ipush(3569250857);
+
+	for (i = 0; i < password.csize; i += 1) {
+		int c = password[i];
+		if (c >= 0xC0 && c < 0xE0 && i + 1 < password.csize) {
+			i += 1;
+			c = (c & 0x1f) << 6 | password[i] & 0x3f;
+		}
+		for (j = 0; j < 4; j += 1) {
+			c = ctx[0x10000 + j] * 1971772241 + c;
+			ctx[0x10000 + j] = c & 0xffffffff;
+			c >>= 32;
+		}
+	}
+
+	return ctx;
+}

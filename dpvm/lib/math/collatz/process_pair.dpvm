@@ -1,0 +1,23 @@
+/* collatz hypothesis: process pair (a,b) i.e. ak + b; T16.475-T16.475 $DVS:time$
+   until a' even and a' >= a; return 1 if a' < a
+*/
+
+(int a, int b) -> (int res) {
+	int az;
+	int lim;
+	int t;
+	
+	az = a;
+	lim = 0x2AAAAAAAAAAAAAAA;
+
+	do {
+		t = b & 1;
+		if (t) { a = a + (a << 1); b = b + (b << 1) + 1; }
+		if (!t) { a = a >> 1; b = b >> 1; }
+	} while (a < lim & b < lim & a >= az & !(a & 1));
+	
+	if (a < az) { t = 1; return (t); }
+	if (a & 1) { t = 0; return (t); }
+	t = -1;
+	return (t);
+}

@@ -1,0 +1,8 @@
+/* blog class, makefile for constructor, T18.715-T18.765; $DVS:time$ */
+
+#include "blog.dpvmh"
+
+/*@ "impl/create.dpvm": create blog object */
+() -> (volatile blogClass obj)
+        blogCreate = celebrate_pattered_brushwork;
+/* @*/      

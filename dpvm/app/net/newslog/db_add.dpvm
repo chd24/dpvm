@@ -1,0 +1,33 @@
+/* newslog: add to db; T15.589-T17.646; $DVS:time$ */
+	
+(volatile stateful any db, const char key[], int depth, int value) -> () {
+	int hash = key;
+
+	while (depth >= 2) {
+		int n = hash >> ((depth - 2) << 2) & 0xf;
+		while (db.lsize <= n) {
+			any subdb;
+			db.lpush(subdb);
+		}
+		db = db.l[n];
+		depth -= 1;
+	}
+
+	int i;
+	char k[] = key;
+	int v = value;
+
+	for (i = 0; i < db.lsize; i += 1) {
+		(k, db.l[i]) = (db.l[i], k);
+		(v, db.i[i]) = (db.i[i], v);
+		if (k == key)
+			return;
+	}
+
+	if (db.lsize < 16) {
+		db.lpush(k);
+		db.ipush(v);
+	}
+
+	return;
+}

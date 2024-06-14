@@ -1,0 +1,55 @@
+/* C system() function analogue; T18.552-T18.523; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+
+(const any arg, const char text[], int status) -> () readOutput = {
+	if (status <= 0)
+		return;
+
+	outputp("", "", text);
+	input(code, "", 0x1000, -1);
+	return;
+};
+
+(const any cmd, int status) -> () launched = {
+	if (status != 1) {
+		char command[];
+		objcopyto(command, cmd);
+		char text[];
+		strcat(text, "Error ");
+		printint(text, status, 1);
+		strcat(text, " while executing command '");
+		strcat(text, command);
+		strcat(text, "'.\n");
+		outputp("", "", text);
+		return;
+	}
+
+	input(readOutput, "", 0x1000, -1);
+	return;
+};
+
+(const char command[]) -> (int error) system = {
+	char program[], args[][];
+	int begin, end = command.csize, b, e;
+
+	(b, e) = strtostr(command, begin, end);
+	if (b >= e)
+		return -1;
+
+	substrcat(program, command, b, e);
+
+	while (b < e) {
+		begin = e;
+		(b, e) = strtostr(command, begin, end);
+		if (b < e) {
+			char arg[];
+			substrcat(arg, command, b, e);
+			args.lpush(arg);
+		}
+	}
+
+	mpopenp(launched, command, program, args, 1);
+
+	return 0;
+};

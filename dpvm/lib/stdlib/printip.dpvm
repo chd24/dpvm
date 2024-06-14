@@ -1,0 +1,27 @@
+/* print ip; T15.543-T16.950; $DVS:time$ */
+
+#include "stdlib.dpvmake"
+
+(volatile stateful char dst[], int ipaddr0, int ipaddr1) -> () {
+	int t;
+	
+	/* todo: ipv6 */
+	if (ipaddr0 >> 32 | ipaddr1) {
+		dst.push(':');
+		dst.push(':');
+		return;
+	}
+
+	printint(dst, ipaddr0 >> 24 & 0xff, 1);
+	dst.push('.');
+
+	printint(dst, ipaddr0 >> 16 & 0xff, 1);
+	dst.push('.');
+
+	printint(dst, ipaddr0 >> 8 & 0xff, 1);
+	dst.push('.');
+
+	printint(dst, ipaddr0 & 0xff, 1);
+
+	return;
+}

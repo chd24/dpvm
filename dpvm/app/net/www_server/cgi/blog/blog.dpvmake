@@ -1,0 +1,6 @@
+/* www server: external makefile for blog cgi module; T18.779-T18.888; $DVS:time$ */
+
+/*@ "main.dpvm": main function of module */
+(const char path[], const char env[][]) -> (int status)
+    blogCgi = crate_cribbing_jag;
+/* @*/                    

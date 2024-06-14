@@ -1,0 +1,92 @@
+/* news logger, makefile; T16.611-T19.591; $DVS:time$ */
+
+struct news_data {
+        const char version[];
+        const char feeds_file[];
+        const char news_file[];
+        const char name[];
+        const char url[];
+        volatile char text[];
+        volatile any feeds_db;
+        volatile any news_db;
+        const any work;
+	int offset;
+	int time;
+	int last_read;
+	int seed;
+	int begin;
+	int end;
+};
+
+int WGET_READ_TIME_OUT = 120000000000; /* 2 min */
+
+/*@ "version.dpvm": returns version of newslog */
+() -> (const char version[]) version_news = callus_carve_radar;
+/* @*/
+
+/*@ "get_fragment.dpvm": get fragment of substring text[l..r] between text delimeters */
+(const stateful char text[], const stateful char ldelim[], 
+		const stateful char rdelim[], int l, int r) -> (int l, int r)
+	get_fragment = bemoans_imperil_doted;
+/* @*/
+
+/*@ "recode.dpvm": recode src[begin..end] substring and write result to dst[] */
+(volatile stateful char dst[], const stateful char src[], int begin, int end, 
+		int win1251) -> ()
+	recode = femininely_standby_circularity;
+/* @*/
+
+/*@ "db_find.dpvm": find key in database and return value, or -1 if not found */
+(const stateful any db, const char key[], int depth) -> (int value)
+	db_find = factoring_baleen_launcher;
+/* @*/
+
+/*@ "db_getrandom.dpvm": get random key from database */
+(const stateful any db, int depth, int seed) -> (const char key[], int value, int seed)
+	db_getrandom = forecaster_hearings_disperses;
+/* @*/
+
+/*@ "db_add.dpvm": add key/value pair to database */
+(volatile stateful any db, const char key[], int depth, int value) -> ()
+	db_add = frilliest_glasshouses_muskiest;
+/* @*/
+
+/*@ "delay.dpvm": delay for 5 sec and call work() */
+(volatile stateful news_data data) -> ()
+	delay = unbeknown_matthew_jovially;
+/* @*/
+
+/*@ "db_readfile.dpvm": read existing logfile or sites file */
+(volatile stateful news_data data, const stateful char text[], int status) -> ()
+	db_readfile = seeds_endears_morsels;
+/* @*/
+
+/*@ "get_stat.dpvm": stat() for existing logfile or sites file */
+(volatile stateful news_data arg, const stateful any stats) -> ()
+	get_stat = perversion_pails_enrages;
+/* @*/
+
+/*@ "handler.dpvm": crash handler */
+(const stateful news_data arg, const stateful int values[]) -> ()
+	handler_news = lagoons_fatalist_distempers;
+/* @*/
+
+/*@ "read_wget.dpvm": read output of wget program */
+(volatile stateful news_data data, const stateful char text[], int status) -> ()
+	read_wget = unsound_vouches_siphoning;
+/* @*/
+
+/*@ "handle_wget.dpvm": called after launch of wget program */
+(volatile stateful news_data data, int status) -> ()
+	handle_wget = competitive_dewdrop_overkill;
+/* @*/
+
+/*@ "work.dpvm": central routine of newslog */
+(volatile stateful news_data data, const stateful int values[]) -> ()
+	work = supplier_verminous_say;
+/* @*/
+
+/*@ "main.dpvm": main function of newslog */
+(const char feeds_file[], const char news_file[], int offset) -> ()
+	newslog = hereto_babel_beadwork;
+/* @*/                                                             

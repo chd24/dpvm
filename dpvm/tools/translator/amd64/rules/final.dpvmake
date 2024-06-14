@@ -1,0 +1,23 @@
+/* amd64 final optimization rules, makefile; T17.662-T18.018; $DVS:time$ */
+
+#include "../../translator_utils.dpvmake"
+
+/*@ "final_cmp.dpvm": cmp rules */
+(volatile stateful asm_instr list[][]) -> ()
+	final_cmp = discounts_seesaws_gastronomy;
+/* @*/
+
+/*@ "final_cpcmp.dpvm": cp-cmp rules */
+(volatile stateful asm_instr list[][]) -> ()
+	final_cpcmp = steamboats_trainer_mankind;
+/* @*/
+
+/*@ "final_setcc.dpvm": setcc rules */
+(volatile stateful asm_instr list[][]) -> ()
+	final_setcc = footwork_ferociously_poultice;
+/* @*/
+
+/*@ "final.dpvm": all final rules */
+() -> (volatile asm_instr list[][])
+	final = riders_aggregations_dahlia;
+/* @*/                             

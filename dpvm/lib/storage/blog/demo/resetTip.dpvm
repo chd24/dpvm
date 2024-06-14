@@ -1,0 +1,126 @@
+/* blog class, resetTip demo, T18.896-T18.915; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../dfs/dfs.dpvmh"
+#include "../blog.dpvmake"
+
+type resetTipData = {
+	volatile blogClass blogObj;
+	const char user[];
+	int messageTime;
+	int messageIndex;
+	int stage;
+};
+
+(const char mess[]) -> () outError = {
+	outputp("", "", mess);
+	outputp("", "", ".\r\n");
+	return;
+};
+
+(volatile stateful any arg, volatile int file[], const char error[]) -> () tipReadCallback = {
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	resetTipData data;
+	objcopyto(data, arg);
+
+	char tip[];
+	(tip, error) = data.blogObj.methods.getTip(data.blogObj);
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	int index = (data.messageIndex << 1) - 0x80, i, itip[] = chars2ints32(tip, 0, 0x40);
+	if (index < 0x80) {
+		outError("Error: illegal tip index");
+		return;
+	}
+	if (file.isize < index + 0x10) {
+		outError("Error: too short tip file");
+		return;
+	}
+
+	for (i = 0; i < 0x10; i += 1)
+		file[index + i] = itip[i];
+
+	error = data.blogObj.methods.writeFile(data.blogObj, data.user, "tip", file);
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	outError("Tip resetted");
+	return;
+};
+
+(volatile stateful any arg, const char file[], const dfsFileAttributes attr, const char error[]) -> () fileReadCallback = {
+	if (error.csize && strstr(error, "not found") < 0) {
+		outError(error);
+		return;
+	}
+
+	resetTipData data;
+	objcopyto(data, arg);
+
+	if (data.stage) {
+		error = data.blogObj.methods.addToTip(data.blogObj, file);
+		if (error.csize) {
+			outError(error);
+			return;
+		}
+	}
+
+	if (data.stage >= 3) {
+		data.blogObj.methods.readFile(data.blogObj, data, tipReadCallback, data.user, "tip");
+	} else {
+		const char files[][] = {"author.txt", "header.txt", "message.txt"};
+		data.stage += 1;
+		data.blogObj.methods.readMessageFile(data.blogObj, data, code, files[data.stage - 1], 0, 0x200);
+	}
+
+	return;
+};
+
+(volatile stateful any arg, volatile int file[], const char error[]) -> () blogReadCallback = {
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	resetTipData data;
+	objcopyto(data, arg);
+
+	(error, data.messageIndex) = data.blogObj.methods.setMessage(data.blogObj, file, 0x80, file.isize, data.messageTime);
+	if (error.csize) {
+		outError(error);
+		return;
+	}
+
+	dfsFileAttributes attr;
+	fileReadCallback(data, "", attr, "");
+	return;
+};
+
+(const char root[], const char user[], const char password[], const char messageId[]) -> (const char error[]) resetTip = {
+	blogClass blogObj = blogCreate();
+	char error[];
+
+	error = blogObj.methods.setRoot(blogObj, root);
+	if (error.csize) return error;
+
+	(password, error) = blogObj.methods.addUser(blogObj, user, password, 0);
+	if (error.csize) return error;
+
+	int time, err, next;
+	(time, err, next) = strtoi(messageId, 0, messageId.csize, 16);
+	if (err)
+		return "Error: illegal message id.";
+
+	blogObj.methods.readFile(blogObj, {blogObj, user, time, 0, 0}, blogReadCallback, user, "blog");
+	return "";
+}

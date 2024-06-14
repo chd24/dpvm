@@ -1,0 +1,249 @@
+/* make projects utility, work routine; T16.601-T20.171; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+
+#include "maker.dpvmake"
+
+(volatile stateful makedata data, const any objs) -> () {
+	makedata data0;
+	objcopyto(data0, data);
+	data = data0;
+
+	compsrc files0[];
+	objcopyto(files0, data.files);
+	data.files = files0;
+
+	compsrc allfiles0[];
+	objcopyto(allfiles0, data.allfiles);
+	data.allfiles = allfiles0;
+
+	int eqfiles;
+	if (data.files.lsize) {
+		if (data.files[data.files.lsize - 1] 
+				== data.allfiles[data.allfiles.lsize - 1])
+			eqfiles = 1;
+	}
+
+	compsrc file;
+	objcopyto(file, data.allfiles[data.allfiles.lsize - 1]);
+	data.allfiles[data.allfiles.lsize - 1] = file;
+
+	if (eqfiles) data.files[data.files.lsize - 1] = file;
+
+	file.links = objs;
+
+	while (data.nfile < data.files.lsize) {
+		char src[] = data.files[data.nfile].file;
+		if (data.filepos < src.csize) {
+			int pos = substrchr(src, data.filepos, src.csize, '#'); 
+			if (pos >= 0) {
+				pos = pos + 1;
+				data.filepos = pos;
+				int end = src.csize;
+				int status;
+				(pos, end, status) = data.registry.compiler.getLexem(src, data.registry.compiler.lexems, pos, end);
+				if (status == 66) { /* include */
+					char str[];
+					char c;
+					(str, pos, status, c) = data.registry.compiler.getConstString(src, pos, end);
+					if (!status) {
+						char path[];
+						strcat(path, data.files[data.nfile].name);
+						pathcat(path, str);
+						
+						int i;
+						int found;
+						for (i = 0; i < data.files.lsize & !found; i = i + 1)
+							if (data.files[i].name == path) found = 1;
+
+						if (!found) {
+							for (i = 0; i < data.allfiles.lsize & !found; i = i + 1)
+								if (data.allfiles[i].name == path) found = 1;
+							if (found)
+								data.files.lpush(data.allfiles[i - 1]);
+							else {
+								compsrc newfile;
+								newfile.name = path;
+								data.allfiles.lpush(newfile);
+								data.files.lpush(newfile);
+								read(data.read_file, data, path, 0, 0x100000);
+								return;
+							}
+						}
+
+					}
+				}
+			} else data.filepos = src.csize;
+		} else {
+			data.nfile = data.nfile + 1;
+			data.filepos = 0;
+		}
+	}
+
+	if (data.allfiles.lsize == 1) {
+		data.allfiles.lpush(file);
+		compsrc newfile;
+		newfile.name = file.name;
+		data.allfiles[0] = newfile;
+	} else {
+		any func = data.registry.compiler.compile(data.registry, data.files);
+		if (func.type == "".type) {
+			char err[];
+			objcopyto(err, func);
+			data.callback(data.arg, err);
+			return;
+		}
+
+		any objs0;
+		objcopyto(objs0, data.objs);
+		data.objs = objs0;
+		data.objs.lpush(func);
+
+		char makefile[] = data.allfiles[1].file;
+		int pos = substrstr(makefile, "@*/", data.makepos, makefile.csize);
+		if (pos < 0) {
+			char err[];
+			strcat(err, version_maker());
+			strcat(err, ": error: can't find @*");
+			strcat(err, "/ after /");
+			strcat(err, "*@ in makefile");
+			data.callback(data.arg, err);
+			return;
+		}
+
+		int eqpos = substrchr(makefile, data.makepos, pos, '=');
+		if (eqpos < 0) {
+			char err[];
+			strcat(err, version_maker());
+			strcat(err, ": error: can't find = between /");
+			strcat(err, "*@ and @*");
+			strcat(err, "/ in makefile");
+			data.callback(data.arg, err);
+			return;
+		}
+
+		int dotcomapos = substrchr(makefile, eqpos, pos, ';');
+		if (dotcomapos < 0) {
+			char err[];
+			strcat(err, version_maker());
+			strcat(err, ": error: can't find ; after = between /");
+			strcat(err, "*@ and @*/ in makefile");
+			data.callback(data.arg, err);
+			return;
+		}
+
+		compsrc newmake;
+		objcopyto(newmake, data.allfiles[0]);
+		data.allfiles[0] = newmake;
+
+		char text[];
+		strcat(text, newmake.file);
+		substrcat(text, makefile, data.makepos, eqpos + 1);
+		text.push(' ');
+		int h0, h1, h2, h3;
+		(h0, h1, h2, h3) = getfullhash(func);
+		data.base58Obj.methods.encodeHash(text, h0, h1, h2, h3);
+		strcat(text, " /* ");
+		printobjname(text, func);
+		strcat(text, " */");
+		data.makepos = pos + 3;
+		substrcat(text, makefile, dotcomapos, data.makepos);
+		newmake.file = text;
+	}
+
+	char makefile[] = data.allfiles[1].file;
+	char frag[];
+	frag.cpush('/');
+	frag.cpush('*');
+	frag.cpush('@');
+	int pos = substrstr(makefile, frag, data.makepos, makefile.csize);
+	if (pos < 0) {
+		if (!data.objs.lsize) {
+			char err[];
+			strcat(err, version_maker());
+			strcat(err, ": error: no files to build");
+			data.callback(data.arg, err);
+			return;
+		}
+
+                if (data.allfiles[0].file.csize < data.allfiles[1].file.csize) {
+                        char f[];
+                        strcat(f, data.allfiles[0].file);
+                        int size = data.allfiles[1].file.csize;
+                        while (f.csize < size)
+                            f.cpush(' ');
+                        data.allfiles[0].file = f;
+                }
+
+		msave_p2p(saved, data, data.objs);
+		return;
+	}
+
+	char text[];
+	strcat(text, data.allfiles[0].file);
+	substrcat(text, makefile, data.makepos, pos);
+	data.allfiles[0].file = text;
+	data.makepos = pos;
+
+	char str[];
+	char c;
+	int status;
+	(str, pos, status, c) = data.registry.compiler.getConstString(makefile, pos + 3, makefile.csize);
+	if (status) {
+		char err[];
+		strcat(err, version_maker());
+		strcat(err, ": error: can't find filename after /");
+		strcat(err, "@*");
+		data.callback(data.arg, err);
+		return;
+	}
+	char path[];
+	strcat(path, data.allfiles[0].name);
+	pathcat(path, str);
+	compsrc empfiles[];
+	data.files = empfiles;
+	data.nfile = 0;
+	data.filepos = 0;
+	compsrc file1;
+	file1.name = path;
+	data.files.push(file1);
+	data.allfiles.push(file1);
+
+	int hashes[] = text2hashes(text);
+
+	any links;
+	int i;
+	any oldlinks = data.allfiles[1].links;
+	any newlinks = data.objs;
+	for (i = 0; i < hashes.isize; i += 4) {
+		int h0, h1, h2, h3, h = hashes[i] << 17 >> 17;
+		int found;
+		int j;
+		for (j = 0; j < oldlinks.lsize && !found; j++) {
+			(h0, h1, h2, h3) = getfullhash(oldlinks.l[j]);
+			if (hashes[i] == h0 && hashes[i + 1] == h1 && hashes[i + 2] == h2 && hashes[i + 3] == h3
+					|| h0 << 17 >> 17 == h && !hashes[i + 1] && !hashes[i + 2] && !hashes[i + 3])
+				links.lpush(oldlinks.l[j]), found = 1;
+		}
+		for (j = 0; j < newlinks.lsize && !found; j++) {
+			(h0, h1, h2, h3) = getfullhash(newlinks.l[j]);
+			if (hashes[i] == h0 && hashes[i + 1] == h1 && hashes[i + 2] == h2 && hashes[i + 3] == h3
+					|| h0 << 17 >> 17 == h && !hashes[i + 1] && !hashes[i + 2] && !hashes[i + 3])
+				links.lpush(newlinks.l[j]), found = 1;
+		}
+		if (!found) {
+			char err[];
+			strcat(err, version_maker());
+			strcat(err, ": error: can't find object ");
+			printobjname(err, h);
+			data.callback(data.arg, err);
+			return;
+		}
+	}
+	data.allfiles[0].links = links;
+
+	read(data.read_file, data, path, 0, 0x100000);
+	return;	
+}

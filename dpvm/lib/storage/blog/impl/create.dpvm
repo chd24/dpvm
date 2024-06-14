@@ -1,0 +1,14 @@
+/* blog class, constructor, T18.715-T18.765; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "blog.dpvmake"
+
+() -> (volatile blogClass obj) blogCreate = {
+        blogImpl impl;
+        blogClass obj;
+
+        impl.methods = blogMethodsImpl;
+        objcopyto(obj, impl);
+
+        return obj;
+};

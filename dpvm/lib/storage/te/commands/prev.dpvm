@@ -1,0 +1,18 @@
+/* view previous entry command, T18.327-T18.334; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandPrev {
+	if (data.pos >= 144)
+		data.pos -= 144;
+
+	return "view";
+}
+
+teCommand cmdPrev = {
+        "prev",
+        "view previous database entry",
+        commandPrev
+};
+
+

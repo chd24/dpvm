@@ -1,0 +1,60 @@
+/* monitor: stats command processing; T15.570-T20.029; $DVS:time$ */
+	
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "monitor.dpvmake"
+
+int statsParams[] = {
+	DPVM_SYS_PARAM_MEMORY,		DPVM_SYS_PARAM_ALLOCED,	    DPVM_SYS_PARAM_MAPPED,	DPVM_SYS_PARAM_NOBJECTS,
+	DPVM_SYS_PARAM_NTHREADS,	DPVM_SYS_PARAM_NACTIVE,	    DPVM_SYS_PARAM_NPTHREADS,	DPVM_SYS_PARAM_NTASKS,
+	DPVM_SYS_PARAM_NTRANSACTIONS,	DPVM_SYS_PARAM_NRESULTS,    DPVM_SYS_PARAM_NADDRS,	DPVM_SYS_PARAM_NMESS,
+	DPVM_SYS_PARAM_QSIZE,		DPVM_SYS_PARAM_QTIME
+};
+
+char statsNames[][] = {
+	"memory",			"alloced",		    "mmapped",			"objects",
+	"threads",			"active",		    "pthreads",			"tasks",
+	"transactions",			"results",		    "addresses",		"messages",
+	"qsize",			"qtime"
+};
+
+(volatile stateful mondata data, const stateful int list[]) -> () statsCallback = {
+	char str[];
+
+	strcat(str, "Stats:");
+
+	int i;
+	for (i = 0; i < statsNames.lsize; i += 1) {
+		if (i)
+			str.cpush(',');
+		printf(str, " %s=", {statsNames[i]});
+
+		int value = list[i];
+		if (value < 1000)
+			printf(str, "%d", {value});
+		else {
+			const char ordNames[] = " KMGTPE";
+			float v = value;
+			int ord;
+			while (v >= 1000)
+				ord += 1, v /= 1000;
+			if (v >= 100)
+				printf(str, "%.1f%c", {v, ordNames[ord]});
+			else if (v >= 10)
+				printf(str, "%.2f%c", {v, ordNames[ord]});
+			else
+				printf(str, "%.3f%c", {v, ordNames[ord]});
+		}
+	}
+
+        str.cpush('.');
+
+	out_result(data, str);
+	return;
+};
+
+(volatile stateful mondata data) -> () outStats = {
+	getsys(statsCallback, data, statsParams);
+	return;
+};

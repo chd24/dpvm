@@ -1,0 +1,32 @@
+/* dpvmb class, verify demo, T20.141-T20.141; $DVS:time$ */
+
+#include "../../../../lib/utils/utils.dpvmake"
+#include "../dpvmb.dpvmake"
+
+(const char err[]) -> () outErr = {
+	outputp("", "", err);
+	outputp("", "", "\r\n");
+	return;
+};
+
+(volatile stateful any data, const char error[]) -> () loadCallback = {
+	if (error.csize) return outErr(error);
+
+	dpvmbClass arr[];
+	pushObject(data, arr);
+	dpvmbClass dpvmbObj = arr[0];
+
+	error = dpvmbObj.methods.verify(dpvmbObj);
+	return outErr(error.csize ? error : "Database verified.");
+};
+
+(const char fileName[]) -> (const char error[]) verify = {
+	dpvmbClass dpvmbObj = dpvmbCreate();
+
+	char error[] = dpvmbObj.methods.setFileName(dpvmbObj, fileName);
+	if (error.csize) return error;
+
+	dpvmbObj.methods.load(dpvmbObj, loadCallback, dpvmbObj);
+
+	return "";
+};

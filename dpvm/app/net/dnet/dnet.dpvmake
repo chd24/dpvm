@@ -1,0 +1,198 @@
+/* dnet module, makefile; T17.534-T19.640; $DVS:time$ */
+
+#include "dnet.dpvmh"
+
+/*@ "version.dpvm": returns version of dnet */
+() -> (const char version[]) version = parlourmaid_milkyway_punitively;
+/* @*/
+
+/*@ "crc32.dpvm": computes crc32 of substring */
+(const stateful dnet_data d, const stateful char data[], int begin, int end) -> (int crc)
+	crc32 = bandaged_burrowed_impermanent;
+/* @*/
+
+/*@ "encoding.dpvm": encoding/decoding of wire-transferred data */
+(volatile stateful char dst[], const stateful char src[], 
+		const stateful dnet_connection c, int decode, int state) -> (int state)
+	encoding = spoonful_primroses_alfalfa;
+/* @*/
+
+/*@ "registry.dpvm": check registry and cast it to native type */
+(const stateful any regSrc) -> (volatile registryData reg, const char error[])
+	registryPrepare = uneasier_kettleful_compositions;
+/* @*/
+
+/*@ "monitor.dpvm": execute monitor command cmd[] and use out_handler for handle output */
+(const dnet_context ctx, const (const dnet_context ctx, const char text[]) -> () out_handler,
+		const char cmd[]) -> ()
+	monitor_command = spellable_environ_clang;
+/* @*/
+
+/*@ "write_log.dpvm": write log message to queue for logging */
+(const stateful dnet_context ctx, const char mess[], int level) -> ()
+	write_log = keyring_processable_bravado;
+/* @*/
+
+/*@ "log_packet.dpvm": output packet for tracing purpose */
+(const stateful dnet_context ctx, const stateful char mess[],
+		const stateful char packet[], int pos, int begin, int end) -> ()
+	log_packet = conceits_voicings_cagy;
+/* @*/
+
+/*@ "host_by_name.dpvm": find host by name */
+(const stateful dnet_context ctx, const char name[]) -> (int number)
+	host_by_name = drug_cartoonist_degenerates;
+/* @*/
+
+/*@ "print_hostname.dpvm": print hostname by number in array or crc */
+(volatile stateful char out[], const stateful dnet_context ctx, int n, int crc) -> ()
+	print_hostname = fretting_referenda_imbeciles;
+/* @*/
+
+/*@ "route_to_host.dpvm": find connection which routes to host */
+(const stateful dnet_context ctx, const dnet_host h) -> (int conn_number, int mode)
+	route_to_host = polyesters_coxcombs_luncheons;
+/* @*/
+
+/*@ "update_host.dpvm": update host data */
+(volatile stateful dnet_context ctx, const stateful dnet_host h) -> 
+		(int change, int number)
+	update_host = gorges_diary_preserved;
+/* @*/
+
+/*@ "context_copy.dpvm": make a copy of context */
+(const stateful dnet_context ctx) -> (volatile dnet_context ctx2)
+	context_copy = disavowing_believers_scrabbling;
+/* @*/
+
+/*@ "context_merge.dpvm": merge context */
+(volatile stateful dnet_context dctx, const stateful dnet_context ctx) -> (int change)
+	context_merge = phosphates_emptyhanded_rotations;
+/* @*/
+
+/*@ "context_send.dpvm": send context to mediator */
+(const stateful dnet_context ctx) -> ()
+	context_send = biodiversity_rhodium_camper;
+/* @*/
+
+/*@ "handler.dpvm": crash handler */
+(const dnet_data data, const int values[]) -> ()
+	handler = floppy_reinstates_hurrah;
+/* @*/
+
+/*@ "logger.dpvm": logging service */
+(const dnet_data data, const int values[]) -> ()
+	logger = schwa_moderates_gumshoe;
+/* @*/
+
+/*@ "mediator.dpvm": mediator service */
+(const dnet_data data, const int values[]) -> ()
+	mediator = scooting_footbridge_chilly;
+/* @*/
+
+/*@ "random_sector.dpvm": produce random array of 128 32-bit numbers */
+(volatile stateful dnet_context ctx) -> (volatile int sector[])
+	random_sector = hijacked_sealing_mechanistic;
+/* @*/
+
+/*@ "crypt.dpvm": crypt data using rsa key */
+(const int data[], const char key[], int key_begin, int key_end) -> (volatile int res[])
+        crypt = termination_brethren_music;
+/* @*/
+
+/*@ "send_packet.dpvm": send outputcoming packet to corresponding thread */
+(volatile stateful dnet_context ctx, const char packet[]) -> ()
+	send_packet = fiasco_cruise_agreeing;
+/* @*/
+
+/*@ "command_bind.dpvm": bind command */
+dnet_command command_bind = sheets_armadillo_leavened;
+/* @*/
+
+/*@ "command_conn.dpvm": conn command */
+dnet_command command_conn = fen_postured_inquires;
+/* @*/
+
+/*@ "command_connect.dpvm": connect command */
+dnet_command command_connect = mentors_seventy_dialling;
+/* @*/
+
+/*@ "command_exit.dpvm": exit command */
+dnet_command command_exit = recommencing_invigorate_standings;
+/* @*/
+
+/*@ "command_help.dpvm": help command */
+dnet_command command_help = menacing_tridents_convect;
+/* @*/
+
+/*@ "command_hosts.dpvm": hosts command */
+dnet_command command_hosts = misconduct_piloted_height;
+/* @*/
+
+/*@ "command_route.dpvm": route command */
+dnet_command command_route = jollify_heroism_cellist;
+/* @*/
+
+/*@ "command_sleep.dpvm": sleep command */
+dnet_command command_sleep = dishpan_deportations_inflating;
+/* @*/
+
+/*@ "command_terminate.dpvm": terminate command */
+dnet_command command_terminate = citizens_fifteen_lassoed;
+/* @*/
+
+/*@ "command_trust.dpvm": trust command */
+dnet_command command_trust = note_distended_authentic;
+/* @*/
+
+/*@ "command_version.dpvm": version command */
+dnet_command command_version = disentangle_rudest_mazy;
+/* @*/
+
+/*@ "command_dpvm.dpvm": dpvm command */
+dnet_command command_dpvm = median_pretending_lunch;
+/* @*/
+
+/*@ "commands.dpvm": array of dnet commands */
+dnet_command dnet_commands[] = pauper_namibian_newsletters;
+/* @*/
+
+/*@ "help.dpvm": generates help information on commands */
+() -> (const char help[]) help = consults_squint_inquires;
+/* @*/
+
+/*@ "command.dpvm": dnet command processing */
+(volatile stateful dnet_context ctx, const stateful char command[], int begin, int end) 
+		-> (const char res[], int error, int next_begin)
+	process_commands = benches_treks_autarchy;
+/* @*/
+
+/*@ "packet.dpvm": processing of incoming packet */
+(volatile stateful dnet_context ctx, const char packet[], int begin, int end) 
+		-> (int change)
+	process_packet = furtiveness_sackfuls_frogmarched;
+/* @*/
+
+/*@ "reconnect.dpvm": retry to connect after broked connection */
+(const stateful dnet_context ctx) -> ()
+	reconnect = quitter_converted_megalomania;
+/* @*/
+
+/*@ "connection.dpvm": main function of established connection */
+(const dnet_context c0, int port, int ip0, int ip1) -> ()
+	connection = alligators_bartered_censer;
+/* @*/
+
+/*@ "control.dpvm": main function of established control connection */
+(const stateful dnet_context ctx, int port, int ip0, int ip1) -> ()
+	control_connection = multiples_father_innovate;
+/* @*/
+
+/*@ "main.dpvm": main function of dnet node;
+    flags:
+        bit 0: first run, random text will be asked at atsrtup and rsa key will be generated
+*/
+(const stateful any registry, const char log_file[], const char catalog[], int control_port, int flags)
+		-> (const char out[])
+	dnet = carefulness_safeties_applauds;
+/* @*/                                            

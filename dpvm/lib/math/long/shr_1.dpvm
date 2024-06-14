@@ -1,0 +1,21 @@
+/* divide dst by 2; T16.475-T17.525; $DVS:time$ */
+
+(volatile stateful int dst[]) -> () {
+	int p;
+	int n;
+	int d;
+	int i;
+
+	i = dst.isize;
+
+	while (i) {
+		i -= 1;
+		d = dst[i];
+		n = d >> 1 | p << 63;
+		p = d & 1;
+		dst[i] = n;
+		if (!n && i == dst.isize - 1) dst.ipop(1);
+	}
+	
+	return;
+}

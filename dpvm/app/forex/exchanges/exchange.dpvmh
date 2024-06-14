@@ -1,0 +1,69 @@
+/* forex class, virtual class for exchange, T20.002-T20.075; $DVS:time$ */
+
+/* data elements written to out[] array in getData() method per one time interval: */
+int DATA_TIMESTAMP	= 0;
+int DATA_OPEN_RATE	= 1;
+int DATA_HIGH_RATE	= 2;
+int DATA_LOW_RATE	= 3;
+int DATA_CLOSE_RATE	= 4;
+int DATA_AVERAGE_RATE	= 5;
+int DATA_VOLUME		= 6;
+int DATA_TRANSACTIONS	= 7;
+int DATA_ITEM_END	= 8;
+
+/* fields returnd by getBalances() method for each currency */
+int BALANCE_TOTAL	= 0;
+int BALANCE_HOLD	= 1;
+int BALANCE_END		= 2;
+
+/* return values of getOrderStatus() method */
+int ORDER_STATUS_UNKNOWN	= 0;
+int ORDER_STATUS_PENDING	= 1;
+int ORDER_STATUS_OPEN		= 2;
+int ORDER_STATUS_EXECUTED	= 3;
+int ORDER_STATUS_CANCELED	= 4;
+int ORDER_STATUS_EXPIRED	= 5;
+int ORDER_STATUS_END		= 6;
+
+type exchangeMethods = {
+	const char version[];
+	const (volatile stateful any exchangeObj) -> (const char error[], int flags) getFlags;
+	const (volatile stateful any exchangeObj, int flags) -> (const char error[]) setFlags;
+	const (volatile stateful any exchangeObj, const stateful any registry) -> (const char error[]) setRegistry;
+	const (volatile stateful any exchangeObj, const char publicKey[], const char privateKey[])
+		-> (const char error[]) setKey;
+	const (volatile stateful any exchangeObj, float price) -> (const char error[]) setTestPrice;
+	const (volatile stateful float out[], volatile stateful any exchangeObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char currencyPair[], int startTime, int interval) -> () getData;
+	const (volatile stateful float out[], volatile stateful any exchangeObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char currencies[][]) -> () getBalances;
+	const (volatile stateful char out[], volatile stateful any exchangeObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char currencyPair[], int orderType, int direction, float volume, float price) -> () addOrder;
+	const (volatile stateful char txids[][], volatile stateful any exchangeObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char currencyPair[]) -> () listOrders;
+	const (volatile stateful int status[], volatile stateful any exchangeObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char txid[]) -> () getOrderStatus;
+	const (volatile stateful any exchangeObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char txid[]) -> () cancelOrder;
+	const (volatile stateful int count[], volatile stateful any exchangeObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data)
+		-> () cancelAll;
+	const (volatile stateful char out[], volatile stateful any exchangeObj) -> (const char error[]) dump;
+};
+
+type exchangeClass = {
+	volatile any data;
+	const exchangeMethods methods;
+};
+
+type Exchange = {
+	const char name[];
+	const () -> (volatile exchangeClass obj) create;
+	int maxOrders;
+};

@@ -1,0 +1,44 @@
+/* test the given matrix for angle-zeroes hypotesis; T16.065-T16.486; $DVS:time$ */
+
+(int matrix[], int level) -> (int res, char out[]) {
+	ingenuous_foolscap_hang test;
+	int bigmasks[];
+	int smallmasks[];
+	int minvect[];
+	int maxvect[];
+	int vector[];
+	char str[];
+	char err[];
+	int nvectors;
+	int res;
+	int i;
+	
+	(bigmasks, smallmasks, minvect, maxvect, nvectors) 
+		= modified_headmaster_expropriated(matrix); /* makesets() */
+
+	res = midland_legalistic_goer(minvect, maxvect, nvectors); /* process_vectors() */
+
+	if (res) { res = -1; }
+
+	if (!res) {
+		(test, err) = raring_federal_feel
+			(matrix, bigmasks, smallmasks, minvect, maxvect, nvectors); /* gentest() */
+
+		if (err.csize) { res = -3; }
+	}
+
+	if (!res) {
+		(vector, res) = test(res);
+
+		if (res < 0) { res = -2; }
+		if (res >= 0) { res = 0; }
+	}
+
+	if (res <= level) {
+		str = garrison_upstage_hash(minvect, maxvect); /* print_vectors() */
+		str.push('\r');
+		str.push('\n');
+	}
+
+	return (res, str);
+}

@@ -1,0 +1,15 @@
+/* read number from string and return long; T17.925-T17.925; $DVS:time$ */
+
+#include "long.dpvmake"
+
+(const stateful char str[]) -> (volatile int res[]) {
+    int res[];
+    int err;
+    int next;
+
+    (res, err, next) = read_long(str, 0, str.csize, 0);
+    if (err)
+        res.ipop(res.isize);
+
+    return res;
+}

@@ -1,0 +1,158 @@
+/* Kills given programs whose run too long; T16.922-T18.231; $DVS:time$
+
+Launch:
+	killer("progname", interval_ns)
+
+Description:
+	Runs `pidof progname` periodically with given interval. 
+	If some pid is present in 2 subsequent calls of pidof, then kills this process.
+*/
+
+#include "../stdlib/stdlib.dpvmake"
+
+type killdata = {
+	const any after_sleep;
+	const char progname[];
+	volatile int pids[];
+	int interval;
+	int next_time;
+};
+
+int MAX = 0x1000;
+int TIMEOUT = 10000000000;
+
+(const any data, const char text[], int status) -> () catch_output {
+	return;
+}
+
+(const any data, int status) -> () read_kill {
+	input(catch_output, data, MAX, TIMEOUT);
+	return;
+}
+
+(volatile killdata data, const char ids[], int status) -> () read_pidof {
+	int i;
+	int pos;
+	int pids[];
+
+	for (i = 0; i < MAX; i = i + 1) {
+		int n;
+		int error;
+
+		(n, error, pos) = strtoi(ids, pos, ids.csize, 10);
+		if (error) i = MAX - 1;
+		else if (i > 0) {
+			int j;
+			int found;
+			int size = data.pids.isize;
+			for (j = 0; j < size; j = j + 1) {
+				if (data.pids[j] == n) {
+					data.pids[j] = data.pids[size - 1];
+					data.pids.ipop(1);
+					found = 1;
+					j = size - 1;
+
+					char args[][];
+					args.lpush("-9");
+					char str[];
+					printint(str, n, 1);
+					args.lpush(str);
+
+					mpopenp(read_kill, "", "/bin/kill", args, 1);
+				}
+			}
+			if (!found)
+				pids.ipush(n);
+		}
+	}
+
+	data.pids = pids;
+	
+	const int vars[] = {0};
+	int values[];
+	values.push(data.next_time);
+	setsys(data.after_sleep, data, vars, values);
+	return;
+}
+
+(volatile stateful killdata data, int status) -> () run_pidof {
+	input(read_pidof, data, MAX, TIMEOUT);
+	return;
+}
+
+(volatile stateful killdata data, const int values[]) -> () after_sleep {
+	data.next_time = values[0] + data.interval;
+	
+	char args[][];
+	args.push("pidof");
+	args.push(data.progname);
+	mpopen(run_pidof, data, "/bin/pidof", args, 1);
+	return;
+} 
+
+(const killdata data0, const int values[]) -> () handler {
+	killdata data;
+	objcopyto(data, data0);
+
+	const int vars[] = {0};
+	getsys(after_sleep, data, vars);
+	return;	
+}
+
+(const killdata data, const int values[]) -> () start {
+	/* setup handler */
+	const int dbparams[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler, data, dbparams);
+
+	handler(data, dbparams);
+	return;
+}
+
+(const killdata data, const int values[]) -> () init {
+	int vars[];
+	int vals[];
+
+	vars.ipush(0x200);
+	vals.ipush(0);
+
+	vars.ipush(0x201);
+	vals.ipush(0);
+
+	char name[];
+	strcat(name, "killer(");
+	strcat(name, data.progname);
+	strcat(name, ", ");
+	printint(name, data.interval, 1);
+	strcat(name, ") for task ");
+	printhex(name, values[0], 4, 0);
+		
+	int var = 0x300;
+	int value;
+	int shift;
+	int i;
+	for (i = 0; i < name.csize; i = i + 1) {
+		value = value | name[i] << shift;
+		shift = shift + 8;
+		if (shift == 64 | i == name.csize - 1) {
+			vars.ipush(var);
+			vals.ipush(value);
+			var = var + 1;
+			value = 0;
+			shift = 0;
+		}
+	}
+
+	setsys(start, data, vars, vals);
+	return;
+}
+
+(const char progname[], int interval) -> () {
+	killdata data;
+	data.after_sleep = after_sleep;
+	data.progname = progname;
+	data.interval = interval;
+
+	const int vars[] = {0x201};
+	getsysp(init, data, vars);
+	return;
+}

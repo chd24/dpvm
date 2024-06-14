@@ -1,0 +1,14 @@
+/* get random real point of given dimension; T16.488-T16.488; $DVS:time$ */
+
+(int dim, int seed) -> (float point[]) {
+	float point[];
+	int i;
+
+	i = 0; do {
+		seed = quills_bore_decorative(seed); /* rand() */
+		point.push(seed * 1.0 / (1 << 47));
+		i = i + 1;
+	} while (i < dim);
+
+	return (point);
+}

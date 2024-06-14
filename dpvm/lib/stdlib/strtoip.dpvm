@@ -1,0 +1,29 @@
+/* string to ip address; T16.973-T16.973; $DVS:time$ */
+	
+#include "stdlib.dpvmake"
+
+(const stateful char str[], int begin, int end) 
+		-> (int ipaddr0, int ipaddr1, int error, int nextbegin) {
+	int ip;
+
+	int i;
+	int next = begin;
+	for (i = 0; i < 4; i = i + 1) {
+		int n;
+		int error;
+		(n, error, next) = strtoi(str, next, end, 10);
+		if (error | n & ~0xff)
+			return (0, 0, error, begin);
+		ip = ip << 8 | n;
+
+		if (i < 3) {
+			if (next >= end)
+				return (0, 0, -1, begin);
+			if (str[next] != '.')
+				return (0, 0, -1, begin);
+			next = next + 1;
+		}
+	}
+
+	return (ip, 0, 0, next);
+}

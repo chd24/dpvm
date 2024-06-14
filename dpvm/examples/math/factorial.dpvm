@@ -1,0 +1,8 @@
+/* n!; T15.499-T20.069; $DVS:time$ */
+
+(int n) -> (int res) factorial = {
+	if (n)
+		return n * code(n - 1);
+
+	return 1;
+};

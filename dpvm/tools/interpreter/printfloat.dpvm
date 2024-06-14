@@ -1,0 +1,9 @@
+/* dpvm print float; T15.525-T19.640; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+
+(volatile stateful char arr[], float f) -> () {
+	printfloat(arr, 8, f);
+
+	return;
+}

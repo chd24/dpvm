@@ -1,0 +1,7 @@
+/* get random int; T15.589-T15.589; $DVS:time$ */
+	
+(int seed) -> (int seed) {
+	int arr[];
+	arr.ipush(seed);
+	return arr;
+}

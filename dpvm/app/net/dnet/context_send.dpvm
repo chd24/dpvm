@@ -1,0 +1,26 @@
+/* send context to mediator; T17.569-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const stateful dnet_context ctx) -> () {
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.thread_id = DNET_THREAD_ID_MEDIATOR;
+	addr.service = DNET_SERVICE_MEDIATOR;
+
+	dnet_mess mess;
+	mess.request = DNET_REQUEST_MERGE_CONTEXT;
+	mess.thread_id = ctx.conns[0].thread_id;
+
+        dnet_context ctx2 = context_copy(ctx);
+
+        if (ctx.conns[0].flags & DNET_CONN_CONTROL)
+                objcopyto(ctx2.conns[0], ctx.conns[0]);
+
+        mess.ctx = ctx2;
+
+	msendp("", "", addr, mess);
+	return;
+}

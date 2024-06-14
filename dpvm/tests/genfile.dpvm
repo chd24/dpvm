@@ -1,0 +1,16 @@
+/* generate test file with given length; T20.189-T20.089 $DVS:time$ */
+
+(const char filename[], int size) -> () genfile = {
+	int i;
+	char buf[];
+	for (i = 0; i <= size; i++) {
+		if (i < size)
+			buf.cpush(i >> ((i & 7) << 3));
+
+		if (!(i & 0xfffff) || i == size) {
+			writep({}, {}, filename, buf, -1);
+			buf = (volatile char[]){};
+		}
+	}
+	return;
+};

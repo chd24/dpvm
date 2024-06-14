@@ -1,0 +1,5 @@
+/* multiply with long result; T16.503-T16.503; $DVS:time$ */
+
+(int x, int y) -> (int low, int high) {
+	asm { mul ret }
+}

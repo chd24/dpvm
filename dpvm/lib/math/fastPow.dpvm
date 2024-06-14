@@ -1,0 +1,20 @@
+/* fast power of int number; T19.829-T20.110; $DVS:time$ */
+
+(int base, int degree) -> (int pow) fastPow = {
+	if (degree < 0) {
+		if (base == 1 || base == -1) degree = -degree;
+		else
+			return 0;
+	}
+
+	int res = 1;
+
+	while (degree) {
+		if (degree & 1)
+			res *= base;
+		base *= base;
+		degree >>= 1;
+	}
+
+	return res;
+};

@@ -1,0 +1,84 @@
+/* blog internal cgi module, headers; T18.762-T19.346; $DVS:time$ */
+
+#include "../../../../storage/blog/blog.dpvmake"
+#include "../modules.dpvmake"
+
+int READ_MAX        = 0x100000;
+int OUT_MAX         = 100;
+
+/* modes */
+int BLOG_EDIT       = 1;
+int BLOG_SAVE       = 2;
+int BLOG_SETUP      = 3;
+int BLOG_SET        = 4;
+int BLOG_CHANGEPWD  = 5;
+int BLOG_REGISTER   = 7;
+int BLOG_MKUSER     = 8;
+int BLOG_READONLY   = 0x10;
+
+type blogUser = {
+	const char name[];
+	const char password[];
+	volatile stateful int envFile[];
+	volatile stateful int inboxFile[];
+	volatile stateful int blogFile[];
+	volatile stateful int tipboxFile[];
+	volatile stateful int tipFile[];
+	int stage;
+	int inboxIndex;
+};
+
+type blogObj = {
+	volatile stateful blogClass obj;
+	volatile stateful blogUser users[];
+	const char server[];
+	const char path[];
+	const char env[][];
+	const cgiFormField fields[];
+	const char program[];
+	const char root[];
+	const char author[];
+	const char header[];
+	const char message[];
+	const char pubKey[];
+	const char file[];
+	const char cookie[];
+	const char fileName[];
+	const int randomValues[];
+	int mode;
+	int postTime;
+	int time;
+	int timeOffset;
+	int currentUser;
+	int messageSet;
+	int ipaddr0;
+	int ipaddr1;
+	int fileMtime;
+	int fileSize;
+	int rangeBegin;
+	int rangeEnd;
+};
+
+type blogEnvVar = {
+	char name[];
+	char varName[];
+	char description[];
+	char defaultValue[];
+};
+
+type blogOutClass = {
+	const (volatile stateful blogObj blog, const char error[]) -> () outError;
+	const (volatile stateful blogObj blog) -> () outList;
+	const (volatile stateful blogObj blog) -> () outMessage;
+	const (volatile stateful blogObj blog, const char path[], const char file[]) -> () outFileHeader;
+	const (volatile stateful blogObj blog) -> () outSpecialPage;
+};
+
+type blogActionClass = {
+	const (volatile stateful blogObj blog) -> () parseFilename;
+	const (volatile stateful blogObj blog) -> (const char error[], int created) createMessage;
+	const (volatile stateful blogObj blog, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback) -> () editMessage;
+	const (volatile stateful blogObj blog, const blogEnvVar vars[]) -> (const char error[]) setEnvironment;
+	const (volatile stateful blogObj blog) -> (const char error[]) changePassword;
+	const (volatile stateful blogObj blog, const blogEnvVar vars[]) -> (const char error[]) makeUser;
+};

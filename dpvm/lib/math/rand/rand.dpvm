@@ -1,0 +1,101 @@
+/* pseudorandom numbers generator */
+
+#include "../../utils/utils.dpvmake"
+#include "rand.dpvmh"
+
+char randVersion[] = "pseudorandom generator 0.1.3, T17.990-T18.385"; /* $DVS:time$
+
+History:
+
+T19.385 - ver 0.1.3: added method getFloat to generate evenly-distributed on [-1, 1] float
+
+T19.376 - ver 0.1.2: added method getNormal to generate normal-distributed (M=0 D=1) float
+
+T18.323 - ver 0.1.1: added methods initObj and saveHash
+
+T17.990 - ver 0.1.0: first full implementation
+
+*/
+
+int intMax = 0x7fffffffffffffff;
+
+(volatile stateful randData data, const stateful any seed) -> () randInitObj = {
+	(data.x, data.y, data.z, data.t) = getfullhash(seed);
+	return;
+};
+
+(volatile stateful randData data, const stateful char seed[]) -> () randInit = {
+	randInitObj(data, seed);
+	return;
+};
+
+(volatile stateful randData data) -> (int) randGet = {
+	randInitObj(data, data);
+	return data.x;
+};
+
+(volatile stateful randData data, int limit) -> (int) randGetLimited = {
+	if (!limit)
+		return -1;
+
+	if (!(limit & (limit - 1)))
+		return randGet(data) & (limit - 1);
+
+	if (limit < 0)
+		return limit - 1;
+
+	int max = intMax;
+	max -= max % limit;
+
+	int res;
+	do {
+		res = randGet(data) & intMax;
+	} while (res >= max);
+
+	return res % limit;
+};
+
+(volatile stateful randData data) -> (float res) randGetFloat = {
+	do
+		randInitObj(data, data);
+	while (data.x == intMax + 1);
+
+	float x = data.x;
+	return x / intMax;
+};
+
+(volatile stateful randData data) -> (float normal) randGetNormal = {
+	float s = 2.0, x, y;
+
+	do {
+		randInitObj(data, data);
+		if (data.x != intMax + 1 && data.y != intMax + 1) {
+			x = data.x;
+			y = data.y;
+			x /= intMax;
+			y /= intMax;
+			s = x * x + y * y;
+		}
+	} while (s <= 0.0 || s > 1.0);
+
+	return x * fsqrt(-2.0 * flog(s) / s);
+};
+
+(volatile stateful int dst[], const stateful randData data) -> () randSaveHash = {
+	dst.ipush(data.x);
+	dst.ipush(data.y);
+	dst.ipush(data.z);
+	dst.ipush(data.t);
+	return;
+};
+
+randClass randObj = {
+	randVersion,
+	randInit,
+	randInitObj,
+	randGet,
+	randGetLimited,
+	randGetFloat,
+	randGetNormal,
+	randSaveHash
+};

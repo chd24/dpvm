@@ -1,0 +1,11 @@
+/* blog internal cgi module, module definition; T18.762-T18.779; $DVS:time$ */
+
+#include "blog.dpvmake"
+#include "version.dpvmh"
+#include "../modules.dpvmake"
+
+cgiModule blogCgiModule = {
+    "/cgi-bin/blog.cgi",
+    version,
+    blogCgi
+};

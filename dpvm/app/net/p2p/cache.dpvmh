@@ -1,0 +1,24 @@
+/* cache of objects with partial known dependents, header, T17.938-T18.051; $DVS:time$ */
+
+type cacheItem = {
+    const stateful int hash[4];
+    volatile int upHashes[4][];
+    const char object[];
+    int nrefs;
+};
+
+type cacheData = {
+    volatile int indexes[];
+    volatile cacheItem buckets[][];
+    int nBuckets;
+    int nItems;
+    int nObjects;
+};
+
+type cacheClass = {
+    const char version[];
+    (volatile stateful cacheData cache) -> (int) init;
+    (volatile stateful cacheData cache, const char object[], const stateful int missedDepsPos[]) -> (int) pushObj;
+    (volatile stateful cacheData cache, volatile char objects[][], const stateful int hashes[]) -> (int) popObjs;
+    (volatile stateful char out[], const stateful cacheData cache) -> () dump;
+};

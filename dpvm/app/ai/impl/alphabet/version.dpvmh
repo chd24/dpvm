@@ -1,0 +1,22 @@
+/* aiAlphabet class, version */
+
+char version[] = "aiAlphabet class, ver 0.1.3, T18.379-T18.413"; /* $DVS:time$
+
+history:
+
+T18.413 ver 0.1.3 - added method getDefaultCodeTable() to find utf-8 codetable for given language;
+		  - last field in statistics will represent number of words instead of number of delimiters
+
+T18.405 ver 0.1.2 - added last field to statistics to count all delimiters
+
+T18.388 ver 0.1.1 - fixed bugs, added paragraph and accent delimiters, output statistics in demo
+
+T18.386 ver 0.1.0 - first working version of parser with demo
+
+T18.383 ver 0.0.3 - added more methods and codetables
+
+T18.380 ver 0.0.2 - method addLetters implemented
+
+T18.379 ver 0.0.1 - class development started, template for the class written
+
+*/

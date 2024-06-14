@@ -1,0 +1,8 @@
+/* hash of object; T15.431-T16.622; $DVS:time$ */
+
+(const stateful any object) -> (int hash0, int hash1, int hash2, int hash3) {
+    asm {
+	hash 
+	ret 
+    }
+}

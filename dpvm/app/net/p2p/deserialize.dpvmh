@@ -1,0 +1,16 @@
+/* p2p deserialize object, common functions; T16.968-T16.968; $DVS:time$ */
+
+(const stateful char str[], int pos) -> (int res) str2int {
+	int i;
+	int c;
+	for (i = 0; i < 8; i = i + 1)
+		c = c << 8 | str[pos + 7 - i];
+	return c;
+}
+
+(volatile stateful int hashes[], const stateful char str[], int pos) -> () str2hash {
+	int i;
+	for (i = 0; i < 32; i = i + 8)
+		hashes.ipush(str2int(str, pos + i));
+	return;
+}

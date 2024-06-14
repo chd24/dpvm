@@ -1,0 +1,57 @@
+/* dfs class, findPath demo, T18.805-T18.838; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../dfs.dpvmake"
+
+type findPathData = {
+    volatile dfsClass dfsObj;
+    const char volumePath[];
+    const char filePath[];
+    int pos;
+};
+
+(volatile stateful findPathData data, const char file[], int status) -> () loadVolumeCallback = {
+    if (status <= 0 || status & 7) {
+        char mess[];
+        printf(mess, "Failed loading dfs volume, status=%d\r\n", {status});
+        outputp("", "", mess);
+        return;
+    }
+
+    int volume[] = chars2ints(file, 0, status);
+
+    char error[] = data.dfsObj.methods.addVolumePart(data.dfsObj, volume, data.pos);
+    if (error.csize) {
+        char mess[];
+        printf(mess, "%s\r\n", {error});
+        outputp("", "", mess);
+        return;
+    }
+
+    dfsFileAttributes attr;
+    (attr, error) = data.dfsObj.methods.findPath(data.dfsObj, data.filePath);
+    int inode = attr.inode;
+    char mess[];
+    if (error.csize) {
+        if (strstr(error, "need more") >= 0) {
+            data.pos = (inode >> 15) << 17;
+            read(code, data, data.volumePath, data.pos << 3, 0x100000);
+            return;
+        }
+        printf(mess, "%s, ", {error});
+    }
+    printf(mess, "inode = %X\r\n", {inode});
+
+    outputp("", "", mess);
+    return;
+};
+
+(const char volumePath[], const char filePath[]) -> () findPath = {
+    dfsClass dfsObj = dfsCreate();
+
+    findPathData data = {dfsObj, volumePath, filePath};
+
+    read(loadVolumeCallback, data, volumePath, 0, 0x100000);
+    return;
+};

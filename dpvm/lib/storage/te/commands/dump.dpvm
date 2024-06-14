@@ -1,0 +1,18 @@
+/* print context dump command, T18.327-T18.328; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandDump {
+	char dst[];
+	data.utilities.teContextDump(dst, data.ctx);
+
+	return dst;
+}
+
+teCommand cmdDump = {
+        "dump",
+        "print dump of context",
+        commandDump
+};
+
+

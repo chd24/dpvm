@@ -1,0 +1,45 @@
+/* dfs class, internal header, T18.798-T18.974; $DVS:time$ */
+
+#include "../dfs.dpvmh"
+#include "../../../algorithms/trie/trie.dpvmake"
+
+/* inode types */
+int DFS_INODE_FILE      = 1;
+int DFS_INODE_DIR       = 2;
+int DFS_INODE_VOLUME    = 3;
+int DFS_INODE_SECTORS   = 4;
+int DFS_INODE_NODES     = 5;
+int DFS_INODE_BOOT      = 6;
+int DFS_INODE_CLUSTERS  = 7;
+int DFS_INODE_NAME      = 8;
+int DFS_INODE_ITEM      = 9;
+int DFS_INODE_FREE      = 0xA;
+int DFS_INODE_ATTR      = 0xC;
+int DFS_INODE_TRIE_FULL = 0xE;
+int DFS_INODE_TRIE_PART = 0xF;
+
+type dfsNode = {
+	volatile dfsFileAttributes attr;
+	volatile int body[];
+	volatile trieClass trie;
+	int nLinks[];
+	int inode;
+	int parentInode;
+	int link;
+};
+
+type dfsPart = {
+	volatile int volume[];
+	int begin;
+};
+
+type dfsData = {
+	volatile dfsPart parts[];
+	volatile dfsNode root;
+	int flags;
+};
+
+type dfsImpl = {
+	volatile dfsData data;
+	const dfsMethods methods;
+};

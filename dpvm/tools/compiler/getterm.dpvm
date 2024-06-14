@@ -1,0 +1,227 @@
+/* dpvm: get term: variable or const; T15.452-T20.113; $DVS:time$ */
+
+/* var | const | [(type)]{object}
+
+   write bytecodes to dst, increase ndst to number of written bytes;
+   status = type (0,1,2,3,4) or -1/-2 on failure
+   type 4 means built-in math (as fsqrt) or io (as output) function
+*/
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr) -> (const type res, int status) {
+	any dst = data.l[4], a;
+	type res;
+	int pos;
+	int end;
+	int status;
+	char c;
+
+
+	/* variables */
+
+	(pos, end, status) = getlexem(data.l[5], data.l[0], data.i[5], data.i[6]);
+	if (status >= 0 && status < maxnames) {
+		data.pos = pos;
+		int n = data.l[0].isize + data.i[0] - 1 - status;
+		putint(data, n);
+		c = 0xA0; dst.push(c); /* lload */
+		data.i[0]++;
+		data.i[4]++;
+		res = data.l[15].l[status];
+		status = 0;
+		return (res, status);
+	}
+
+	(pos, end, status) = getlexem(data.l[5], data.l[1], data.i[5], data.i[6]);
+	if (status >= 0 && status < maxnames) {
+		data.pos = pos;
+		int n = data.l[1].isize + data.i[1] - 1 - status;
+		putint(data, n);
+		c = 0xA1; dst.push(c); /* iload */
+		data.i[1]++;
+		data.i[4]++;
+		status = 1;
+		return (res, status);
+	}
+
+	(pos, end, status) = getlexem(data.l[5], data.l[2], data.i[5], data.i[6]);
+	if (status >= 0 && status < maxnames) {
+		data.pos = pos;
+		int n = data.l[2].isize + data.i[2] - 1 - status;
+		putint(data, n);
+		c = 0xA2; dst.push(c); /* fload */
+		data.i[2]++;
+		data.i[4]++;
+		status = 2;
+		return (res, status);
+	}
+
+	(pos, end, status) = getlexem(data.l[5], data.l[3], data.i[5], data.i[6]);
+	if (status >= 0 && status < maxnames) {
+		data.pos = pos;
+		int n = data.l[3].isize + data.i[3] - 1 - status;
+		putint(data, n);
+		c = 0xA3; dst.push(c); /* cload */
+		data.i[3]++;
+		data.i[4]++;
+		status = 3;
+		return (res, status);
+	}
+
+
+	/* constant expression */
+
+	any lvalue;
+	int ivalue;
+	float fvalue;
+	char cvalue;
+	type tmp = a.type;
+	int oldpos = data.pos;
+
+	(lvalue, ivalue, status, fvalue, cvalue) = getconstexpr(data, tmp, 0);
+	if (!status) {
+		int f = 1;
+		int i = 0;
+		int size = dst.lsize;
+		if (size > 0x1000) size = 0x1000;
+
+		while (i < size && f)
+			if (dst.l[i] == lvalue) f = 0;
+			else i++;
+
+		if (f) { i = dst.lsize; dst.push(lvalue); }
+
+		c = 0x82; dst.push(c); /* code */
+		putint(data, i);
+		c = 0xB0; dst.push(c); /* lget */
+		data.i[0]++;
+		data.i[4] += 2;
+
+		res = lvalue.type;
+		status = 0;
+		return (res, status);
+	}    
+	data.pos = oldpos;
+
+	(lvalue, ivalue, status, fvalue, cvalue) = getconstexpr(data, tmp, 2);
+	if (!status) {
+		int f = 1;
+		int i = 0;
+		int size = dst.fsize;
+		if (size > 0x1000) size = 0x1000;
+
+		while (i < size && f)
+			if (dst.f[i] == fvalue) f = 0;
+			else i++;
+
+		if (f) { i = dst.fsize; dst.push(fvalue); }
+
+		c = 0x82; dst.push(c); /* code */
+		putint(data, i);
+		c = 0xB2; dst.push(c); /* fget */
+		data.i[2]++;
+		data.i[4] += 2;
+
+		status = 2;
+		return (res, status);
+	}
+	data.pos = oldpos;
+
+	(lvalue, ivalue, status, fvalue, cvalue) = getconstexpr(data, tmp, 1);
+	if (!status) {
+		int i = 0;
+		putint(data, ivalue);
+
+		data.i[1]++;
+
+		status = 1;
+		return (res, status);
+	}
+	data.pos = oldpos;
+
+	(lvalue, ivalue, status, fvalue, cvalue) = getconstexpr(data, tmp, 3);
+	if (!status) {
+		int i = +cvalue;
+		putint(data, i);
+		c = 0xD1; dst.push(c); /* itoc */
+
+		data.i[3]++;
+		data.i[4]++;
+
+		status = 3;
+		return (res, status);
+	}
+	data.pos = oldpos;
+
+
+	/* composed object */
+	(res, status) = getObject(data, instr, getexpr, a.type);
+	if (status != -1)
+	    return (res, status);
+
+
+	/* special bytecodes: code, math, io */
+
+	(pos, end, status) = getlexem(data.l[5], bytecodes, data.i[5], data.i[6]);
+
+	if (status == 0x82) { /* code */
+		data.pos = pos;
+		c = status; dst.push(c);
+		data.i[0]++;
+		data.i[4]++;
+
+		res = dst.type;
+		status = 0;
+
+	} else if (status >= 0xD4 && status < 0x100) { /* math, io */
+		data.pos = pos;
+		dst.cpush(status);
+		data.ndst++;
+
+		if (status >= 0xF0) status = status - 0x10;
+
+		if (status == 0xD4) { /* fsplit */
+			type t = (float) -> (int, int);
+			res = t;
+		} else if (status == 0xD5) { /* fmerge */
+			type t = (int, int) -> (float);
+			res = t;
+		} else if (status == 0xDD) { /* fsincos */
+			type t = (float) -> (float, float);
+			res = t;	
+		} else if (status == 0xDF) { /* fatan */
+			type t = (float, float) -> (float);
+			res = t;
+		} else if (status < 0xE0) { /* other math */
+			type t = (float) -> (float);
+			res = t;	
+		} else if (status == 0xE0) { /* input */
+			type t = (any, any, int, int) -> ();
+			res = t;	
+		} else if (status == 0xE2 | status == 0xEA) { /* read, mstat */
+			type t = (any, any, any, int, int) -> ();
+			res = t;
+		} else if (status == 0xE3 | status == 0xEE) { /* write, mpopen */
+			type t = (any, any, any, any, int) -> ();
+			res = t;
+		} else if (status == 0xE4) { /* bind */
+			type t = (any, any, int, int, int) -> ();
+			res = t;
+		} else if (status == 0xE5 | status == 0xEC) { /* connect, mrecv */
+			type t = (any, any, any, int) -> ();
+			res = t;
+		} else if (status == 0xE7 | status == 0xED) { /* setsys, msend */
+			type t = (any, any, any, any) -> ();
+			res = t;
+		} else { /* output, getsys, mload, msave */
+			type t = (any, any, any) -> ();
+			res = t;
+		}
+
+		status = 4;
+	} else
+		status = -1;
+
+	return (res, status);
+}

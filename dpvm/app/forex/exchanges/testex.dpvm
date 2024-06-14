@@ -1,0 +1,10 @@
+/* forex class, register testex exchange, T20.040-T20.040; $DVS:time$ */
+
+#include "testex/testex.dpvmake"
+#include "exchange.dpvmh"
+
+Exchange testexExchange = {
+	"testex",
+	testexCreate,
+	80
+};

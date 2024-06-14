@@ -1,0 +1,78 @@
+/* www server: write log; T15.543-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(volatile stateful www_data arg, int status) -> () send_mess {
+	www_mess mess;
+	mess.close = arg.close;
+
+	if (!mess.close) {
+		int start = strstr(arg.request, "\r\n\r\n");
+		if (start >= 0 & start + 4 < arg.request.csize) {
+			mess.request = arg.request;
+			mess.reqstart = start + 4;
+		}
+	}
+
+	msend("", "", arg.address, mess);
+	return;
+}
+
+(volatile stateful www_data arg, const int result[]) -> () {
+	char log[];
+	char request[] = arg.request;
+
+	printip(log, arg.ipaddr0, arg.ipaddr1);
+	log.push(' ');
+	getheader(log, request, "\nHost: ");
+	log.push(' ');
+	getcookie(log, request);
+	log.push(' ');
+	log.push('[');
+	strftime(log, "%Y-%m-%d:%H:%M:%S:", arg.time, arg.offset);
+	printhex(log, arg.taskid & 0xffff, 4, 0);
+	log.push(':');
+	printhex(log, arg.address & 0xffff, 4, 0);
+	log.push(' ');
+	log.push('+');
+	int n = (result[0] - arg.time) / 10000000;
+	printint(log, n / 100, 2);
+	log.push('.');
+	printint(log, n % 100, 2);
+	log.push(']');
+	log.push(' ');
+	log.push('"');
+	getheader(log, request, ""); /* GET ... */
+	log.push('"');
+	log.push(' ');
+	printint(log, arg.status, 1);
+	log.push(' ');
+	n = arg.pos;
+	if (n < 0) { n = 0; }
+	printint(log, n, 1); /* number of bytes */
+	int t = arg.length;
+	if (t != n) {
+		log.push('/');
+		printint(log, t, 1); /* total number of bytes */
+	}
+	log.push(' ');
+	log.push('"');
+	getheader(log, request, "\nReferer: ");
+	log.push('"');
+	log.push(' ');
+	log.push('"');
+	getheader(log, request, "\nUser-Agent: ");
+	log.push('"');
+	log.push('\r');
+	log.push('\n');
+
+	if (arg.flags & LOG_REQUEST) {
+		int end = strstr(arg.request, "\r\n\r\n");
+		if (end >= 0)
+			substrcat(log, arg.request, 0, end + 2);
+	}
+
+	write(send_mess, arg, arg.log, log, -1);
+	return;
+}

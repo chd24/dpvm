@@ -1,0 +1,14 @@
+/* blog class, mkError internal method, T18.721-T18.721; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "version.dpvmh"
+
+(const char mess[], const char func[]) -> (const char err[]) mkError = {
+    char err[];
+    strcat(err, version);
+    strcat(err, ": Error in function ");
+    strcat(err, func);
+    strcat(err, "(): ");
+    strcat(err, mess);
+    return err;
+};

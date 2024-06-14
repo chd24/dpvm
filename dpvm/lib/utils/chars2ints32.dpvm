@@ -1,0 +1,21 @@
+/* converts char array to ints32 array; T17.533-T17.533; $DVS:time$ */
+
+(const stateful char str[], int begin, int end) -> (volatile int arr[]) {
+	int res[];
+	int n;
+	int i;
+	int p;
+	for (i = begin; i < end; i += 1, p += 8) {
+		n |= str[i] << p;
+		if (p == 24) {
+			res.ipush(n);
+			n = 0;
+			p = -8;
+		}
+	}
+	
+	if (p)
+		res.ipush(n);
+	
+	return res;
+}

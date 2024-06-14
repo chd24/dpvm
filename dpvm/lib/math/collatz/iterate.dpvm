@@ -1,0 +1,19 @@
+/* collatz hypothesis: start seq from given number; T16.475-T16.475 $DVS:time$ */
+
+(int n) -> (int arr[]) {
+	int arr[];
+	int lim;
+	int t;
+	
+	lim = 0x2AAAAAAAAAAAAAAA;
+
+	arr.push(n);
+	if (n > 1) { do {
+		t = n & 1;
+		if (t) { n = n + (n << 1) + 1; }
+		if (!t) { n = n >> 1; }
+		arr.push(n);
+	} while (n > 1 & n < lim); }
+
+	return (arr);
+}

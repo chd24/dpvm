@@ -1,0 +1,16 @@
+/* monitor: save and output result and goto input; T16.465-T19.547; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "monitor.dpvmake"
+	
+(volatile stateful mondata data, const stateful any objs) -> () {
+	char str[];
+
+	if (objs.l[0] != wind_speeded_hogwash)
+		printobjname(str, objs.l[0]);
+	else
+		str = "Error saving object.";
+
+	out_result(data, str);
+	return;
+}

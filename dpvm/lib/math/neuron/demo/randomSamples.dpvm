@@ -1,0 +1,96 @@
+/* neuron class, randomSamples demo, T19.376-T19.690; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../rand/rand.dpvmake"
+#include "../neuron.dpvmake"
+
+struct sample {
+	const float inputs[];
+	const float outputs[];
+};
+
+(volatile stateful randData data, int size) -> (volatile float arr[]) randFloatArray = {
+	float arr[] = floatsArray(size);
+	int i;
+	for (i = 0; i < size; i += 1)
+		arr[i] = randObj.getFloat(data);
+	return arr;
+};
+
+(const stateful any registry, const char seed[], const char netDescription[], int nSamples, int nRounds, int flags, float positiveRate) -> (const char error[]) randomSamples = {
+	trainingParams params = {0.001, 0.9, 0.999, 0.00000001};
+
+	neuronClass neuronObj = neuronCreate();
+
+	char error[] = neuronObj.methods.setFlags(neuronObj, flags);
+	if (error.csize) return error;
+
+	error = neuronObj.methods.setRandomSeed(neuronObj, seed);
+	if (error.csize) return error;
+
+	error = neuronObj.methods.setRegistry(neuronObj, registry);
+	if (error.csize) return error;
+
+	error = neuronObj.methods.construct(neuronObj, netDescription);
+	if (error.csize) return error;
+
+	{
+		char out[];
+		error = neuronObj.methods.dump(out, neuronObj);
+		if (error.csize) return error;
+
+		outputp("", "", out);
+	}
+
+	randData rnd;
+	randObj.initObj(rnd, {seed, "1"});
+
+	int nInputs, nOutputs;
+	(error, nInputs) = neuronObj.methods.getNInputs(neuronObj);
+	if (error.csize) return error;
+	(error, nOutputs) = neuronObj.methods.getNOutputs(neuronObj);
+	if (error.csize) return error;
+
+	sample samples[];
+	int i;
+	for (i = 0; i < nSamples; i += 1) {
+		float inputs[] = randFloatArray(rnd, nInputs), outputs[] = randFloatArray(rnd, nOutputs);
+		int j;
+		if (outputs[0] < 2 * positiveRate - 1) {
+			outputs[0] = 1;
+			for (j = 1; j < outputs.fsize; j += 1)
+				outputs[j] = 0;
+		} else {
+			for (j = 0; j < outputs.fsize; j += 1)
+				outputs[j] = 0;
+			if (nOutputs > 1)
+				outputs[randObj.getLimited(rnd, nOutputs - 1) + 1] = 1;
+		}
+		sample s = {inputs, outputs};
+		samples.lpush(s);
+	}
+
+	float sum;
+	int success;
+
+	for (i = 0; i < nRounds; i += 1) {
+		sample s = samples[i % nSamples];
+		float res, outputs[];
+		objcopyto(outputs, s.outputs);
+		(error, res) = neuronObj.methods.training(neuronObj, s.inputs, outputs, params);
+		if (error.csize) return error;
+		sum += res;
+		success += res < 0.25;
+
+		char out[];
+		printf(out, "\r\nRound %d, sample %d:\r\n", {i, i % nSamples});
+		error = neuronObj.methods.dump(out, neuronObj);
+		if (error.csize) return error;
+		printf(out, "Result = %f, average = %f, success = %f%%\r\n", {res, sum / (i + 1), success * 100.0 / (i + 1)});
+
+		outputp("", "", out);
+	}
+
+	return "";
+};

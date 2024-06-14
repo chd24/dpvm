@@ -1,0 +1,15 @@
+/* neuron class, convert weightId to groupId, T19.734-T19.734"; /* $DVS:time$ */
+
+#include "neuron.dpvmh"
+
+(const stateful neuronLayer layer, int weightId) -> (int groupId) weightToGroup = {
+	int i;
+
+	for (i = 0; i < NEURON_PARALLEL; i += 1) {
+		neuronGroup g = layer.groups[i];
+		if (weightId >= g.weightStartId && weightId < g.weightStartId + g.nWeights)
+			return i;
+	}
+
+	return -1;
+};

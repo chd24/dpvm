@@ -1,0 +1,25 @@
+/* add substring to sha512 context; T16.492-T19.991; $DVS:time$ */
+
+#include "sha512.dpvmake"
+
+(volatile stateful int ctx[], const stateful char text[], int begin, int end) -> () {
+	int n = ctx[88];
+	
+	while (begin < end) {
+		int c = text[begin];
+		int i = ((n >> 3) & 0xf) + 8;
+
+		if (!(n & 7)) ctx[i] = 0;
+		ctx[i] |= c << ((~n & 7) << 3);
+		n += 1;
+
+		if (!(n & 0x7f))
+			sha512_processChunk(ctx, ctx, 8);
+
+		begin += 1;
+	}
+
+	ctx[88] = n;
+
+	return;
+}

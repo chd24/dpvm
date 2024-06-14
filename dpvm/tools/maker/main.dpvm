@@ -1,0 +1,32 @@
+/* make projects utility; T16.600-T20.171; $DVS:time$ */
+
+#include "../../lib/math/crypto/base58/base58.dpvmake"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "maker.dpvmake"
+
+(const stateful any registry, const (volatile stateful any arg, const char res[]) -> () callback,
+		volatile stateful any arg, const char makefile[]) -> () {
+	makedata data;
+
+	data.callback = callback;
+	data.read_file = read_file;
+	data.arg = arg;
+	compsrc file;
+	file.name = makefile;
+	data.allfiles.push(file);
+	data.base58Obj = base58Create();
+
+	char mess[];
+	(data.registry, mess) = registryPrepare(registry);
+	if (mess.csize) {
+		char err[];
+		strcat(err, version_maker());
+		strcat(err, ": error while preparing registry: ");
+		strcat(err, mess);
+		callback(arg, err);
+		return;
+	}
+
+	read(read_file, data, makefile, 0, 0x100000);
+	return;
+}

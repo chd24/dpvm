@@ -1,0 +1,21 @@
+/* version of RSA module */
+	
+char version[] = "RSA implementation, version 0.1.2, T17.545-T18.227"; /* $DVS:time$ */
+
+() -> (const char version[]) {
+	return version;
+}
+
+/* history:
+
+T18.227 ver 0.1.2: checked with checker 0.2
+
+T17.982 ver 0.1.1: added timestamps for begin and end of test, files rsaTestBegin.txt
+		   and rsaTestEnd.txt created respectively
+
+T17.926 ver 0.1.0: creation of rsa module, implementation of keygen, crypt and test 
+		   using dpvm syncronous parallelization
+
+T17.545 ver 0.0.1: implementation of crypt inside the dnet project
+
+*/

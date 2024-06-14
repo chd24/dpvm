@@ -1,0 +1,298 @@
+/* system registry of frequently used programs, T18.314-T20.171 $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "../../lib/math/crypto/base58/base58.dpvmake"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+#include "class.dpvmh"
+#include "types.dpvmh"
+#include "version.dpvmh"
+
+(const stateful any obj, int nlink) -> (const stateful any link) getLink = {
+	if (nlink < 0 || nlink >= obj.lsize) {
+		any x;
+		return x;
+	}
+
+	return obj.l[nlink];
+};
+
+(const stateful any obj, int nint) -> (int value) getInt = {
+	if (nint < 0 || nint >= obj.isize)
+		return -1;
+
+	return obj.i[nint];
+};
+
+(volatile stateful any obj, const stateful any link, int nlink) -> (int res) setLink = {
+	if (nlink < 0 || nlink >= obj.lsize)
+		return -1;
+
+	if (obj.l[nlink].type != link.type)
+		return -2;
+
+	obj.l[nlink] = link;
+
+	return 0;
+};
+
+(volatile stateful any obj, int value, int nint) -> (int res) setInt = {
+	if (nint < 0 || nint >= obj.isize)
+		return -1;
+
+	obj.i[nint] = value;
+
+	return 0;
+};
+
+(const stateful any reg) -> (volatile registryData regcopy) registryCopy {
+	registryData regcopy;
+
+	if (reg.type == regcopy.type)
+		objcopyto(regcopy, reg);
+	else {
+		int i;
+		for (i = 0; i < reg.isize && i < regcopy.isize; i += 1)
+			setInt(regcopy, getInt(reg, i), i);
+
+		for (i = 0; i < regcopy.lsize; i += 1) {
+			if (i < reg.lsize && getLink(reg, i).type == getLink(regcopy, i).type)
+				setLink(regcopy, getLink(reg, i), i);
+			else {
+				int j;
+				for (j = 0; j < reg.lsize; j += 1) {
+					if (getLink(reg, j).type == getLink(regcopy, i).type) {
+						setLink(regcopy, getLink(reg, j), i);
+						j = reg.lsize;
+					}
+				}
+			}
+		}
+	}
+
+	return regcopy;
+}
+
+(const char text[]) -> (const char error[]) mkError {
+	char error[];
+	strcat(error, registryVersion);
+	strcat(error, ": Error: ");
+	strcat(error, text);
+	strcat(error, ".");
+	return error;
+}
+
+(const stateful registryData reg, const stateful any obj, const funcType t, int flags) -> (const char error[]) checkObj {
+	if (obj.type.l[0] != obj.type && obj.type.l[1] != obj.type) {
+		if (!obj.csize) {
+			char error[];
+			strcat(error, "object of type '");
+			strcat(error, t.name);
+			strcat(error, "' is empty");
+			return mkError(error);
+		}
+
+		if (flags & REGISTRY_CHECK && reg.checker.csize) {
+			any funcs[];
+			checker_data data;
+			char error[];
+
+			(funcs, data, error, flags) = reg.checker(obj);
+
+			if (flags & CHECKER_ILLEGAL)
+				return error;
+		}
+	} else {
+		int i;
+		for (i = 0; i < obj.lsize; i += 1) {
+			if (obj.l[i] != obj) {
+				char err[] = code(reg, obj.l[i], t, flags);
+				if (err.csize) return err;
+			}
+		}
+	}
+
+	return "";
+}
+
+(const stateful registryData reg, int flags) -> (const char error[]) registryCheck {
+	int i;
+
+	for (i = 0; i < allFuncTypes.lsize; i += 1) {
+		funcType t = allFuncTypes[i];
+
+		if (flags & (t.flag | REGISTRY_ALL)) {
+			char error[] = checkObj(reg, getLink(reg, t.pos), t, flags);
+			if (error.csize)
+				return error;
+		}
+	}
+
+	return "";
+}
+
+type setData = {
+        volatile stateful registryData reg;
+        const (volatile any data, const char error[]) -> () callback;
+        volatile any data;
+        const funcType t;
+        int funcHash;
+};
+
+(volatile setData d, const any objs) -> () setCallback {
+	any x;
+
+	if (objs.lsize != 1 || objs.l[0] == x.type) {
+		char mess[];
+		strcat(mess, "object ");
+		printobjname(mess, d.funcHash);
+		strcat(mess, " not found");
+		d.callback(d.data, mkError(mess));
+		return;
+	}
+
+	any func = objs.l[0];
+
+	if (func.type != getLink(d.reg, d.t.pos).type || func.type == x.type) {
+		char mess[];
+		strcat(mess, "type of object ");
+		printobjname(mess, d.funcHash);
+		strcat(mess, " mismatches function type '");
+		strcat(mess, d.t.name);
+		strcat(mess, "'");
+		d.callback(d.data, mkError(mess));
+		return;
+	}
+
+	char error[] = checkObj(d.reg, func, d.t, REGISTRY_CHECK);
+	if (error.csize) {
+		d.callback(d.data, error);
+		return;
+	}
+
+	if (setLink(d.reg, func, d.t.pos)) {
+		d.callback(d.data, mkError("internal error"));
+		return;
+	}
+
+	d.callback(d.data, "");
+	return;
+}
+
+(volatile stateful registryData reg, const (volatile any data, const char error[]) -> () callback, volatile any data, const stateful char env[], int timeout) -> () registrySet {
+	int pos = strchr(env, '=');
+	if (pos < 0) {
+		callback(data, mkError("environment string should have format 'name=value'"));
+		return;
+	}
+
+	int begin;
+	int end;
+
+	(begin, end) = strtostr(env, 0, pos);
+	char name[];
+	substrcat(name, env, begin, end);
+
+	funcType t;
+	int i;
+	int found;
+	for (i = 0; i < allFuncTypes.lsize && !found; i += 1) {
+		t = allFuncTypes[i];
+
+		if (t.name == name)
+			found = 1;
+	}
+
+	if (!found) {
+		char mess[];
+		strcat(mess, "unknown name of environment variable: '");
+		strcat(mess, name);
+		strcat(mess, "'; should be one of:");
+		for (i = 0; i < allFuncTypes.lsize; i += 1) {
+			if (i)
+				strcat(mess, ", ");
+			strcat(mess, " '");
+			strcat(mess, allFuncTypes[i].name);
+			strcat(mess, "'");
+		}
+		callback(data, mkError(mess));
+		return;
+	}
+
+	(begin, end) = strtostr(env, pos + 1, env.csize);
+
+	if (t.flag == REGISTRY_INT) {
+		int n, err;
+		(n, err, pos) = strtoi(env, begin, end, 0);
+		if (err) {
+			char mess[];
+			strcat(mess, "unrecognized value of environment variable: '");
+			strcat(mess, name);
+			strcat(mess, "'; should be int value");
+			callback(data, mkError(mess));
+			return;
+		}
+
+		if (setInt(reg, n, t.pos)) {
+			callback(data, mkError("internal error (int)"));
+			return;
+		}
+
+		callback(data, "");
+		return;
+	}
+
+	int hashes[], hash = name2hash(env, begin, end);
+	if (hash >= 0) {
+		hashes.ipush(hash);
+		hashes.ipush(0);
+		hashes.ipush(0);
+		hashes.ipush(0);
+	} else if (end - begin == 47) {
+		base58Class base58Obj = base58Create();
+		if (!base58Obj.methods.decodeHash(hashes, base58Obj, env, begin, end))
+			hash = hashes[0] << 17 >> 17;
+	}
+	if (hash < 0) {
+		char mess[];
+		strcat(mess, "unrecognized value of environment variable: '");
+		strcat(mess, name);
+		strcat(mess, "'; should be function name");
+		callback(data, mkError(mess));
+		return;
+	}
+
+	setData d;
+	d.reg = reg;
+	d.callback = callback;
+	d.data = data;
+	d.t = t;
+	d.funcHash = hash;
+
+	mload_p2p(setCallback, d, hashes, timeout);
+	return;
+}
+
+(volatile char out[], const stateful registryData reg, const char prefix[]) -> () registryPrint {
+	int i;
+
+	for (i = 0; i < allFuncTypes.lsize; i += 1) {
+		funcType t = allFuncTypes[i];
+
+		if (t.flag == REGISTRY_INT)
+			printf(out, "%s %s=%d\r\n", {prefix, t.name, getInt(reg, t.pos)});
+		else if (!checkObj(reg, getLink(reg, t.pos), t, 0).csize)
+			printf(out, "%s %s=%p\r\n", {prefix, t.name, getLink(reg, t.pos)});
+	}
+
+	return;
+}
+
+/* system registry object */
+registryClass registryObj = {
+        registryVersion,
+        registryCopy,
+        registryCheck,
+        registrySet,
+        registryPrint
+};

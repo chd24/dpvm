@@ -1,0 +1,10 @@
+/* forex class, register kraken exchange, T20.002-T20.040; $DVS:time$ */
+
+#include "kraken/kraken.dpvmake"
+#include "exchange.dpvmh"
+
+Exchange krakenExchange = {
+	"kraken",
+	krakenCreate,
+	80
+};

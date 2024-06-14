@@ -1,0 +1,84 @@
+/* generate array of functions to process bytecodes; T16.495-T20.133; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "debugger.dpvmh"
+
+(volatile stateful char str[], const stateful thread t) -> () printStack = {
+	any func = t.function;
+	any st = t.stack;
+	int pos = t.pointer;
+
+
+	/* header */
+
+	printf(str, "Debug: in %p(), pos %d, codes:", {func, pos});
+	
+
+	/* list of bytecodes near current position */
+
+	int i = pos - 4, end = pos + 4;
+	if (i < 0) i = 0;
+	if (end > func.csize) end = func.csize + 1;
+	do {
+		str.push(' ');
+		if (i == pos) {
+			str.push('|');
+			str.push(' ');
+		}
+		if (i < func.csize)
+			print_bytecode(str, func.c[i]);
+		i += 1;
+	} while (i < end);
+	strcat(str, "\r\n");
+
+
+	/* output links */
+
+	if (t.pointers.isize)
+		i = t.pointers[t.pointers.isize - 5];
+	else
+		i = 0;
+	printf(str, "- links[%d]:", {st.lsize - i});
+	for (i; i < st.lsize; i += 1)
+		printf(str, " %p", {st.l[i]});
+	strcat(str, "\r\n");
+
+
+	/* output ints */
+
+	if (t.pointers.isize)
+		i = t.pointers[t.pointers.isize - 4];
+	else
+		i = 0;
+	printf(str, "- ints[%d]:", {st.isize - i});
+	for (i; i < st.isize; i += 1)
+		printf(str, " %d", {st.i[i]});
+	strcat(str, "\r\n");
+
+
+	/* output floats */
+
+	if (t.pointers.isize)
+		i = t.pointers[t.pointers.isize - 3];
+	else
+		i = 0;
+	printf(str, "- floats[%d]:", {st.fsize - i});
+	for (i; i < st.fsize; i += 1)
+		printf(str, " %.15f", {st.f[i]});
+	strcat(str, "\r\n");
+
+
+	/* output chars */
+
+	if (t.pointers.isize)
+		i = t.pointers[t.pointers.isize - 2];
+	else
+		i = 0;
+	printf(str, "- chars[%d]:", {st.csize - i});
+	for (i; i < st.csize; i += 1)
+		printf(str, " %02X", {+st.c[i]});
+	strcat(str, "\r\n");
+
+	return;
+};
+	

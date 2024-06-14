@@ -1,0 +1,44 @@
+/* test for run/wait bytecodes with io; T17.890-T19.616; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+
+type test_data = {
+	const (int) -> (int) func;
+	int x;
+	int y;
+};
+
+(const test_data data, const int values[]) -> () handler {
+	(int) -> (int) f = data.func;
+	int x = data.x;
+	int y = data.y;
+
+	asm {
+		1 iload 0 lload run
+		0 iload 1 lload run
+		wait 0 istore
+		wait 1 istore
+	};
+	
+	char res[];
+	res.cpush('[');
+	printint(res, x, 1);
+	res.cpush(' ');
+	printint(res, y, 1);
+	res.cpush(']');
+	res.cpush('\n');
+
+	outputp("", "", res);
+	return;
+}
+
+(const (int) -> (int) f, int x, int y) -> () {
+	test_data data;
+	data.func = f;
+	data.x = x;
+	data.y = y;
+
+	int vars[];
+	getsysp(handler, data, vars);
+	return;
+}

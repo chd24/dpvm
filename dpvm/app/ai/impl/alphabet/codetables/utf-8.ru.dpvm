@@ -1,0 +1,31 @@
+/* aiAlphabet class, default utf-8.ru codetable */
+
+#include "../../../alphabet.dpvmh"
+#include "codetables.dpvmh"
+
+char version[] = " default utf-8.ru codetable, ver 0.1.0, T18.413-T18.413"; /* $DVS:time$
+
+history:
+
+T18.413 ver 0.1.0 - first version
+
+*/
+
+aiAlphabetLettersArray
+small = {
+	{ "а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я" },
+	AI_ALPHABET_SMALL
+},
+big = {
+	{ "А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я" },
+	AI_ALPHABET_BIG
+};
+
+aiAlphabetPredefinedCodeTable ai_utf_8_ru = {
+	"utf-8.ru",
+	version,
+	{
+		small,
+		big
+	}
+};

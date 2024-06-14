@@ -1,0 +1,291 @@
+/* aiVocabulary class, multiFiles demo, T18.408-T18.418; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../alphabet.dpvmake"
+#include "../../vocabulary.dpvmake"
+
+char outDelim[] = "-------------------------------------------------------\r\n";
+int outNWords = 40;
+
+type parserData = {
+	const char vocabulary[];
+	const char logFile[];
+	const char fileList[];
+	const char codeTable[];
+	const char fileName[];
+	volatile aiAlphabet aiA;
+	volatile aiVocabulary aiV;
+	volatile char input[];
+	int fileListPos;
+};
+
+(const stateful parserData data, const char mess[], int status) -> () Out = {
+	if (status) {
+		char out[];
+		strcat(out, mess);
+		if (status >= 10) {
+			strcat(out," (status ");
+			printint(out, status, 1);
+		} else {
+			strcat(out," (position ");
+			printint(out, -status, 1);
+		}
+		strcat(out, ")\r\n");
+		mess = out;
+	}
+
+	outputp("", "", mess);
+	writep("", "", data.logFile, mess, -1);
+	return;
+};
+
+(const char list[], int pos) -> (const char path[], int nextpos) getFileName {
+	while (pos < list.csize && (list[pos] == ' ' || list[pos] == '\t' || list[pos] == '\r' || list[pos] == 'n'))
+		pos += 1;
+	if (pos >= list.csize)
+		return ("", pos);
+
+	int nl = substrchr(list, pos, list.csize, '\n');
+	if (nl < 0)
+		return ("", pos);
+
+	int end = nl - 1;
+	while (end > pos && (list[end] == ' ' || list[end] == '\t' || list[end] == '\r' || list[end] == 'n'))
+		end -= 1;
+
+	char path[];
+	substrcat(path, list, pos, end + 1);
+	return (path, nl + 1);
+};
+
+(volatile stateful parserData data, const stateful char text[], const char codeTable[]) -> (const char out[], int status) processText = {
+	char err[];
+
+	int statsA0[];
+	(statsA0, err) = data.aiA.methods.getStatistics(data.aiA, codeTable);
+	if (err.csize && strstr(err, "not found") < 0) return (err, 1);
+
+	char indexes[];
+	(indexes, err) = data.aiA.methods.parseText(data.aiA, codeTable, data.input);
+	if (err.csize) return (err, 2);
+
+	int statsA[];
+	(statsA, err) = data.aiA.methods.getStatistics(data.aiA, codeTable);
+	if (err.csize) return (err, 3);
+
+	char defCodeTable[];
+	(defCodeTable, err) = data.aiA.methods.getDefaultCodeTable(data.aiA, codeTable);
+	if (err.csize) return (err, 4);
+
+	char letters[][];
+	(letters, err) = data.aiA.methods.getLetters(data.aiA, defCodeTable, AI_ALPHABET_SMALL);
+	if (err.csize) return (err, 5);
+
+	int statsV0[];
+	int nWords0;
+	(statsV0, err, nWords0) = data.aiV.methods.getStatistics(data.aiV);
+	if (err.csize) return (err, 6);
+
+	if (!statsA0.isize) {
+		int stats[], i, size = statsA.isize;
+		for (i = 0; i < size; i += 1) stats.ipush(0);
+		statsA0 = stats;
+	}
+
+	if (!statsV0.isize) {
+		int stats[], i, size = statsA.isize;
+		for (i = 0; i < size; i += 1) stats.ipush(0);
+		statsV0 = stats;
+	}
+
+	int statsV[], i, size = statsA.isize, sum, sum0;
+	for (i = 0; i < size; i += 1) {
+		int n = statsA[i] - statsA0[i];
+		sum0 += n;
+		n += statsV0[i];
+		sum += n;
+		statsV.ipush(n);
+	}
+
+	err = data.aiV.methods.setStatistics(data.aiV, statsV);
+	if (err.csize) return (err, 7);
+
+	char words[];
+	int pos, begin = 0, end = indexes.csize;
+	while (begin < end) {
+		(err, pos) = data.aiV.methods.parseIndexes(words, data.aiV, indexes, begin, end);
+		if (err.csize) {
+			if (strstr(err, "Too long word") < 0)
+				return (err, -pos);
+			char mess[];
+			strcat(mess, err);
+			strcat(mess, " '");
+			int p;
+			for (p = pos - 1; p >= 0 && (indexes[p] < AI_ALPHABET_EMPTY || indexes[p] == AI_ALPHABET_ACCENT); p -= 1);
+			for (p += 1; p < pos; p += 1)
+				if (indexes[p] != AI_ALPHABET_ACCENT)
+					strcat(mess, letters[indexes[p] & ~AI_ALPHABET_BIG]);
+				else
+					strcat(mess, "'");
+			strcat(mess, "' skipped");
+			Out(data, mess, -pos);
+		}
+		begin = pos;
+	}
+
+	int nWords;
+	(statsV0, err, nWords) = data.aiV.methods.getStatistics(data.aiV);
+	if (err.csize) return (err, 9);
+
+	char out[];
+	strcat(out, data.fileName);
+	strcat(out, ": ");
+	printint(out, text.csize, 1);
+	strcat(out, " bytes, ");
+	printint(out, sum0 - (statsA[size - 1] - statsA0[size - 1]), 1);
+	strcat(out, " letters, ");
+	printint(out, statsA[size - 1] - statsA0[size - 1], 1);
+	strcat(out, " words, ");
+	printint(out, nWords - nWords0, 1);
+	strcat(out, " new words, ");
+	printint(out, nWords, 1);
+	strcat(out, " total words\r\n");
+	strcat(out, outDelim);
+
+	for (i = 0; i < size; i += 1) {
+		if (i < size - 1)
+			strcat(out, letters[i]);
+		else
+			strcat(out, "_");
+		strcat(out, ":");
+		printfloat(out, 2, statsV[i] * 100.0 / sum);
+		strcat(out, " ");
+	}
+	strcat(out, "\r\n");
+	strcat(out, outDelim);
+
+	err = data.aiV.methods.printTopWords(out, data.aiV, letters, outNWords);
+	if (err.csize) return (err, 10);
+
+	strcat(out, outDelim);
+
+	return (out, 0);
+}
+
+(volatile parserData data, const char text[], int status) -> () readFile = {
+	if (status < 0 || status + data.input.csize == 0) return Out(data, "Error reading text file.", 14);
+
+	if (status)
+		strcat(data.input, text);
+
+	if (status == 0x100000) {
+		read(code, data, data.fileName, data.input.csize, 0x100000);
+		return;
+	}
+
+	char res[];
+	(res, status) = processText(data, data.input, data.codeTable);
+	if (status > 0) return Out(data, res, status + 100);
+	else if (status < 0) return Out(data, res, status);
+
+	Out(data, res, 0);
+
+	data.input.cpop(data.input.csize);
+	(data.fileName, data.fileListPos) = getFileName(data.fileList, data.fileListPos);
+
+	if (!data.fileName.csize) {
+		char err[] = data.aiV.methods.recalculateWeights(data.aiV);
+		if (err.csize) return Out(data, err, 15);
+
+		char defCodeTable[];
+		(defCodeTable, err) = data.aiA.methods.getDefaultCodeTable(data.aiA, data.codeTable);
+		if (err.csize) return Out(data, err, 16);
+
+		char letters[][];
+		(letters, err) = data.aiA.methods.getLetters(data.aiA, defCodeTable, AI_ALPHABET_SMALL);
+		if (err.csize) return Out(data, err, 17);
+
+		char out[];
+		err = data.aiV.methods.printTopWords(out, data.aiV, letters, outNWords);
+		if (err.csize) return Out(data, err, 18);
+
+		strcat(out, outDelim);
+		Out(data, out, 0);
+
+		char dump[];
+		err = data.aiV.methods.saveData(dump, data.aiV);
+		if (err.csize) return Out(data, err, 19);
+
+		writep("", "", data.vocabulary, dump, 0);
+		return;
+	}
+
+	read(code, data, data.fileName, 0, 0x100000);
+	return;
+};
+
+(volatile parserData data, const char text[], int status) -> () readFileList = {
+	if (status < 0 || status + data.input.csize == 0) return Out(data, "Error reading fileList file.", 12);
+
+	if (status)
+		strcat(data.input, text);
+
+	if (status == 0x100000) {
+		read(code, data, data.fileList, data.input.csize, 0x100000);
+		return;
+	}
+
+	char fileList[];
+	strcat(fileList, data.input);
+	data.fileList = fileList;
+	data.input.cpop(data.input.csize);
+
+	(data.fileName, data.fileListPos) = getFileName(data.fileList, data.fileListPos);
+	if (!data.fileName.csize) return Out(data, "File list is empty", 13);
+
+	read(readFile, data, data.fileName, 0, 0x100000);
+	return;
+};
+
+(volatile parserData data, const char text[], int status) -> () readVocabulary = {
+	if (status < 0) return Out(data, "Error reading vocabulary file.", 10);
+
+	if (status)
+		strcat(data.input, text);
+
+	if (status == 0x100000) {
+		read(code, data, data.vocabulary, data.input.csize, 0x100000);
+		return;
+	}
+
+	if (data.input.csize) {
+		char err[] = data.aiV.methods.loadData(data.aiV, data.input);
+		if (err.csize) return Out(data, err, 11);
+	}
+
+	data.input.cpop(data.input.csize);
+	read(readFileList, data, data.fileList, 0, 0x100000);
+	return;
+}
+
+(const char vocabulary[], const char logFile[], const char fileList[], const char codeTable[]) -> () multiFiles = {
+	parserData data;
+
+	data.vocabulary = vocabulary;
+	data.logFile = logFile;
+	data.fileList = fileList;
+	data.codeTable = codeTable;
+	data.aiA = aiAlphabetCreate();
+	data.aiV = aiVocabularyCreate();
+
+	char out[];
+	strcat(out, data.aiV.methods.version);
+	strcat(out, " with ");
+	strcat(out, data.aiA.methods.version);
+	strcat(out, "\r\n");
+	strcat(out, outDelim);
+	Out(data, out, 0);
+
+	read(readVocabulary, data, vocabulary, 0, 0x100000);
+	return;
+};

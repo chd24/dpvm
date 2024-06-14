@@ -1,0 +1,20 @@
+/* add int[] subarray to sha512 context; T16.492-T19.991; $DVS:time$ */
+
+#include "sha512.dpvmake"
+
+(volatile stateful int ctx[], const stateful int data[], int begin, int end) -> () add{
+	int n = ctx[88];
+	
+	while (begin < end) {
+		ctx[((n >> 3) & 0xf) + 8] = data[begin];
+		n += 8;
+		begin += 1;
+
+		if (!(n & 0x7f))
+			sha512_processChunk(ctx, ctx, 8);
+	}
+
+	ctx[88] = n;
+
+	return;
+}

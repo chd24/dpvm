@@ -1,0 +1,22 @@
+/* generate random long number with given number of bits; T17.925-T17.990; $DVS:time$ */
+
+#include "../rand/rand.dpvmake"
+
+(const stateful char seed[], int nbits) -> (volatile int res[]) {
+    randData rand;
+    randObj.init(rand, seed);
+
+    int n[];
+    while (nbits > 0) {
+            n.ipush(randObj.get(rand));
+            nbits -= 64;
+    }
+    nbits += 64;
+
+    if (nbits < 64)
+        n[n.isize - 1] &= (1 << nbits) - 1;
+    if (n.isize)
+        n[n.isize - 1] |= 1 << (nbits - 1);
+
+    return n;
+}

@@ -1,0 +1,41 @@
+/* dpvm: get declaration; T16.525-T20.114; $DVS:time$ */
+
+/* basetype: int | float | char | type | any
+   modifier: const | stateful | volatile
+   decl: [modifier..] (basetype | (decl,...) [-> (decl,...)] | [struct] {decl;...}) \
+		[name [ ( '[' [min[..[.][max]] ']' | (decl,...)) ...]]
+
+   context:
+	0 - decl in global scope
+	1 - decl in function
+	2 - type cast in expression
+	3 - decl in structure
+	4 - decl in funcion parameters
+	5 - initializer of type const
+
+   rstatus:
+	bits  0..1:  0 - link, 1 - int, 2 - float, 3 - char
+	bit      2:  1 - const
+	bit	 3:  1 - stateful
+	bit      4:  1 - volatile
+	bit      5:  1 - type
+	bit      6:  1 - function
+	bits 8..62:  hash of name of object is any, 0 otherwise
+	bit     63:  1 - error
+*/
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, int context) -> (const type res, int rstatus) {
+	type res;
+	int rstatus;
+
+	(res, rstatus) = getdecltype(data, code, context);
+
+	if (rstatus >= 0) {
+		(res, rstatus) = getdeclname(data, code, res, context, rstatus);
+	}
+
+	return (res, rstatus);
+}

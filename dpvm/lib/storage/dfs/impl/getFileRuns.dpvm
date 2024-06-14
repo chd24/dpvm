@@ -1,0 +1,150 @@
+/* dfs class, getFileRuns method implementation, T18.809-T19.015; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "dfs.dpvmake"
+
+(volatile stateful int runs[], const stateful dfsPart parts[], const stateful int volume[], int volumeBegin,
+		int begin, int end, int beginPos, int endPos, int level /*, int flags */)
+		-> (const char error[], int begin, int end) getFileRunsRecurse = {
+/*
+	if (flags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[getFileRunsRecurse(1): runs.isize=%X volumeBegin=%X begin=%X end=%X beginPos=%X endPos=%X level=%X]\r\n",
+		       {runs.isize, volumeBegin, begin, end, beginPos, endPos, level});
+		outputp("", "", mess);
+	}
+*/
+	int shift = 3 + level * 6, size;
+	level -= 1;
+
+	while (begin < end) {
+		int tmp, sector = volume[begin];
+		for (tmp = 1, size = end - begin; tmp < size && volume[begin + tmp] == sector + tmp; tmp += 1);
+
+		int tmpEndPos = endPos;
+		if (tmp < size)
+			tmpEndPos = ((beginPos >> shift) + tmp) << shift;
+/*
+		if (flags & DFS_FLAG_DEBUG) {
+			char mess[];
+			printf(mess, "[getFileRunsRecurse(2): runs.isize=%X volumeBegin=%X begin=%X end=%X beginPos=%X endPos=%X level=%X sector=%X tmp=%X size=%X tmpEndPos=%X]\r\n",
+			       {runs.isize, volumeBegin, begin, end, beginPos, endPos, level, sector, tmp, size, tmpEndPos});
+			outputp("", "", mess);
+		}
+*/
+		if (level) {
+			int newBegin = (sector << 6) + (beginPos >> (shift - 6) & 0x3f),
+				newEnd = ((sector + tmp) << 6) - (-tmpEndPos >> (shift - 6) & 0x3f),
+				newVolume[] = volume, newVolumeBegin = volumeBegin;
+
+			if (newBegin < volumeBegin || newEnd > volumeBegin + volume.isize) {
+				int i;
+				for (i = 0; i < parts.lsize; i += 1) {
+					newVolume = parts[i].volume;
+					newVolumeBegin = parts[i].begin;
+
+					if (newBegin >= newVolumeBegin && newEnd <= newVolumeBegin + newVolume.isize)
+						i = parts.lsize;
+				}
+
+				if (i == parts.lsize)
+					return (mkError("need more volume data", "getFileRunsRecurse"), newBegin, newEnd);
+			}
+/*
+			if (flags & DFS_FLAG_DEBUG) {
+				char mess[];
+				printf(mess, "[getFileRunsRecurse(3): runs.isize=%X newVolumeBegin=%X newBegin=%X newEnd=%X beginPos=%X tmpEndPos=%X level=%X]\r\n",
+				       {runs.isize, newVolumeBegin, newBegin, newEnd, beginPos, tmpEndPos, level});
+				outputp("", "", mess);
+			}
+*/
+			char error[];
+			(error, newBegin, newEnd) = code(runs, parts, newVolume, newVolumeBegin,
+					newBegin - newVolumeBegin, newEnd - newVolumeBegin, beginPos, tmpEndPos, level /*, flags */);
+			if (error.csize)
+				return (error, newBegin, newEnd);
+
+		} else {
+			int newBegin = (sector << 9) + (beginPos & 0x1ff),
+				newEnd = ((sector + tmp) << 9) - (-tmpEndPos & 0x1ff);
+/*
+			if (flags & DFS_FLAG_DEBUG) {
+				char mess[];
+				int last;
+				if (runs.isize)
+					last = runs[runs.isize - 1];
+				printf(mess, "[getFileRunsRecurse(4): runs.isize=%X runs[runs.isize - 1]=%X newBegin=%X newEnd=%X]\r\n",
+				       {runs.isize, last, newBegin, newEnd});
+				outputp("", "", mess);
+			}
+*/
+			if (runs.isize && runs[runs.isize - 1] == newBegin)
+				runs[runs.isize - 1] = newEnd;
+			else
+				runs.ipush(newBegin),
+				runs.ipush(newEnd);
+		}
+
+		begin += tmp;
+		beginPos = 0;
+		endPos -= tmpEndPos;
+	}
+
+	return ("", 0, 0);
+};
+
+(volatile stateful any dfsObj, int inode, int begin, int end) -> (volatile int runs[], const char error[], int begin, int end) getFileRuns = {
+	int runs[];
+	dfsImpl impl;
+	char err[] = convertObjToImpl(impl, dfsObj, "getFileRuns");
+	if (err.csize) return (runs, err, 0, 0);
+
+	if (impl.data.flags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[getFileRuns(1): inode=%X, begin=%X, end=%X]\r\n", {inode, begin, end});
+		outputp("", "", mess);
+	}
+
+	inode <<= 2;
+
+	dfsPart parts[] = impl.data.parts;
+	int volume[], inodeBegin, inodeEnd, i;
+
+	for (i = 0; i < parts.lsize && (inode < inodeBegin || inode + 4 > inodeEnd); i += 1)
+		volume = parts[i].volume, inodeBegin = parts[i].begin, inodeEnd = inodeBegin + volume.isize;
+
+	if (inode < inodeBegin || inode + 4 > inodeEnd)
+		return (runs, mkError("need more volume data", "getFileRuns"), inode, inode + 4);
+
+	inode -= inodeBegin;
+
+	int size = volume[inode + 1];
+	if (begin < 0) begin = 0;
+	if (end > size) end = size;
+	if (begin >= end)
+		return (runs, "", 0, 0);
+
+	int level = volume[inode] >> 24 & 0xf;
+	if (!level || level > 9)
+		return (runs, mkError("tree height not supported", "getFileRuns"), level, level);
+
+	if (impl.data.flags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[getFileRuns(2): inodeBegin=%X inode=%X begin=%X end=%X level=%X]\r\n", {inodeBegin, inode, begin, end, level});
+		outputp("", "", mess);
+	}
+
+	(err, begin, end) = getFileRunsRecurse(runs, parts, volume, inodeBegin, inode + 3, inode + 4, begin, end, level /*, impl.data.flags */);
+
+	if (impl.data.flags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[getFileRuns(3): inode=%X begin=%X end=%X runs=(", {inode, begin, end});
+		for (i = 0; i < runs.isize; i += 2) {
+			printf(mess, "%X-%X ", {runs[i], runs[i + 1]});
+		}
+		printf(mess, ") err=%s]\r\n", {err});
+		outputp("", "", mess);
+	}
+
+	return (runs, err, begin, end);
+};

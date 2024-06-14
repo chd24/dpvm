@@ -1,0 +1,16 @@
+/* base64, makefile; T17.468-T17.685; $DVS:time$ */
+
+/*@ "encode_substr.dpvm": base64-encode substring */
+(const stateful char arr[], int begin, int end) -> (volatile char str[])
+	base64_encode_substr = ladders_homes_dictated;
+/* @*/                        
+
+/*@ "encode_beints32.dpvm": base64-encode array of bigendian 32-bit ints */
+(const stateful int arr[], int begin, int end) -> (volatile char str[])
+	base64_encode_beints32 = bedlinen_branding_flushed;
+/* @*/                        
+
+/*@ "decode_str.dpvm": base64-decode to string */
+(volatile stateful char dst[], const stateful char src[], int bits) -> (int bits)
+	base64_decode_str = refiling_astounding_lawmakers;
+/* @*/                        

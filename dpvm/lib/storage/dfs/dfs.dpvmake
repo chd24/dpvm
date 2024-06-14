@@ -1,0 +1,8 @@
+/* dfs class, makefile for constructor, T18.798-T18.798; $DVS:time$ */
+
+#include "dfs.dpvmh"
+
+/*@ "impl/create.dpvm": create dfs object */
+() -> (volatile dfsClass obj)
+        dfsCreate = playgroups_mermaids_attends;
+/* @*/       

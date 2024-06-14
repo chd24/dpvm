@@ -1,0 +1,22 @@
+/* floor(log_2(src)), T19.376-T19.376; $DVS:time$ */
+
+(const stateful int src[]) -> (int res) short_log2 = {
+	int size = src.isize;
+
+	if (!size)
+		return -1;
+
+	size -= 1;
+
+	int mask = src[size];
+	size <<= 6;
+
+	if (mask >> 32) mask >>= 32, size += 32;
+	if (mask >> 16) mask >>= 16, size += 16;
+	if (mask >> 8) mask >>= 8, size += 8;
+	if (mask >> 4) mask >>= 4, size += 4;
+	if (mask >> 2) mask >>= 2, size += 2;
+	if (mask >> 1) size += 1;
+
+	return size;
+};

@@ -1,0 +1,30 @@
+/* add nand to schema; T16.488-T16.488; $DVS:time$ */
+
+(int schema[], int nvars, int freecell, int cella, int cellb) -> (int rescell, int freecell) {
+	int rescell;
+	int t;
+
+	if (cella > cellb) {
+		t = cella;
+		cella = cellb;
+		cellb = t;
+	}
+
+	rescell = freecell;
+	freecell = freecell + 1;
+
+	if (cellb >= nvars << 1) {
+		rescell = cellb;
+		freecell = freecell - 1;
+
+		if (cella >= nvars << 1 & cellb == freecell - 1 & cella == cellb - 1) {
+			rescell = cella;
+			freecell = freecell - 1;
+		}
+	}
+
+	schema.push(rescell);
+	schema.push(cella);
+	schema.push(cellb);
+	return (rescell, freecell);
+}

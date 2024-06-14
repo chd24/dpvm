@@ -1,0 +1,48 @@
+/* blog class, writeFile internal method, T18.896-T18.906; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "blog.dpvmake"
+
+(volatile stateful any blogObj, const char userName[], const char fileType[], volatile stateful int file[]) -> (const char error[]) writeFile = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "writeFile");
+	if (err.csize)
+		return err;
+
+	if (!impl.data.root.csize)
+		return mkError("blog root is not set", "writeFile");
+
+	blogUser user;
+	(user, err) = findUser(impl.data, userName);
+	if (err.csize)
+		return err;
+
+	int i, size = file.isize, min = 0x80, mask = 0x7f, encrypt = 1;
+
+	if (fileType == "inbox")
+		min = 0, mask = 0x7, encrypt = 0;
+	else if (fileType == "tipbox")
+		min = 0, mask = 0xf, encrypt = 0;
+
+	if (size < min || size & mask)
+		return mkError("illegal file size", "writeFile");
+
+	if (encrypt && user.dfsCtx.isize) {
+		size >>= 7;
+
+		dfs_set_data(user.dfsCtx, file);
+
+		for (i = 1; i < size; i += 1)
+			dfs_encrypt(user.dfsCtx, file, i << 7, 0x80, i);
+
+		size <<= 7;
+	}
+
+	char fileName[];
+	printf(fileName, "%s/%s.%s", {impl.data.root, userName, fileType});
+
+	writep("", "", fileName, ints32_2chars(file, 0, size), 0);
+	return "";
+};

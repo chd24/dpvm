@@ -1,0 +1,18 @@
+/* dnet node, rsa crypt routine; T17.545-T19.640; $DVS:time$ */
+
+#include "../../utils/utils.dpvmake"
+#include "../../math/crypto/rsa/rsa.dpvmake"
+
+(const int data[], const char key[], int key_begin, int key_end) -> (volatile int res[]) {
+	int k[] = chars2ints(key, key_begin, key_end);
+	int size = k.isize;
+	int i;
+
+	while (size >= 4 && k.isize == size) {
+		size >>= 1;
+		for (i = 0; i < size && k[i] == k[i + size]; i += 1);
+		if (i == size) k.ipop(size);
+	}
+
+        return rsa_crypt(k, data);
+}

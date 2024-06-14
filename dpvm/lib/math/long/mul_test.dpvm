@@ -1,0 +1,61 @@
+/* multiplication test */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../rand/rand.dpvmake"
+#include "long.dpvmake"
+
+char version[] = "Long numbers multiplication test 0.1.0, T17.990-T17.991"; /* $DVS:time$ */
+
+int nIterations = 64;
+
+(const stateful char seed[], int maxDimension) -> (volatile int res[]) {
+    outputp("", "", version);
+    outputp("", "", "\r\n");
+
+    randData rnd;
+    randObj.init(rnd, seed);
+
+    int dim;
+    for (dim = 4; dim <= maxDimension; dim <<= 1) {
+        char str[];
+        strcat(str, "Dimension = ");
+        printint(str, dim, 3);
+        outputp("", "", str);
+
+        int iter;
+        for (iter = 0; iter < nIterations; iter += 1) {
+            int s1[];
+            int s2[];
+
+            int i;
+            for (i = 0; i < dim; i += 1) {
+                s1.ipush(randObj.get(rnd));
+                s2.ipush(randObj.get(rnd));
+            }
+
+            outputp("", "", ".");
+            int d1[] = mul_pythagoras(s1, s2);
+            outputp("", "", ":");
+            int d2[] = mul_long(s1, s2);
+
+            if (d1 != d2) {
+                outputp("", "", "\r\nFAILED!\r\n");
+                int res[];
+                copyints(res, s1, 0, s1.isize);
+                res.ipush(-1);
+                copyints(res, s2, 0, s2.isize);
+                res.ipush(-1);
+                copyints(res, d1, 0, d1.isize);
+                res.ipush(-1);
+                copyints(res, d2, 0, d2.isize);
+                return res;
+            }
+        }
+
+        outputp("", "", "\r\n");
+    }
+
+    outputp("", "", "Passed.\r\n");
+    int res[];
+    return res;
+}

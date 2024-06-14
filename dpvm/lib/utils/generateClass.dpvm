@@ -1,0 +1,375 @@
+/* class source code generator */
+
+char version[] = "Class source generator, ver 0.1.2, T19.354-T20.056"; /* $DVS:time$
+
+History:
+
+T20.056 ver 0.1.2 - moved stdlib to lib folder
+
+T19.744 ver 0.1.1 - added registry support
+
+T19.358 ver 0.1.0 - initial version
+
+*/
+
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../stdlib/stdlib.dpvmake"
+#include "../storage/dfs/dfs.dpvmake"
+
+type classFile = {
+	const char title[];
+	const char path[];
+	const char content[];
+};
+
+classFile classFiles[] = {
+
+	{
+		"public header",
+		"%name.dpvmh",
+"%head
+
+type %nameMethods = {
+	const char version[];
+	const (volatile stateful any %nameObj) -> (const char error[], int flags) getFlags;
+	const (volatile stateful any %nameObj, int flags) -> (const char error[]) setFlags;
+	const (volatile stateful any %nameObj, const stateful any registry) -> (const char error[]) setRegistry;
+	const (volatile stateful char out[], volatile stateful any %nameObj) -> (const char error[]) dump;
+};
+
+type %nameClass = {
+	volatile any data;
+	const %nameMethods methods;
+};"
+	},
+
+	{
+		"makefile for constructor",
+		"%name.dpvmake",
+"%head
+
+#include \"%name.dpvmh\"
+
+/*@ \"impl/create.dpvm\": create %name object */
+() -> (volatile %nameClass obj)
+	%nameCreate = playgroups_mermaids_attends;
+/* @*/"
+	},
+
+	{
+		"version",
+		"impl/version.dpvmh",
+"%title
+
+char version[] = \"%name class, ver 0.0.1, %date-%date\"; /* $DVS:time$
+
+History:
+
+%date ver 0.0.1 - initial version %gen
+
+*/"
+	},
+
+	{
+		"internal header",
+		"impl/%name.dpvmh",
+"%head
+
+#include \"%dpvm/tools/registry/registry.dpvmh\"
+#include \"../%name.dpvmh\"
+
+type %nameData = {
+	const registryData registry;	/* system registry */
+	int flags;			/* flags */
+	int registrySet;		/* 1 if registry set */
+};
+
+type %nameImpl = {
+	volatile %nameData data;
+	const %nameMethods methods;
+};"
+	},
+
+	{
+		"mkError internal method",
+		"impl/mkError.dpvm",
+"%head
+
+#include \"%dpvm/lib/stdlib/stdlib.dpvmake\"
+#include \"version.dpvmh\"
+
+(const char mess[], const char func[]) -> (const char err[]) mkError = {
+	char err[];
+	printf(err, \"%s: Error in function %s(): %s\", {version, func, mess});
+	return err;
+};"
+	},
+
+	{
+		"convertObjToImpl internal method",
+		"impl/convertObjToImpl.dpvm",
+"%head
+
+#include \"%dpvm/lib/stdlib/stdlib.dpvmake\"
+#include \"%name.dpvmake\"
+
+(volatile stateful %nameImpl impl, const stateful any %nameObj, const char func[]) -> (const char error[]) convertObjToImpl = {
+	if (%nameObj.type != %nameImpl && (%nameObj.type != %nameClass || %nameObj.l[0].type != %nameData)) {
+		return mkError(\"%nameObj has illegal type\", func);
+	}
+	objcopyto(impl, %nameObj);
+	return \"\";
+};"
+	},
+
+	{
+		"dump method implementation",
+		"impl/dump.dpvm",
+"%head
+
+#include \"%dpvm/lib/stdlib/stdlib.dpvmake\"
+#include \"%name.dpvmake\"
+
+(volatile stateful char out[], volatile stateful any %nameObj) -> (const char error[]) dump = {
+	%nameImpl impl;
+	char err[] = convertObjToImpl(impl, %nameObj, \"dump\");
+	if (err.csize) return err;
+
+	printf(out, \"%nameObj dump:\r\nVersion:  %s\r\nFlags:    %X\r\n\",
+		{impl.methods.version, impl.data.flags});
+	if (impl.data.registrySet)
+		printf(out, \"Registry: %p\r\n\", {impl.data.registry});
+	return \"\";
+};"
+	},
+
+	{
+		"methods implementation",
+		"impl/methods.dpvm",
+"%head
+
+#include \"%dpvm/tools/registry/registry.dpvmake\"
+#include \"%name.dpvmake\"
+#include \"version.dpvmh\"
+
+int registryMask = REGISTRY_COMPILER;	/* mask of registry applications used by %name class */
+
+(volatile stateful any %nameObj) -> (const char error[], int flags) getFlags = {
+	%nameImpl impl;
+	char err[] = convertObjToImpl(impl, %nameObj, \"getFlags\");
+	if (err.csize) return (err, 0);
+
+	return (\"\", impl.data.flags);
+};
+
+(volatile stateful any %nameObj, int flags) -> (const char error[]) setFlags = {
+	%nameImpl impl;
+	char err[] = convertObjToImpl(impl, %nameObj, \"setFlags\");
+	if (err.csize) return err;
+
+	impl.data.flags = flags;
+	return \"\";
+};
+
+(volatile stateful any %nameObj, const stateful any registry) -> (const char error[]) setRegistry = {
+	%nameImpl impl;
+	char err[] = convertObjToImpl(impl, %nameObj, \"setRegistry\");
+	if (err.csize) return err;
+
+	registryData registryCopy = registryObj.copy(registry);
+	err = registryObj.check(registryCopy, registryMask);
+	if (err.csize) return err;
+
+	impl.data.registry = registryCopy;
+	impl.data.registrySet = 1;
+	return \"\";
+};
+
+%nameMethods %nameMethodsImpl = {
+	version,
+	getFlags,
+	setFlags,
+	setRegistry,
+	dump
+};"
+	},
+
+	{
+		"makefile for implementation",
+		"impl/%name.dpvmake",
+"%head
+
+#include \"%name.dpvmh\"
+
+/*@ \"mkError.dpvm\": compose error message */
+(const char mess[], const char func[]) -> (const char err[])
+	mkError = evaporated_backpedalled_retried;
+/* @*/
+
+/*@ \"convertObjToImpl.dpvm\": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
+(volatile stateful %nameImpl impl, const stateful any %nameObj, const char func[]) -> (const char error[])
+	convertObjToImpl = embalmer_viewpoint_outgrown;
+/* @*/
+
+/*@ \"dump.dpvm\": dump internal content of %nameObj object */
+(volatile stateful char out[], volatile stateful any %nameObj) -> (const char error[])
+	dump = etched_impair_supersedes;
+/* @*/
+
+/*@ \"methods.dpvm\": public methods implementation */
+%nameMethods %nameMethodsImpl = toasting_bewilderment_mincer;
+/* @*/"
+	},
+
+	{
+		"constructor",
+		"impl/create.dpvm",
+"%head
+
+#include \"%dpvm/lib/stdlib/stdlib.dpvmake\"
+#include \"%name.dpvmake\"
+
+() -> (volatile %nameClass obj) %nameCreate = {
+	%nameImpl impl;
+	%nameClass obj;
+
+	impl.methods = %nameMethodsImpl;
+	objcopyto(obj, impl);
+
+	return obj;
+};"
+	},
+
+	{
+		"dump demo",
+		"demo/dump.dpvm",
+"%head
+
+#include \"../%name.dpvmake\"
+
+(const stateful any registry, int flags) -> (const char error[]) dump = {
+	%nameClass %nameObj = %nameCreate();
+
+	char error[] = %nameObj.methods.setFlags(%nameObj, flags);
+	if (error.csize) return error;
+
+	error = %nameObj.methods.setRegistry(%nameObj, registry);
+	if (error.csize) return error;
+
+	char out[];
+	error = %nameObj.methods.dump(out, %nameObj);
+	if (error.csize) return error;
+
+	outputp(\"\", \"\", out);
+	return \"\";
+};"
+	},
+
+	{
+		"makefile for demos",
+		"demo/demo.dpvmake",
+"%head
+
+/*@ \"dump.dpvm\": creates %name object, sets flags to it and dumps it */
+(const stateful any registry, int flags) -> (const char error[])
+	dump = africa_disciple_investiture;
+/* @*/"
+	}
+
+};
+
+
+type rule = {
+	const char from[];
+	const char to[];
+};
+
+(const stateful rule rules[], const char input[]) -> (const char output[]) applyRules = {
+	int i;
+	for (i = 0; i < rules.lsize; i += 1) {
+		rule r = rules[i];
+		int pos;
+		do {
+			pos = strstr(input, r.from);
+			if (pos >= 0) {
+				char output[];
+				substrcat(output, input, 0, pos);
+				strcat(output, r.to);
+				substrcat(output, input, pos + r.from.csize, input.csize);
+				input = output;
+			}
+		} while (pos >= 0);
+	}
+	return input;
+};
+
+(const classFile file, const char path[], int time) -> (const char error[]) processFile = {
+	rule rules[];
+	char parts[][] = splitString(path, "/");
+	int nparts = parts.lsize;
+	if (!nparts)
+		return "Error: given path is empty.\r\n";
+
+	rule name = {"%name", parts[nparts - 1]};
+	rules.lpush(name);
+
+	dfsClass dfsObj = dfsCreate();
+	int dfsTime = dfsObj.methods.time2dfsTime(time);
+	char dfsTimeStr[];
+	printf(dfsTimeStr, "T%d.%03d", {dfsTime >> 32, dfsTime >> 20 & 0x3ff});
+	rule date = {"%date", dfsTimeStr};
+	rules.lpush(date);
+
+	char genStr[];
+	printf(genStr, "generated by %s", {version});
+	rule gen = {"%gen", genStr};
+	rules.lpush(gen);
+
+	char titleStr[];
+	printf(titleStr, "/* %s class, %s */\r\n/* Generated by %s */", {parts[nparts - 1], file.title, version});
+	rule title = {"%title", titleStr};
+	rules.lpush(title);
+
+	char headStr[];
+	printf(headStr, "/* %s class, %s, %s-%s; $DVS:time$ */\r\n/* Generated by %s */", {parts[nparts - 1], file.title, dfsTimeStr, dfsTimeStr, version});
+	rule head = {"%head", headStr};
+	rules.lpush(head);
+
+	char fullPath[];
+	printf(fullPath, "%s/%s", {path, applyRules(rules, file.path)});
+	char parts2[][] = splitString(fullPath, "/");
+	char dpvmStr[];
+	strcat(dpvmStr, "..");
+	int i;
+	for (i = parts2.lsize - 3; i >= 0 && parts2[i] != "dpvm"; i -= 1)
+		strcat(dpvmStr, "/..");
+	if (i < 0)
+		return "Error: folder 'dpvm' not found in given path.\r\n";
+	rule dpvm = {"%dpvm", dpvmStr};
+	rules.lpush(dpvm);
+
+	writep("", "", fullPath, applyRules(rules, file.content), 0);
+	return "";
+};
+
+(const char path[], const int values[]) -> () processFiles = {
+	int i;
+	for (i = 0; i < classFiles.lsize; i += 1) {
+		char error[] = processFile(classFiles[i], path, values[0]);
+		if (error.csize) {
+			outputp("", "", error);
+			return;
+		}
+	}
+	char mess[];
+	printf(mess, "Class source generated in folder '%s'.\r\n", {path});
+	outputp("", "", mess);
+	return;
+};
+
+(const char path[]) -> () generateClass = {
+	const int vars[] = {DPVM_SYS_PARAM_TIME};
+	getsys(processFiles, path, vars);
+	return;
+};

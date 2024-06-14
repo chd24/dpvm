@@ -1,0 +1,64 @@
+/* aiAlphabet class, koi8-r.ru.txt codetable */
+
+#include "../../../alphabet.dpvmh"
+#include "codetables.dpvmh"
+
+char version[] = "koi8-r.ru.txt codetable, ver 0.1.0, T18.413-T18.413"; /* $DVS:time$
+
+history:
+
+T18.413 ver 0.1.0 - first version
+
+*/
+
+aiAlphabetLettersArray
+small = {
+	{ "Á","Â","×","Ç","Ä","Å","£","Ö","Ú","É","Ê","Ë","Ì","Í","Î","Ï","Ð","Ò","Ó","Ô","Õ","Æ","È","Ã","Þ","Û","Ý","ß","Ù","Ø","Ü","À","Ñ" },
+	AI_ALPHABET_SMALL
+},
+big = {
+	{ "á","â","÷","ç","ä","å","³","ö","ú","é","ê","ë","ì","í","î","ï","ð","ò","ó","ô","õ","æ","è","ã","þ","û","ý","ÿ","ù","ø","ü","à","ñ" },
+	AI_ALPHABET_BIG
+},
+accents = {
+	{ "`", "'" },
+	AI_ALPHABET_ACCENT
+},
+spaces = {
+	{
+	  " ", "\t", "\r", "\n", ",", ":", "-", "(", ")", "\""
+	},
+	AI_ALPHABET_SPACE
+},
+skipped = {
+	{
+	  "[", "]", "{", "}", "...", "--", "*", "/", "=",
+	  "0","1","2","3","4","5","6","7","8","9",
+	  "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z",
+	  "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
+	  "&gt;", "&lt;"
+	},
+	AI_ALPHABET_SKIPPED
+},
+dots = {
+	{ ".", ";", "?", "!" },
+	AI_ALPHABET_DOT
+},
+paragraph = {
+	{ "\n\n", "\n\r\n", "\n   " },
+	AI_ALPHABET_PARAGRAPH
+};
+
+aiAlphabetPredefinedCodeTable ai_koi8_r_ru_txt = {
+	"koi8-r.ru.txt",
+	version,
+	{
+		small,
+		big,
+		accents,
+		spaces,
+		skipped,
+		dots,
+		paragraph
+	}
+};

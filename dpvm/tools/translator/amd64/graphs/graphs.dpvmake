@@ -1,0 +1,119 @@
+/* via-graphs translator for amd64, makefile; T16.613-T18.018; $DVS:time$ */
+
+#include "../../translator_utils.dpvmake"
+
+/* structure describing each gate in schema */
+type gate = {
+        volatile stateful this in0;	/* reference to gate connected to input 0 of this */
+        volatile stateful this in1;	/* reference to gate connected to input 1 of this */
+        volatile stateful this out0;	/* reference to gate connected to output 0 of this */
+        volatile stateful this out1;	/* reference to gate connected to output 1 of this */
+        volatile stateful this prev;	/* reference to previous gate in chain */
+        volatile stateful this next;	/* reference to next gate in chain */
+        int funcpos;                    /* position of bytecode associated with this gate */
+        int stackpos0;                  /* position of output 0 in stack or registers */
+        int stackpos1;                  /* position of output 1 in stacl or refisters */
+        int edgesmask;                  /* mask of existing inputs/outputs (4 bits) */
+        int flags;                      /* flags, see below */
+        int op;                         /* operation, see below */
+        int value;                      /* constant value, attached to the gate */
+        int depth;                      /* temporary value, depth of the gate */
+        int depthfrom;                  /* temporary value, input source of maximum depth */
+        int depthend;                   /* temporary value, depth if this is last gate of chain */
+        int depthendfrom;               /* temporary value, input source of such a depth */
+};
+
+/* structure describing schema */
+type schema = {
+        volatile stateful gate inputs[];    /* vector of input gates */
+        volatile stateful gate outputs[];   /* vector of output gates */
+        volatile stateful gate base;        /* base of dual list with prev/next links */
+        volatile int outright[];            /* vector of 0/1 there 1 if i-th output is output 1 of gate */
+        int startout;                       /* index of first output in the stack, = 0 */
+        int startmem;                       /* index of first position in the stack for temporary variables */
+        int nregs;                          /* number of used registers */
+        int nmems;                          /* number of used temporary variables in the stack */
+};
+
+/* gate operations */
+int op_none	 = 0x00;
+int op_const	 = 0x01;
+int op_neg	 = 0x10;
+int op_not	 = 0x11;
+int op_add	 = 0x20;
+int op_sub	 = 0x21;
+int op_mul	 = 0x22;
+int op_div	 = 0x23;
+int op_and	 = 0x24;
+int op_or	 = 0x25;
+int op_xor	 = 0x26;
+int op_shl	 = 0x28;
+int op_shr	 = 0x29;
+int op_rol	 = 0x2A;
+int op_ror	 = 0x2B;
+int op_eq	 = 0x30;
+int op_lt	 = 0x31;
+int op_gt	 = 0x32;
+int op_neq	 = 0x33;
+int op_geq	 = 0x34;
+int op_leq	 = 0x35;
+int op_fullmul	 = 0x40;
+
+/* gate flags */
+int flag_input		= 0x01;	/* 1 if gate is input */
+int flag_output0	= 0x02;	/* 1 if output 0 of the gate is output of the schema */
+int flag_in0right	= 0x04;	/* 1 if input 0 of gate connected to output 1 of that gate */
+int flag_32bit		= 0x08;	/* 1 if operation is 32-bit */
+int flag_output1	= 0x20;	/* 1 if output 1 of the gate is output of the schema */
+int flag_in1right	= 0x40; /* 1 if input 1 of gate connected to output 1 of that gate */
+
+
+/*@ "findend.dpvm": finds end of potentially compiled using this method segment 
+	of bytecodes starting from given beginning pos in function */
+(const stateful any func, int begin) -> (int end)
+	findend = demo_attenuation_soar;
+/* @*/
+
+/*@ "destroyschema.dpvm": destroys gate set, auto garbage cleaning not worked because 
+	of cyclic links */
+(volatile stateful schema res) -> () destroyschema = strider_fortune_ambivalently;
+/* @*/
+
+/*@ "makeschema.dpvm": creates schema for given segment of the function,
+	beginstack is size of integral stack at the beginning of segment */
+(const stateful any func, int begin, int end, int beginstack) 
+        -> (volatile stateful schema res, int status)
+	makeschema = upholders_scissored_sewage;
+/* @*/
+
+/*@ "removeconst.dpvm": removes const gates from scheme expect of const outputs */
+(volatile stateful schema s) -> () removeconst = saigon_controversy_radio;
+/* @*/
+
+/*@ "removeleaf.dpvm": removes leaf (not used) gates and 1-1 transit gates */
+(volatile stateful schema s) -> () removeleaf = belch_unsuppressed_restraint;
+/* @*/
+
+/*@ "shifts2rotates.dpvm": converts shifts back and forward to cyclic shift */
+(volatile stateful schema s) -> () shifts2rotates = arab_railwaymen_shortcut;
+/* @*/
+
+/*@ "addoutputleaf.dpvm": add leaf gaget for output if output is written to memory
+	before this memory cell is still used by input value */
+(volatile stateful schema s) -> () addoutputleaf = ratified_communing_announced;
+/* @*/
+
+/*@ "split2chains.dpvm": split all edges between gates into chains, each chain
+	corresponds rehister of memory cell */
+(volatile stateful schema s) -> () split2chains = roaster_ugliness_pagers;
+/* @*/
+
+/*@ "assembly.dpvm": output schema as seuence of assembly instructions */
+(volatile stateful asm_instr list[], const stateful any func, volatile stateful schema s) 
+	-> () assembly = clothespeg_infiltrate_auspice;
+/* @*/
+
+/*@ "main.dpvm": full translation cycle from function to machina code */
+(volatile stateful audience_trigs_modelling machcode, const stateful any func) 
+	-> (int res) amd64_graphs = mbabane_debilitate_centuries;
+/* @*/                                     

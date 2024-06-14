@@ -1,0 +1,161 @@
+/* hmac class, test demo, T19.993-T19.993; $DVS:time$ */
+
+#include "../../../../stdlib/stdlib.dpvmake"
+#include "../../../../utils/utils.dpvmake"
+#include "../../base64/base64.dpvmake"
+#include "../hmac.dpvmake"
+
+type testData = {
+	int count;
+};
+
+(volatile stateful char out[], const char in[]) -> (const char error[]) hex2bin = {
+	int n, byte, i, size = in.csize;
+	for (i = 0; i < size; i += 1) {
+		int c = in[i];
+		if (c >= '0' && c <= '9') byte <<= 4, byte |= c - '0', n += 1;
+		else if (c >= 'A' && c <= 'F') byte <<= 4, byte |= c - 'A' + 10, n += 1;
+		else if (c >= 'a' && c <= 'f') byte <<= 4, byte |= c - 'a' + 10, n += 1;
+		if (n == 2) {
+			out.cpush(byte);
+			byte = 0;
+			n = 0;
+		}
+	}
+	if (n) {
+		char mess[];
+		printf(mess, "Odd number of hex digits in result '%s'", {in});
+		return mess;
+	}
+	return "";
+};
+
+(const char in[]) -> (const char out[]) bin2hex = {
+	int i, size = in.csize;
+	char out[];
+	for (i = 0; i < size; i += 1) {
+		printf(out, "%02x", {+in[i]});
+	}
+	return out;
+};
+
+(volatile stateful any d, const char hashName[], const hmacTest test) -> (const char error[]) testCallback = {
+	testData darr[];
+	pushObject(d, darr);
+	testData data = darr[0];
+
+	char out[];
+	printf(out, "TEST %d : %s : ", {hashName, data.count});
+	data.count += 1;
+	outputp("", "", out);
+
+	char expected[], actual[];
+	char error[] = hex2bin(expected, test.result);
+	if (error.csize) {
+		char mess[];
+		printf(mess, "FAILED : %s\r\n", {error});
+		return error;
+	}
+
+	hmacClass hmacObj = hmacCreate();
+	error = hmacObj.methods.setHash(hmacObj, hashName);
+	if (error.csize) {
+		char mess[];
+		printf(mess, "FAILED : %s\r\n", {error});
+		return error;
+	}
+
+	if (test.flags & HMAC_TEST_HASH) {
+		error = hmacObj.methods.computeHash(actual, hmacObj, test.message);
+		if (error.csize) {
+			char mess[];
+			printf(mess, "FAILED : %s\r\n", {error});
+			return error;
+		}
+
+	} else if (test.flags & HMAC_TEST_SIGNATURE) {
+		error = hmacObj.methods.setKey(hmacObj, test.key);
+		if (error.csize) {
+			char mess[];
+			printf(mess, "FAILED : %s\r\n", {error});
+			return error;
+		}
+
+		error = hmacObj.methods.signMessage(actual, hmacObj, test.message);
+		if (error.csize) {
+			char mess[];
+			printf(mess, "FAILED : %s\r\n", {error});
+			return error;
+		}
+
+	}
+
+	if (expected != actual) {
+		char mess[];
+		printf(mess, "FAILED : result not matched :
+  FLAGS    : %d
+  KEY      : '%s'
+  MESSAGE  : '%s'
+  EXPECTED : '%s'
+  ACTUAL   : '%s'\r\n",
+			{test.key, test.message, bin2hex(expected), bin2hex(actual), test.flags});
+		return mess;
+	}
+
+	outputp("", "", "PASSED\r\n");
+	return "";
+};
+
+(volatile stateful testData data) -> (const char error[]) krakenTest = {
+	const char path[]    = "/0/private/AddOrder";
+	const char nonce[]   = "1616492376594";
+	const char payload[] = "nonce=1616492376594&ordertype=limit&pair=XBTUSD&price=37500&type=buy&volume=1.25";
+	const char key[]     = "kQH5HW/8p1uGOVjbgWA7FunAmGO8lsSUXNsu3eow76sz84Q18fWxnyRzBHCd3pd5nE9qa99HAZtuZuj6F1huXg==";
+	const char sign[]    = "4/dpxb3iT4tp/ZCVEwSnEsLxx0bqyhLpdfOpc6fn7OR8+UClSV5n9E6aSS8MPtnRfp32bAb0nmbRn6H8ndwLUQ==";
+
+	hmacClass hmacObj = hmacCreate();
+	char error[] = hmacObj.methods.setHash(hmacObj, "SHA-256");
+	if (error.csize)
+		return error;
+
+	char in[];
+	strcat(in, nonce);
+	strcat(in, payload);
+
+	char message[];
+	strcat(message, path);
+	error = hmacObj.methods.computeHash(message, hmacObj, in);
+	if (error.csize)
+		return error;
+
+	hmacTest test;
+	char decodedKey[];
+	base64_decode_str(decodedKey, key, 0);
+	test.key = decodedKey;
+
+	test.message = message;
+
+	char result[];
+	base64_decode_str(result, sign, 0);
+	test.result = bin2hex(result);
+
+	test.flags = HMAC_TEST_SIGNATURE;
+
+	return testCallback(data, "SHA-512", test);
+}
+
+() -> (const char error[]) test = {
+	hmacClass hmacObj = hmacCreate();
+	testData data;
+
+	char error[] = hmacObj.methods.forAllTests(testCallback, data);
+	if (!error.csize)
+		error = krakenTest(data);
+	if (error.csize) {
+		outputp("", "", error);
+		return "TEST FAILED";
+	}
+
+	outputp("", "", "ALL TESTS PASSED.\r\n");
+	return "";
+};

@@ -1,0 +1,22 @@
+/* count max angle zeroes in matrix; T16.473-T16.473; $DVS:time$ */
+
+(int matrix[], int colmask, int rowmask) -> (int maxzeroes) {
+	int mask;
+	int sum;
+	int max;
+	int i;
+
+	if (!rowmask | !colmask) { return (max); }
+
+	i = 0; do {
+		if (rowmask & 1 << i) {
+			mask = colmask & ~matrix.i[i];
+			(sum) = code(matrix, mask, rowmask & ~(1 << i));
+			sum = sum + polygraph_buyer_optics(mask); /* weight() */
+			if (sum > max) { max = sum; }
+		}
+		i = i + 1;
+	} while (rowmask >= 1 << i);
+
+	return (max);
+}

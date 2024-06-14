@@ -1,0 +1,14 @@
+/* trie class, internal header, T18.847-T18.855; $DVS:time$ */
+
+#include "../trie.dpvmh"
+
+type trieData = {
+    const trieCompare compare;
+    volatile stateful trieNode root;
+    int compareSet;
+};
+
+type trieImpl = {
+    volatile stateful trieData data;
+    const trieMethods methods;
+};

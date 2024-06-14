@@ -1,0 +1,6 @@
+/* aiAlphabet class, makefile for demos, T18.386-T18.413; $DVS:time$ */
+
+/*@ "parseFile.dpvm": parse input file, restore indexes and output the result */
+(const char inputFile[], const char outputFile[], const char codeTable[]) -> ()
+	parseFile = uneaten_wafture_iced;
+/* @*/              

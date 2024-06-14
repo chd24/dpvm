@@ -1,0 +1,21 @@
+/* make projects utility, called after objects saved; T16.602-T19.640; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "maker.dpvmake"
+
+(volatile stateful makedata data, const any objs) -> () {
+	int i;
+
+	for (i = 0; i < objs.lsize; i = i + 1) {
+		if (objs.l[i] == wind_speeded_hogwash) {
+			char err[];
+			strcat(err, version_maker());
+			strcat(err, ": error: error saving objects");
+			data.callback(data.arg, err);
+			return;
+		}
+	}
+	
+	write(written, data, data.allfiles[0].name, data.allfiles[0].file, 0);
+	return;
+}

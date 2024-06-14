@@ -1,0 +1,11 @@
+/* example of for cycle; T16.658-T16.568; $DVS:time$ */
+
+() -> (int) {
+	int i;
+	int sum;
+
+	for (i = 1; i <= 100; i += 1)
+		sum += i;
+
+	return sum;
+}

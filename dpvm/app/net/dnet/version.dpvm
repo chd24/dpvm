@@ -1,0 +1,79 @@
+/* return version of dnet module */
+	
+char version[] = "Dnet version 0.3.7, T17.534-T19.640"; /* $DVS:time$ */
+
+() -> (const char version[]) {
+	return version;
+}
+
+/* history:
+
+T19.640 ver 0.3.9: compiled with new registry; used timeZone and debugLevel environment variables
+
+T18.516 ver 0.3.8: added flag DNET_FLAG_MOBILE to generate weak keys for android platform
+
+T18.361 ver 0.3.7: added system registry to call monitor through it
+
+T18.227 ver 0.3.6: checked with checker 0.2
+
+T17.934 ver 0.3.5: added more output for rsa key generation
+
+T17.928 ver 0.3.4: added rsa key generation; if flags parameter has bit0 == 1 (first run),
+                   then program asks random text at startup and if key file is absent,
+                   then generates key file
+
+T17.641 ver 0.3.3: changed modifiers const/stateful/volatile due to new checker
+
+T17.627 ver 0.3.2: pre-allocating and removing mailbox addresses
+
+T17.595 ver 0.3.1: download 2 more files, trust hosts enabled
+
+T17.592 ver 0.3.0: implemented dpvm command which executes any dpvm monitor command
+
+T17.589 ver 0.2.9: rework control connections; correct profile evaluation
+
+T17.588 ver 0.2.8: fixed bug in cleanup of old connections; 
+		   added number of threads to each message in log file
+
+T17.586 ver 0.2.7: fixed bug on late reconnect after resume; cleanup old connections
+
+T17.583 ver 0.2.6: added sleep command
+
+T17.582 ver 0.2.5: fixed bugs with memory leak and reconnect after resume, 
+		   enhanced debug messages
+
+T17.578 ver 0.2.4: crc32 optimization
+
+T17.575 ver 0.2.3: continue fixed bugs
+
+T17.574 ver 0.2.2: fixed bugs, improved routing
+
+T17.573 ver 0.2.1: fixed bugs
+
+T17.572 ver 0.2.0: reconnect, send exchange and update packets
+
+T17.570 ver 0.1.5: added route command, fixed bug
+
+T17.567 ver 0.1.4: added mediator service to exchange context info between threads
+
+T17.564 ver 0.1.3: added overcats encoding
+	ver 0.1.2: add hosts and conn commands, process exchange and update packets
+
+T17.561 ver 0.1.1: correct processing of incoming packets
+
+T17.559 ver 0.1.0: first version which can reply on external command messages
+
+T17.553 ver 0.0.7: decrypt incoming data and search for packets
+
+T17.552 ver 0.0.6: added rsa encryption/decryption, continuous connection
+
+T17.550 ver 0.0.5: added check of key file using cryptography functions
+
+T17.545 ver 0.0.4: added first version of connect and bind commands
+
+T17.542 ver 0.0.3: added control connections and terminate command
+	ver 0.0.2: first working version with exit and help commands
+
+T17.534	Dnet over dpvm project started, version 0.0.1
+
+*/

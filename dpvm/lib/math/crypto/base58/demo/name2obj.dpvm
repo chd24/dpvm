@@ -1,0 +1,39 @@
+/* base58 class, name2obj demo, T19.570-T20.166; $DVS:time$ */
+
+#include "../../../../stdlib/stdlib.dpvmake"
+#include "../../../../utils/utils.dpvmake"
+#include "../../../../../app/net/p2p/p2p_io.dpvmake"
+#include "../base58.dpvmake"
+
+int TIMEOUT = 10000000000;
+
+(const stateful char name[]) -> (const char error[]) name2obj = {
+	base58Class base58Obj = base58Create();
+
+	int hashes[], err = base58Obj.methods.decodeHash(hashes, base58Obj, name, 0, name.csize);
+
+	if (!err) {
+		const (const int hashes[], const any objs) -> () callback = {
+			char mess[];
+			printf(mess, "Object with hash (%x, %x, %x, %x) ", {hashes[0], hashes[1], hashes[2], hashes[3]});
+
+			int h0, h1, h2, h3;
+			(h0, h1, h2, h3) = getfullhash(objs.l[0]);
+
+			if (h0 == hashes[0] && h1 == hashes[1] && h2 == hashes[2] && h3 == hashes[3])
+				printf(mess, "found: %p.\r\n", {objs.l[0]});
+			else
+				printf(mess, "not found.\r\n", {});
+
+			outputp("", "", mess);
+			return;
+		};
+
+		mload_p2p(callback, hashes, hashes, TIMEOUT);
+		return "";
+	}
+
+	char error[];
+	printf(error, "Illegal name, error %d.", {err});
+	return error;
+};

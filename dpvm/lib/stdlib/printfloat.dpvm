@@ -1,0 +1,31 @@
+/* print float; T15.585-T16.654; $DVS:time$ */
+
+#include "stdlib.dpvmake"
+	
+(volatile stateful char dst[], float x, int precision) -> () {
+	int n;
+	char c;
+
+	if (x < 0) { dst.cpush('-'); x = -x; }
+
+	n = ffloor(x);
+	if (n < 0) {
+		strcat(dst, "nan");
+		return;
+	}
+
+	x = x - n;
+
+	printint(dst, n, 1);
+	dst.push('.');
+
+	while (precision) {
+		x = x * 10;
+		n = ffloor(x);
+		x = x - n;
+		dst.cpush(n + '0');
+		precision = precision - 1;
+	}
+
+	return;
+}

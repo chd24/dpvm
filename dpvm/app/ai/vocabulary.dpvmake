@@ -1,0 +1,8 @@
+/* aiVocabulary class, makefile for constructor, T18.397-T18.434; $DVS:time$ */
+
+#include "vocabulary.dpvmh"
+
+/*@ "impl/vocabulary/create.dpvm": create vocabulary object */
+() -> (volatile aiVocabulary obj)
+	aiVocabularyCreate = megatons_curlers_dews;
+/* @*/                

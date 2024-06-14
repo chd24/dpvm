@@ -1,0 +1,29 @@
+/* add asm instruction; T16.083-T18.018; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[],
+                const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> () {
+	asm_instr instr;
+	int prev;
+	int index;
+
+	prev = list[next].prev;
+
+	instr.mnem = mnem;
+	instr.hex = hex;
+	instr.prev = prev;
+	instr.next = next;
+	instr.param0 = paramA;
+	instr.param1 = paramB;
+	instr.param2 = paramC;
+	instr.param3 = paramD;
+
+	index = list.lsize;
+	list.push(instr);
+	list[prev].next = index;
+	list[next].prev = index;
+
+	return;
+}

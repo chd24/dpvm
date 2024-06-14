@@ -1,0 +1,27 @@
+# newslog: list of ru feeds; T15.592-T17.061; $DVS:time$
+
+Hi-News         https://hi-news.ru/feed
+Kerch           https://www.kerch.com.ru/RSS/LastNews.aspx?id=1
+Meduza          https://meduza.io/rss/all
+N+1             https://nplus1.ru/rss
+Newsru          http://rss.newsru.com/all_news
+Polit           http://www.polit.ru/feeds
+Republic        https://republic.ru/export/all.xml
+Tunna           https://tunna.livejournal.com/data/rss/
+Znak            https://www.znak.com/rss
+Бумага          https://paperpaper.ru/feed/
+Ведомости       https://www.vedomosti.ru/rss/news
+Дождь           https://tvrain.ru/export/rss/all.xml
+Мехмат          https://math.msu.ru/rss.xml
+Новая           https://content.novayagazeta.ru/rss/all.xml
+Погода-Мск      https://meteoinfo.ru/rss/forecasts/index.php?s=27612
+Погода-Клин     https://meteoinfo.ru/rss/forecasts/index.php?s=27417
+Постнаука       https://postnauka.ru/feed
+РБК             http://static.feed.rbc.ru/rbc/logical/footer/news.rss
+Росбалт         http://www.rosbalt.ru/feed/
+Сноб            https://snob.ru/rss/
+Фонтанка        http://www.fontanka.ru/fontanka.rss
+Хабр            https://habr.com/ru/rss/best/daily/
+Элементы        http://elementy.ru/rss/news
+Эхо             https://echo.msk.ru/blog/rss.xml
+Эхо             https://echo.msk.ru/interview/rss-fulltext.xml

@@ -1,0 +1,13 @@
+/* function called after reply received from the server; T16.505-T18.002; $DVS:time$ */
+
+#include "wget.dpvmake"
+
+(wget_data data, const char text[], int status) -> () {
+	if (status <= 0) /* end of stream, error or timeout expired */
+		return;
+
+	writep("", "", data.file, text, -1); /* write to the end of file */
+
+	input(code, data, 0x100000, TIMEOUT); /* recursive call to read next part of reply */
+	return;
+}

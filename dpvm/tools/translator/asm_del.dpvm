@@ -1,0 +1,24 @@
+/* del asm instruction; T16.083-T17.684; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], int next) -> (int newnext) {
+	int index;
+	int prev;
+	
+	index = list[next].prev;
+	prev = list[index].prev;
+
+	list[prev].next = next;
+	list[next].prev = prev;
+
+	if (index != list.lsize - 1) {
+		list[index] = list[list.lsize - 1];
+		list[list[index].prev].next = index;
+		list[list[index].next].prev = index;
+		if (next == list.lsize - 1) next = index;
+	}
+	list.lpop(1);
+	
+	return next;
+}

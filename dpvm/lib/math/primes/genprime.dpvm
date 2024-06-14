@@ -1,0 +1,237 @@
+/* generate long probably prime number greather than given */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../long/long.dpvmake"
+#include "primes.dpvmake"
+
+char version[] = "genprime 0.1.1 T17.922-T18.227"; /* $DVS:time$ */
+
+int MILLER_RABIN_ROUNDS_PER_WORKER  = 5;
+
+type mailaddr = {
+    const char version[];
+    int n[];
+    int flags;
+};
+
+type mailmess = {
+    const char mess[];
+    int messtype;
+    int offset;
+    int result;
+};
+
+int MESS_START      = 0;
+int MESS_RESULT     = 1;
+int MESS_ERROR      = 2;
+int MESS_FINISH     = 3;
+
+type logger = {
+    const mailaddr addr;
+    const any objs;
+    const any read_mess;
+};
+
+(volatile stateful logger log, const mailmess mess, const int values[]) -> () log_one {
+    char out[];
+
+    int timezone = log.addr.flags >> 8 & 0xf;
+    if (log.addr.flags & 0xf000) timezone = -timezone;
+
+    strftime(out, "%Y-%m-%d %H:%M:%S", values[0], timezone);
+    out.cpush('.');
+    printint(out, values[0] / 1000000 % 1000, 3);
+    strcat(out, "  [");
+    substrcat(out, "STARESERRFIN", mess.messtype * 3, (mess.messtype + 1) * 3);
+    out.cpush(':');
+    out.cpush('+');
+    printint(out, mess.offset, 4);
+    out.cpush(':');
+    printint(out, mess.result, 5);
+    out.cpush(']');
+    out.cpush(' ');
+    strcat(out, mess.mess);
+    out.cpush('\r');
+    out.cpush('\n');
+
+    outputp("", "", out);
+    return;
+}
+
+(volatile stateful logger log, const int values[]) -> () log_all {
+    int i;
+
+    for (i = 0; i < log.objs.lsize; i += 1) {
+            mailmess mess;
+            if (mess.type != log.objs.l[i].type) {
+                    mess.mess = "Dropped mailbox message of illegal format";
+                    mess.messtype = MESS_ERROR;
+            } else {
+                    objcopyto(mess, log.objs.l[i]);
+            }
+
+            log_one(log, mess, values);
+
+            if (mess.messtype == MESS_FINISH || mess.messtype == MESS_ERROR && mess.result == 6)
+                return;
+    }
+
+    mrecv(log.read_mess, log, log.addr, -1);
+    return;
+
+}
+
+(volatile stateful logger log, const any objs, int status) -> () read_mess {
+    if (status) {
+        mailmess m;
+        m.mess = "Error receiving mail in logger";
+        m.messtype = MESS_ERROR;
+        m.result = status;
+        any objs1;
+        objs1.lpush(m);
+        objs = objs1;
+    }
+    log.objs = objs;
+    const int vars[] = {0};
+    getsys(log_all, log, vars);
+    return;
+}
+
+(const mailaddr addr, const any objs, int status) -> () read_first_mess {
+    logger log;
+    log.addr = addr;
+    log.read_mess = read_mess;
+    read_mess(log, objs, status);
+    return;
+}
+
+
+(const mailaddr addr, int offset) -> (int res, int offset) worker {
+    int n[] = copy_long(addr.n);
+    int max_rounds = MILLER_RABIN_ROUNDS_PER_WORKER;
+    int flags = addr.flags;
+    int res;
+    add_short(n, offset);
+
+    do {
+        res = prime_long(n, 1);
+
+        if (flags & 1) {
+            mailmess mess;
+            if (res) {
+                mess.mess = "Composite";
+            } else {
+                mess.mess = "Probably prime after 1 round";
+            }
+            mess.messtype = MESS_RESULT;
+            mess.offset = offset;
+            mess.result = res;
+            msendp("", "", addr, mess);
+        }
+
+        if (!res)
+            return (1, offset);
+
+        offset += 60;
+        add_short(n, 60);
+
+        if (res % 10 == 5)
+            max_rounds -= res / 10 + 1;
+    } while (max_rounds > 0);
+
+    return (0, offset);
+}
+
+/* flags:
+	bit 0 - output debug information
+        bits 8..15 - timezone (0x03 for +3, 0xf3 for -3)
+*/
+(volatile stateful int n[], int flags) -> () {
+    const int remainders[] = {7, 11, 19, 23, 31, 43, 47, 59, 67};
+
+    mailaddr addr;
+    addr.version = version;
+    addr.n = copy_long(n);
+    addr.flags = flags;
+
+    if (flags & 1) {
+        mrecvp("", "", addr, 0);
+        mrecvp(read_first_mess, addr, addr, -1);
+        mailmess mess;
+        mess.messtype = MESS_START;
+        mess.mess = version;
+        msendp("", "", addr, mess);
+    }
+
+    if (!n.isize)
+        n.ipush(0);
+
+    if (n.isize == 1) {
+        int res = nextprime(n[0]);
+        if (res) {
+            if (flags & 1) {
+                mailmess mess;
+                mess.mess = "Small prime";
+                mess.messtype = MESS_FINISH;
+                mess.offset = res - n[0];
+                mess.result = 0;
+                msendp("", "", addr, mess);
+            }
+            n[0] = res;
+            return;
+        }
+    }
+
+    int rem = mod_short(n, 60);
+    int i;
+    int index;
+    for (i = 0; i < 8; i += 1) {
+        if (remainders[i] >= rem)
+            index = i, i = 8;
+    }
+
+    int offset = remainders[index] - rem;
+    int offsets[8];
+    int res[8];
+    for (i = 0; i < 8; i += 1) {
+        offsets[i] = offset;
+        offset += remainders[index + 1] - remainders[index];
+        index += 1;
+        if (index == 8)
+            index = 0;
+    }
+
+    while(1) {
+        [
+            (res[0], offsets[0]) = worker(addr, offsets[0]);
+            (res[1], offsets[1]) = worker(addr, offsets[1]);
+            (res[2], offsets[2]) = worker(addr, offsets[2]);
+            (res[3], offsets[3]) = worker(addr, offsets[3]);
+            (res[4], offsets[4]) = worker(addr, offsets[4]);
+            (res[5], offsets[5]) = worker(addr, offsets[5]);
+            (res[6], offsets[6]) = worker(addr, offsets[6]);
+            (res[7], offsets[7]) = worker(addr, offsets[7]);
+        ]
+
+        for (i = 0; i < 8; i += 1) {
+            if (res[i]) {
+                int nn[] = copy_long(n);
+                add_short(nn, offsets[i]);
+                if (!prime_long(nn, (1 << 63) - 1)) {
+                    if (flags & 1) {
+                        mailmess mess;
+                        mess.mess = "Probably prime";
+                        mess.messtype = MESS_FINISH;
+                        mess.offset = offsets[i];
+                        msendp("", "", addr, mess);
+                    }
+                    add_short(n, offsets[i]);
+                    return;
+                }
+                offsets[i] += 60;
+            }
+        }
+    }
+
+    return;
+}

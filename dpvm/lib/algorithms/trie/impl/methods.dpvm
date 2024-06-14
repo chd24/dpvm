@@ -1,0 +1,186 @@
+/* trie class, methods implementation, T18.847-T18.871; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "trie.dpvmake"
+#include "version.dpvmh"
+
+(volatile stateful any trieObj, const trieCompare compare) -> (const char error[]) setCompare = {
+    trieImpl impl;
+    char err[] = convertObjToImpl(impl, trieObj, "setCompare");
+    if (err.csize) return err;
+
+    impl.data.compare = compare;
+    impl.data.compareSet = 1;
+
+    return "";
+};
+
+(volatile stateful any trieObj, const any key, volatile any value) -> (const char error[]) addKeyValue = {
+    trieImpl impl;
+    char err[] = convertObjToImpl(impl, trieObj, "addKeyValue");
+    if (err.csize) return err;
+
+    if (!impl.data.compareSet)
+        return mkError("compare not set", "addKeyValue");
+
+    int dir = -1, bitNo, left, right;
+    (bitNo, left, right) = impl.data.compare(key, key);
+
+    trieNode node = impl.data.root, parentNode, newNode = {key, value,,, bitNo, TRIE_FLAG_KEY | TRIE_FLAG_VALUE};
+
+    do {
+        if (!(node.flags & TRIE_FLAG_KEY)) {
+            impl.data.root = newNode;
+            return "";
+        }
+
+        if (node.key == key)
+            return mkError("key already added", "addKeyValue");
+
+        (bitNo, left, right) = impl.data.compare(node.key, key);
+
+        if (bitNo < node.bitNo) {
+            if (!right) {
+                trieNode tmpNode = {key,, newNode, node, bitNo, TRIE_FLAG_KEY | TRIE_FLAG_LEFT | TRIE_FLAG_RIGHT};
+                newNode = tmpNode;
+            } else if (right > 0) {
+                trieNode tmpNode = {key,, node, newNode, bitNo, TRIE_FLAG_KEY | TRIE_FLAG_LEFT | TRIE_FLAG_RIGHT | TRIE_FLAG_KEY_DIR};
+                newNode = tmpNode;
+            } else if (!left)
+                newNode.left = node,
+                newNode.flags |= TRIE_FLAG_LEFT;
+            else if (left > 0)
+                newNode.right = node,
+                newNode.flags |= TRIE_FLAG_RIGHT;
+            else
+                return mkError("internal error (0)", "addKeyValue");
+
+            if (!dir)
+                parentNode.left = newNode;
+            else if (dir > 0)
+                parentNode.right = newNode;
+            else
+                impl.data.root = newNode;
+
+            return "";
+        }
+
+        if (bitNo > node.bitNo)
+            right = node.flags & TRIE_FLAG_KEY_DIR;
+
+        if (!right) {
+            if (node.flags & TRIE_FLAG_LEFT)
+                (parentNode, node) = (node, node.left),
+                dir = 0;
+            else {
+                node.left = newNode;
+                node.flags |= TRIE_FLAG_LEFT;
+                return "";
+            }
+        } else if (right > 0) {
+            if (node.flags & TRIE_FLAG_RIGHT)
+                (parentNode, node) = (node, node.right),
+                dir = 1;
+            else {
+                node.right = newNode;
+                node.flags |= TRIE_FLAG_RIGHT;
+                return "";
+            }
+        } else if (node.flags & TRIE_FLAG_VALUE)
+            return mkError("internal error (1)", "addKeyValue");
+        else {
+            node.key = key;
+            node.value = value;
+            node.flags |= TRIE_FLAG_VALUE;
+            node.flags &= ~TRIE_FLAG_KEY_DIR;
+            return "";
+        }
+    } while (1);
+
+    return mkError("internal error (2)", "addKeyValue");
+};
+
+(volatile stateful any trieObj, const any key) -> (volatile stateful trieNode node, const char error[]) findKey = {
+    trieImpl impl;
+    trieNode empty;
+    char err[] = convertObjToImpl(impl, trieObj, "findKey");
+    if (err.csize) return (empty, err);
+
+    trieNode node = impl.data.root;
+
+    if (!impl.data.compareSet)
+        return (empty, mkError("compare not set", "findKey"));
+
+    do {
+        if (!(node.flags & TRIE_FLAG_KEY))
+            return (empty, mkError("not found (0)", "findKey"));
+
+        if (node.key == key && (node.flags & TRIE_FLAG_VALUE))
+            return (node, "");
+
+        int bitNo, left, right;
+        (bitNo, left, right) = impl.data.compare(node.key, key);
+
+        if (bitNo < node.bitNo)
+            return (empty, mkError("not found (1)", "findKey"));
+
+        if (bitNo > node.bitNo)
+            right = node.flags & TRIE_FLAG_KEY_DIR;
+
+        if (!right) {
+            if (node.flags & TRIE_FLAG_LEFT)
+                node = node.left;
+            else
+                return (empty, mkError("not found (2)", "findKey"));
+        } else if (right > 0) {
+            if (node.flags & TRIE_FLAG_RIGHT)
+                node = node.right;
+            else
+                return (empty, mkError("not found (3)", "findKey"));
+        } else
+            return (empty, mkError("not found (4)", "findKey"));
+    } while (1);
+
+    return (empty, "internal error");
+};
+
+(volatile stateful any trieObj, volatile stateful any data,
+	const (volatile stateful any data, volatile stateful trieNode parentNode, volatile stateful trieNode node, int dir) -> () callback)
+        -> (const char error[]) traverseDown = {
+    trieImpl impl;
+    char err[] = convertObjToImpl(impl, trieObj, "traverseDown");
+    if (err.csize) return err;
+
+    if (!impl.data.compareSet)
+        return mkError("compare not set", "traverseDown");
+
+    trieNode queue[];
+
+    if (impl.data.root.flags & TRIE_FLAG_KEY) {
+        trieNode empty;
+        queue.lpush(impl.data.root);
+	callback(data, empty, queue[0], -1);
+    }
+
+    int i;
+    for (i = 0; i < queue.lsize; i += 1) {
+        if (queue[i].flags & TRIE_FLAG_LEFT)
+	    callback(data, queue[i], queue[i].left, 0),
+            queue.lpush(queue[i].left);
+
+        if (queue[i].flags & TRIE_FLAG_RIGHT)
+	    callback(data, queue[i], queue[i].right, 1),
+            queue.lpush(queue[i].right);
+    }
+
+    return "";
+};
+
+trieMethods trieMethodsImpl = {
+    version,
+    setCompare,
+    addKeyValue,
+    findKey,
+    traverseDown
+};

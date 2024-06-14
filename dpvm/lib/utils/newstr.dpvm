@@ -1,0 +1,7 @@
+/* return empty non-const string; T16.498-T16.498; $DVS:time$ */
+
+(int fictive) -> (char str[]) {
+	char str[];
+	
+	return (str);
+}

@@ -1,0 +1,37 @@
+/* io_handle: main; T17.155-T17.156; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "io_handle.dpvmake"
+
+(const io_handle data, int mode) -> () run {
+	char str[];
+
+	strcat(str, data.version);
+	strcat(str, ": program ");
+	strcat(str, data.progname);
+	strcat(str, " launched.\n");
+
+	outputp("", "", str);
+	return;
+}
+
+(const io_handle data, const int values[]) -> () start {
+	/* setup handler */
+	const int dbparams[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler, data, dbparams);
+
+	char args[][];
+	mpopen(run, data, data.progname, args, 1);
+	return;
+}
+
+(const char progname[], int time_offset) -> () {
+	io_handle data;
+	data.version = version();
+	data.progname = progname;
+	data.time_offset = time_offset;
+
+	const int vars[] = {0x201};
+	getsysp(start, data, vars);
+	return;
+}

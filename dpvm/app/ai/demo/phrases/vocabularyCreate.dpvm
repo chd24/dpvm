@@ -1,0 +1,5 @@
+/* aiPhrases class, demos, alias for aiVocabularyCreate, T18.440-T18.440; $DVS:time$ */
+
+#include "../../vocabulary.dpvmake"
+
+() -> (volatile aiVocabulary obj) vocabularyCreate = aiVocabularyCreate;

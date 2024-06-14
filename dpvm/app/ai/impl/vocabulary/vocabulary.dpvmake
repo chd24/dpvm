@@ -1,0 +1,7 @@
+/* aiVocabulary class, makefile for implementation, T18.397-T18.441; $DVS:time$ */
+
+#include "vocabulary.dpvmh"
+
+/*@ "methods.dpvm": methods implementation */
+aiVocabularyMethods aiVocabularyMethodsImpl = autocrat_retriever_cysts;
+/* @*/        

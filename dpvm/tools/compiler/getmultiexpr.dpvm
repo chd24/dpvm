@@ -1,0 +1,147 @@
+/* dpvm: get multi expression; T15.573-T20.113; $DVS:time$ */
+
+/* expr | (multiexpr, ..., multiexpr)
+ *
+ * write bytecodes to dst, increase ndst to number of written bytes;
+ * status = type (0,1,2,3,4,5) or -1 on failure
+ * type 4 means built-in math (as fsqrt) or io (as output) function
+ * type 5 means multiexpr, res = struct type
+ */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr, volatile stateful type castto, int inbraces)
+		-> (const type res, int segments[], int status) {
+	int segments[];
+	type res;
+
+	/* read next lexem and check if it is ( */
+	int status;
+	int pos0 = data.i[5];
+
+	if (!inbraces) {
+		int nlinks  = data.i[0];
+		int nints   = data.i[1];
+		int nfloats = data.i[2];
+		int nchars  = data.i[3];
+		int ndst    = data.i[4];
+
+		segments.push(pos0);
+		type t;
+		(t, status) = getexpr(data, instr);
+		segments.push(data.i[5]);
+
+		if (status == 5) {
+			if (castto.i[8] | castto.i[9] | castto.i[10] | castto.i[11]) {
+				castto.i[8] -= t.i[8];
+				castto.i[9] -= t.i[9];
+				castto.i[10] -= t.i[10];
+				castto.i[11] -= t.i[11];
+				if ((castto.i[8] | castto.i[9] | castto.i[10] | castto.i[11]) < 0) {
+					data.mess = "can't cast multi expression for return/assign";
+					data.pos = pos0;
+					status = -2;
+				}
+			}
+			return (t, segments, status);
+		} else if (status >= 0) {
+			int i;
+			for (i = 0; i < 4; i++) {
+				if (castto.i[8 + i]) {
+					status = typecast(data, i, status);
+					if (!status) status = i; 
+					castto.i[8 + i] -= 1;
+					return (t, segments, status);
+				}
+			}
+			return (t, segments, status);
+		} else if (status == -2)
+			return (t, segments, status);
+
+		data.l[4].cpop(data.i[4] - ndst);
+		data.nlinks = nlinks;
+		data.nints = nints;
+		data.nfloats = nfloats;
+		data.nchars = nchars;
+		data.ndst = ndst;
+		data.pos = pos0;
+		segments.ipop(2);
+	}
+	
+	int pos;
+	int end;
+
+	(pos, end, status) = getlexem(data.l[5], lexems, data.i[5], data.i[6]);
+	if (status) {
+		if (inbraces) {
+			data.mess = "( expected at the beginning of multi expression";
+			status = -2;
+		} else
+			status = -1; 
+		return (res, segments, status); 
+	}
+	data.pos = pos;
+
+	(pos, end, status) = getlexem(data.l[5], lexems, data.i[5], data.i[6]);
+	int iter;
+	while (status != 1) {
+		type t;
+
+		int segms[];
+		(t, segms, status) = code(data, instr, getexpr, castto, 0);
+		int j;
+		for (j = 0; j < segms.isize; j++)
+			segments.push(segms.i[j]);
+
+		if (status == -2) return (res, segments, status);
+		else if (status < 0) {
+			if (iter) {
+				data.mess = "multi expression expected";
+				status = -2;
+			} else
+				data.pos = pos0;
+			return (res, segments, status);
+		} else if (status == 4) {
+			data.mess = "can't use math or i/o function in multi expression";
+			return (res, segments, -2);
+		} else if (status == 5) {
+			res.i[8] += t.i[8];
+			res.i[9] += t.i[9];
+			res.i[10] += t.i[10];
+			res.i[11] += t.i[11];
+			int i;
+			for (i = 4; i < t.lsize; i++)
+				res.push(t.l[i]);
+		} else {
+			res.i[8 + status] += 1;
+			if (!status) res.push(t);
+		}
+
+		(pos, end, status) = getlexem(data.l[5], lexems, data.i[5], data.i[6]);
+		if (status != 1 && status != 6) {
+			data.mess = ") or , expected in multi expression";
+			return (res, segments, -2);
+		}
+		data.pos = pos;	
+		iter = 1;
+	}
+
+	data.pos = pos;
+
+	if (res.i[8] + res.i[9] + res.i[10] + res.i[11] == 1) {
+		if (res.i[8]) { res = res.l[4]; status = 0; }
+		else if (res.i[9]) status = 1;
+		else if (res.i[10]) status = 2;
+		else status = 3; 
+		return (res, segments, status);
+	}
+
+	res.i[12] = res.i[8];
+	res.i[13] = res.i[9];
+	res.i[14] = res.i[10];
+	res.i[15] = res.i[11];
+	
+	res = mktype(res, 0);
+
+	return (res, segments, 5);
+}

@@ -1,0 +1,99 @@
+/* overcats log writer; T17.465-T18.054; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "overcats.dpvmake"
+
+type logger = {
+        volatile overcats_data data;
+        const any objs;
+};
+
+(volatile stateful logger log, const stateful overcats_mess mess,
+		const stateful int values[]) -> () log_one {
+	char out[];
+
+	strftime(out, "%Y-%m-%d %H:%M:%S", values[0], log.data.timezone);
+
+	out.push('.');
+	printint(out, values[0] / 1000000 % 1000, 3);
+	out.push(' ');
+	out.push('[');
+	printhex(out, log.data.task_id, 4, 0);
+	out.push(':');
+	printhex(out, mess.thread_id >> 4 & 0xffff, 4, 0);
+	out.push(':');
+	printhex(out, mess.thread_id & 0xf, 1, 0);
+	out.push(':');
+	substrcat(out, "NONEFATACRITINTEERROWARNMESSINFODBUGTRAC",
+		mess.request << 2, (mess.request + 1) << 2);
+	out.push(']');
+	out.push(' ');
+	out.push(' ');
+	strcat(out, mess.data);
+	out.push('\r');
+	out.push('\n');
+
+	writep("", "", log.data.log_file, out, -1);
+	return;
+}
+
+(volatile stateful logger log, const stateful int values[]) -> () log_all {
+	int i;
+
+	for (i = 0; i < log.objs.lsize; i += 1) {
+		overcats_mess mess;
+		if (mess.type != log.objs.l[i].type) {
+			mess.data = "Dropped mailbox message of illegal format";
+			mess.request = 2;
+			mess.thread_id = log.data.thread_id;
+		} else {
+			objcopyto(mess, log.objs.l[i]);
+		}
+
+		log_one(log, mess, values);
+	}
+	
+	overcats_addr addr;
+	addr.version = log.data.version;
+	addr.task_id = log.data.task_id;
+	addr.service = OVERCATS_SERVICE_LOG;
+
+	mrecv(log.data.func, log, addr, -1);
+	return;	
+}
+
+(volatile stateful logger log, const any objs, int status) -> () read_mbox {
+	if (status) {
+		any objs1;
+		overcats_mess mess;
+                char m[];
+                strcat(m, "Error ");
+                printint(m, status, 1);
+                strcat(m, " when received mail in logger");
+                mess.data = m;
+		mess.request = 2;
+		mess.thread_id = log.data.thread_id;
+		objs1.lpush(mess);
+		objs = objs1;
+	}
+
+	log.objs = objs;
+	
+	const int vars[] = {0};
+	getsys(log_all, log, vars);
+	return;
+}
+
+(const stateful overcats_data d, const int values[]) -> () {
+	overcats_data data;
+	objcopyto(data, d);
+
+	data.func = read_mbox;
+	data.thread_id = 5;
+
+	logger log;
+	log.data = data;
+
+	read_mbox(log, "", 0);
+	return;
+}

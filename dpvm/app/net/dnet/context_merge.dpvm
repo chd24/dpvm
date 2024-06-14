@@ -1,0 +1,91 @@
+/* merge contexts; T17.566-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+int CONN_CLEANUP_TIME	= 900000000000; /* 15 min */
+
+(volatile stateful dnet_context dctx, const stateful dnet_context ctx) -> (int change) {
+	int change;
+	int ch;
+	int n;
+	int i;
+
+	if (ctx.last_time > dctx.last_time)
+		dctx.last_time = ctx.last_time;
+
+	int size = ctx.conns.lsize;
+	for (i = 0; i < size; i += 1) {
+		dnet_connection sc = ctx.conns[i];
+		if (sc.thread_id >= 0 || sc.thread_id < DNET_THREAD_ID_TMP) {
+			int j;
+			n = -1;
+			for (j = 0; j < dctx.conns.lsize; j += 1) {
+				dnet_connection dc = dctx.conns[j];
+				if (dc.thread_id == sc.thread_id) {
+					if (sc.flags & DNET_CONN_FINISHED &&
+							!(dc.flags & DNET_CONN_FINISHED)) {
+						int k;
+						for (k = 0; k < dctx.hosts.lsize; k += 1) {
+							if (dctx.hosts[k].thread_id == sc.thread_id 
+									&& dctx.hosts[k].flags & DNET_HOST_IMMEDIATE) {
+								dctx.hosts[k].flags &= ~DNET_HOST_IMMEDIATE;
+								k = dctx.hosts.lsize;
+							}
+						}
+					}
+
+					dc.flags |= sc.flags;
+
+					if (sc.last_time > dc.last_time)
+						dc.last_time = sc.last_time;
+
+					if (sc.in_bytes > dc.in_bytes)
+						dc.in_bytes = sc.in_bytes;
+					if (sc.out_bytes > dc.out_bytes)
+						dc.out_bytes = sc.out_bytes;
+
+					if (sc.in_packets > dc.in_packets)
+						dc.in_packets = sc.in_packets;
+					if (sc.out_packets > dc.out_packets)
+						dc.out_packets = sc.out_packets;
+
+					if (sc.in_dropped > dc.in_dropped)
+						dc.in_dropped = sc.in_dropped;
+					if (sc.out_dropped > dc.out_dropped)
+						dc.out_dropped = sc.out_dropped;
+					n = j;
+					j = dctx.conns.lsize;
+				}
+			}
+
+			if (n < 0) {
+				dnet_connection c;
+				objcopyto(c, sc);
+				change = 1;
+				dctx.conns.lpush(c);
+			}
+		}
+	}
+
+	size = dctx.conns.lsize;
+	for (i = 1; i < size; i += 1) {
+		dnet_connection c = dctx.conns[i];
+		if (c.flags & DNET_CONN_FINISHED 
+				&& dctx.last_time - c.last_time >= CONN_CLEANUP_TIME) {
+			if (i != size - 1)
+				dctx.conns[i] = dctx.conns[size - 1];
+			dctx.conns.lpop(1);
+			size -= 1;
+			i -= 1;
+		}
+	}
+
+	size = ctx.hosts.lsize;
+	for (i = 0; i < size; i += 1) {
+		(ch, n) = update_host(dctx, ctx.hosts[i]);
+		change |= ch;
+	}
+
+	return change;
+}

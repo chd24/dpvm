@@ -1,0 +1,48 @@
+/* dpvmb class, find() method implementation, T20.132-T20.155; $DVS:time$ */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "dpvmb.dpvmake"
+
+char ARCH[] = "amd64";
+
+(volatile stateful char out[], volatile stateful any dpvmbObj, int hash0, int hash1, int hash2, int hash3)
+		-> (const char error[]) find = {
+	dpvmbImpl impl;
+	char err[] = convertObjToImpl(impl, dpvmbObj, "find");
+	if (err.csize) return err;
+
+	if (!impl.data.dbInited)
+		return mkError("database not initialized", "find");
+
+	char db[] = impl.data.db;
+	int i, begin, size = impl.data.db.csize;
+
+	if (!impl.data.archiver.csize) {
+		if (!impl.data.registrySet)
+			return mkError("registry is not set", "find");
+
+		Archiver archiver;
+		for (i = 0; i < size; i++)
+			archiver.cpush(db[i]);
+
+		err = impl.data.registry.translator.translatorTest(impl.data.registry, archiver, ARCH, -1);
+		if (err.csize < selfArchiver.csize)
+			return mkError(err, "find");
+
+		impl.data.archiver = archiver;
+	}
+
+	any res;
+	(res, begin, size) = impl.data.archiver(hash0, hash1, hash2, hash3, 0);
+	if (size < 0) {
+		char mess[];
+		printf(mess, "object not found, last header = %x, error = %x", {begin, ~size});
+		return mkError(mess, "find");
+	}
+
+	int end = begin + size;
+	for (i = begin; i < end; i++)
+		out.cpush(db[i]);
+
+	return "";
+};

@@ -1,0 +1,14 @@
+/* squared equation; T15.582-T15.585; $DVS:time$ */
+
+(float a, float b, float c) -> (float x1, float x2) square_equ = {
+	float D;
+	float x1;
+	float x2;
+	
+	D = b * b - 4 * a * c;
+
+	x1 = (-b - fsqrt(D)) / (2 * a);
+	x2 = (-b + fsqrt(D)) / (2 * a);
+
+	return (x1, x2);
+};

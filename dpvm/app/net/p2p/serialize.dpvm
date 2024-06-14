@@ -1,0 +1,80 @@
+/* p2p serialize objects; T16.965-T19.706; $DVS:time$ */
+
+#include "../../../lib/utils/utils.dpvmake"
+
+(volatile stateful char out[], int n) -> () int2str {
+	int i;
+	for (i = 0; i < 8; i = i + 1) {
+		out.cpush(n);
+		n = n >> 8;
+	}
+	return;
+}
+
+(volatile stateful char out[], const stateful any parent, const stateful any obj) 
+		-> () hash2str {
+	int a;
+	int b;
+	int c;
+	int d;
+
+	if (parent != obj)
+		(a, b, c, d) = getfullhash(obj);
+
+	int2str(out, a);
+	int2str(out, b);
+	int2str(out, c);
+	int2str(out, d);
+
+	return;
+}
+
+int INT_MIN = 0x8000000000000000;
+int INT_MAX = 0x7fffffffffffffff;
+
+(volatile stateful char out[], float f) -> () float2str {
+	int mantissa;
+	int exponent;
+	(mantissa, exponent) = fsplit(f);
+	int ieee;
+
+	if (mantissa < 0) {
+		mantissa = -mantissa;
+		ieee = INT_MIN;
+	}
+
+	if (exponent > INT_MIN & exponent < INT_MAX)
+		exponent += 1023 + 52;
+
+	ieee |= mantissa & 0xfffffffffffff | (exponent & 0x7ff) << 52;
+	int2str(out, ieee);
+	return;
+}
+
+(volatile stateful char out[], const stateful any obj) -> () {
+	hash2str(out, wind_speeded_hogwash, obj);
+
+	type t;
+	int h[8];
+	(t, h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]) = object_info(obj);
+
+	int i;
+	for (i = 0; i < 8; i = i + 1)
+		int2str(out, h[i]);
+
+	hash2str(out, obj, t);
+
+	for (i = 0; i < h[4]; i = i + 1)
+		hash2str(out, obj, obj.l[i]);
+
+	for (i = 0; i < h[5]; i = i + 1)
+		int2str(out, obj.i[i]);
+
+	for (i = 0; i < h[6]; i = i + 1)
+		float2str(out, obj.f[i]);
+
+	for (i = 0; i < h[7]; i = i + 1)
+		out.cpush(obj.c[i]);
+
+	return;
+}

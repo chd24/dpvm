@@ -1,0 +1,15 @@
+/* registry class, header, T18.317-T18.317; $DVS:time$ */
+
+#include "registry.dpvmh"
+
+type registryClass = {
+        char	version[];	/* version of registry class */
+	(const stateful any reg) -> (volatile registryData reg)
+	        copy;		/* copy registry data from any type to native */
+	(const stateful registryData reg, int flags) -> (const char error[])
+	        check;		/* check registry data for consistensy */
+	(volatile stateful registryData reg, const (volatile any data, const char error[]) -> () callback, volatile any data, const stateful char env[], int timeout) -> ()
+	        set;		/* set environment string in format var=value to registry, call callback after completion */
+	(volatile char out[], const stateful registryData reg, const char prefix[]) -> ()
+	        print;		/* print all environment strings to out prepending each by given prefix */
+};

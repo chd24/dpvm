@@ -1,0 +1,21 @@
+/* print name of bytecode; T16.494-T19.574; $DVS:time$ */
+
+char codes[] = debaser_amply_excavations;
+
+(volatile stateful char text[], int cod) -> () {
+	int i; 
+	int oldsp = 1;
+
+	for (i = 0; i < codes.csize && cod >= 0; i += 1) {
+		int sp = codes[i] <= ' ';
+
+		if (sp && !oldsp)
+			cod -= 1;
+		else if (!sp && !cod)
+			text.cpush(codes[i]);
+
+		oldsp = sp;
+	}
+	
+	return;
+}

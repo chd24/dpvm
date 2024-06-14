@@ -1,0 +1,40 @@
+/* tests for run/wait bytecodes and call-using analogues, makefile; T16.606-T19.616; $DVS:time$ */
+
+/*@ "call_2.dpvm": computes f(x) and f(y) sequentally */
+(const (int) -> (int) f, int x, int y) -> (int fx, int fy) 
+	call_2 = peak_viewings_countenance;
+/* @*/
+
+/*@ "run_2.dpvm": computes f(x) and f(y) in parallel */
+(const (int) -> (int) f, int x, int y) -> (int fx, int fy) 
+	run_2 = misspelling_pestilential_ravening;
+/* @*/
+
+/*@ "call_asm.dpvm": computes f(x) and f(y) sequentally using assembly */
+(const (int) -> (int) f, int x, int y) -> (int fx, int fy) 
+	call_asm = birdcages_estimation_revalues;
+/* @*/
+
+/*@ "run_asm.dpvm": computes f(x) and f(y) in parallel using assembly */
+(const (int) -> (int) f, int x, int y) -> (int fx, int fy) 
+	run_asm = earthed_vying_intonation;
+/* @*/
+
+/*@ "call_io.dpvm": computes f(x) and f(y) sequentally using io handler */
+(const (int) -> (int) f, int x, int y) -> () 
+	call_io = rapporteurs_voice_denting;
+/* @*/
+
+/*@ "run_io.dpvm": computes f(x) and f(y) in parallel  using io handler */
+(const (int) -> (int) f, int x, int y) -> () 
+	run_io = findable_rats_mosquito;
+/* @*/
+
+/*@ "temporary.dpvm": function to test temporary transactions */
+(const stateful char str[]) -> (int res)
+	temporary = existed_prehistoric_swimmingly;
+/* @*/
+
+/*@ "pow_mod.dpvm": (int)->(int) function to test parallel execution */
+        pow_mod = pixel_ascend_swappable;
+/* @*/

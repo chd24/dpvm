@@ -1,0 +1,20 @@
+/* print int in hex; T15.543-T16.576; $DVS:time$ */
+	
+(volatile stateful char dst[], int n, int digits, int upper) -> () {
+	char symb[] = "0123456789abcdef";
+	if (upper) { symb = "0123456789ABCDEF"; }
+
+	digits = digits << 2;
+	int f = 0;
+	int d = 64;
+	do {
+		d = d - 4;
+		int k = n >> d & 15;
+		if (digits > d | k | f) {
+			dst.cpush(symb[k]);
+			f = 1;
+		}
+	} while (d);
+
+	return;
+}

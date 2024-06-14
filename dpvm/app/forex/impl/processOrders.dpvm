@@ -1,0 +1,46 @@
+/* forex class, processOrders internal method implementation, T19.780-T20.038; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "forex.dpvmake"
+
+(volatile stateful forexImpl impl) -> () processOrders = {
+	char err[];
+	float rate;
+	int i;
+
+	for (i = 0; i < impl.data.orders.lsize; i += 1) {
+		forexOrder order = impl.data.orders[i];
+		(err, rate) = impl.methods.getCurrentRate(impl, order.currencyTo, order.currencyFrom);
+
+		if (order.expirationTime <= impl.data.lastFileTime &&
+				(order.orderType != ORDER_TYPE_MARKET || !impl.data.exchangeSet)) {
+			order.rate = rate;
+			int action = ORDER_ACTION_EXPIRED;
+			if (order.orderType == ORDER_TYPE_MARKET)
+				action = ORDER_ACTION_EXECUTED;
+			processOrder(impl, i, action);
+			i -= 1;
+		} else if (!impl.data.exchangeSet) {
+			if (order.orderType == ORDER_TYPE_LIMIT) {
+				if (rate >= order.rate) {
+					processOrder(impl, i, ORDER_ACTION_EXECUTED);
+					i -= 1;
+				}
+			} else if (order.orderType == ORDER_TYPE_STOP_LOSS) {
+				if (rate <= order.rate) {
+					processOrder(impl, i, ORDER_ACTION_EXECUTED);
+					i -= 1;
+				}
+			} else if (order.orderType == ORDER_TYPE_TRAILING_STOP) {
+				if (rate > order.maxRate)
+					order.maxRate = rate;
+				if (rate <= order.rate * order.maxRate) {
+					order.rate = rate;
+					processOrder(impl, i, ORDER_ACTION_EXECUTED);
+					i -= 1;
+				}
+			}
+		}
+	}
+	return;
+};

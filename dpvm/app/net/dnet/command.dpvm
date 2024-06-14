@@ -1,0 +1,124 @@
+/* dnet node, command processing; T17.534-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const stateful char command[], int begin, int end) 
+		-> (const char res[], int res, int next_begin) process_command {
+	int tmp_next;
+	int next;
+
+	if (begin >= end)
+		return ("", 1, end);
+	for (next = begin; next < end && command[next] != '\n' 
+			&& command[next] != ';'; next += 1);
+	tmp_next = next;
+	if (next < end)
+		next += 1;
+
+	int b;
+	int e;
+	(b, e) = strtostr(command, begin, tmp_next);
+	if (b >= e)
+		return ("", 0, next);
+
+	char cmd[];
+	substrcat(cmd, command, b, e);
+
+	char brcmd[];
+	brcmd.cpush('[');
+	strcat(brcmd, cmd);
+	brcmd.cpush(']');
+
+	int args_begin = e;
+
+	char args[][];
+	while (e < tmp_next) {
+		(b, e) = strtostr(command, e, tmp_next);
+		if (b < e) {
+			char arg[];
+			substrcat(arg, command, b, e);
+			args.lpush(arg);
+		} else
+			e = tmp_next;
+	}	
+
+	int i;
+	for (i = 0; i < dnet_commands.lsize; i += 1) {
+		dnet_command c = dnet_commands[i];
+		if (cmd == c.name || brcmd == c.name || c.name[0] == '[') {
+			if (c.name[0] == '[' && c.min_nargs == 1 && c.max_nargs == 1) {
+				if (brcmd != c.name)
+					args_begin = begin;
+				char arg[];
+				substrcat(arg, command, args_begin, tmp_next);
+				char args2[][];
+				args2.lpush(arg);
+				args = args2;
+			}
+			if (args.lsize < c.min_nargs || args.lsize > c.max_nargs) {
+				char m[];
+				strcat(m, "Illegal number of arguments for command '");
+				strcat(m, cmd);
+				strcat(m, "'");
+				write_log(ctx, m, 5);
+
+				char mess[];
+				strcat(mess, m);
+				strcat(mess, "\r\n");
+
+				return (mess, -1, next);
+			}
+
+			char res[];
+			int error;
+			(res, error) = c.func(ctx, args);
+			if (res < 0) {
+				char m[];
+				strcat(m, "Command '");
+				strcat(m, cmd);
+				strcat(m, "' finished with error ");
+				printint(m, error, 1);
+				if (res.csize) {
+					strcat(m, ": ");
+					strcat(m, res);
+				}
+				write_log(ctx, m, 5);
+
+				char mess[];
+				strcat(mess, m);
+				strcat(mess, "\r\n");
+
+				return (mess, error, next);
+			}
+			
+			return (res, error, next);
+		}
+	}
+
+	char m[];
+	strcat(m, "Command '");
+	strcat(m, cmd);
+	strcat(m, "' not found");
+	write_log(ctx, m, 5);
+
+	char mess[];
+	strcat(mess, m);
+	strcat(mess, "\r\n");
+
+	return (mess, -2, next);
+}
+
+(volatile stateful dnet_context ctx, const stateful char command[], int begin, int end) 
+		-> (const char res[], int error, int next_begin) {
+	char total_res[];
+	int error;
+
+	do {
+		char res[];
+		(res, error, begin) = process_command(ctx, command, begin, end);
+		strcat(total_res, res);
+	} while (!error);
+
+	return (total_res, error, begin);
+}

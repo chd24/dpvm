@@ -1,0 +1,142 @@
+/* translator for amd64, makefile; T16.609-T18.397; $DVS:time$ */
+
+#include "../translator_utils.dpvmake"
+
+/*@ "load.dpvm": load value from memory to register */
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> ()
+	amd64_load = glycerol_multiplier_nominates;
+/* @*/
+
+/*@ "store.dpvm": store value to memory from register */
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		int datatype, int reg, int i, int n) -> ()
+	amd64_store = vanadium_intentional_canoeing;
+/* @*/
+
+/*@ "fload.dpvm": load float value from memory to fpu register */
+(const stateful translator_data data, volatile stateful asm_instr list[],
+		int i, int n) -> ()
+	amd64_fload = unbiassed_defends_downloaded;
+/* @*/
+
+/*@ "fstore.dpvm": store float value to memory from fpu register */
+(const stateful translator_data data, volatile stateful asm_instr list[],
+		int i, int n) -> ()
+	amd64_fstore = humans_brows_banns;
+/* @*/
+
+/*@ "fiload.dpvm": load float value from memory to integer stack */
+(const stateful translator_data data, volatile stateful asm_instr list[],
+		int i, int n) -> ()
+	amd64_fiload = partly_unexpurgated_mantras;
+/* @*/
+
+/*@ "fistore.dpvm": store float value to memory from integer stack */
+(const stateful translator_data data, volatile stateful asm_instr list[],
+		int i, int n) -> ()
+	amd64_fistore = sportsman_siege_easy;
+/* @*/
+
+/*@ "precall.dpvm": pushing registers to stack befora function call */
+(volatile stateful asm_instr list[]) -> ()
+	amd64_precall = concord_salvageable_exalt;
+/* @*/
+
+/*@ "call.dpvm": calling function addr and popping registers from stack after it */
+(volatile stateful asm_instr list[], int addr) -> ()
+	amd64_call = urethra_plasticity_dictionary;
+/* @*/
+
+/*@ "unlink.dpvm": unlinks an object from links stack */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int n) -> (int res)
+	amd64_unlink = moreover_defeater_subtitling;
+/* @*/
+
+/*@ "stack_top.dpvm": set stack pointers to the top */
+(volatile stateful translator_data data, volatile stateful asm_instr list[], 
+		int i, int linksdiff) -> ()
+	amd64_stack_top = snowing_husbandry_aridity;
+/* @*/
+
+/*@ "stack_fail.dpvm": restore stack in the case of inpredictable fail of function */
+(volatile stateful translator_data data, volatile stateful asm_instr list[], int i)
+		-> ()
+	amd64_stack_fail = reviewing_wrinkle_sourest;
+/* @*/
+
+/*@ "fail.dpvm": handles the case of inpredictable fail of function */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], 
+		int i, int cc, int err) -> ()
+	amd64_fail = moralistic_reformers_perpetrators;
+/* @*/
+
+/*@ "type_match.dpvm": match type with pattern */
+(volatile stateful translator_data data, volatile stateful asm_instr list[], 
+		volatile stateful asm_instr endlist[], int datatype, int i, int n) 
+		-> (int res)
+	amd64_type_match = outbid_nurtured_mesmerised;
+/* @*/
+
+/*@ "info.dpvm": code/info/hash/fix bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c)
+		-> (int res, int i)
+	amd64_info = replies_polity_mumps;
+/* @*/
+
+/*@ "funcs.dpvm": ret/call bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
+	amd64_funcs = specifiers_diagnostic_spyings;
+/* @*/
+
+/*@ "jumps.dpvm": l*, j* bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> ()
+	amd64_jumps = lazing_slenderly_necrotic;
+/* @*/
+
+/*@ "stack.dpvm": *load, *store, *pops, *popn bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
+	amd64_stack = streamline_landing_attention;
+/* @*/
+
+/*@ "getset.dpvm": *get, *set bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
+	amd64_getset = weirder_container_external;
+/* @*/
+
+/*@ "pushpop.dpvm": *push, *pop bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
+	amd64_pushpop = gymnasia_nagged_misdealing;
+/* @*/
+
+/*@ "imath.dpvm": integer math bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int i)
+	amd64_imath = slobs_scaffold_rubbles;
+/* @*/
+
+/*@ "fmath.dpvm": floating-point math bytecodes */
+(const stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
+	amd64_fmath = quarrel_dielectric_professions;
+/* @*/
+
+/*@ "io.dpvm": input-output bytecodes */
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
+	amd64_io = starchy_polysyllabic_glow;
+/* @*/
+
+/*@ "main.dpvm": main function of translator for amd64 */
+(volatile stateful translator_data data, volatile stateful asm_instr list[]) -> (int res)
+	amd64 = dowagers_vends_lines;
+/* @*/                                              

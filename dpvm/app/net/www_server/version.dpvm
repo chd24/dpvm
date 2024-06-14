@@ -1,0 +1,27 @@
+/* return version of www_server */
+	
+char version[] = "DPVM web server version 0.7.6, T15.543-T20.191"; /* $DVS:time$ */
+
+() -> (const char version[]) {
+	return version;
+}
+
+/*
+
+T20.191 ver 0.7.6:  maximum number of thread increased to 450
+
+T18.917 ver 0.7.5:  stable version of blog.cgi module
+
+T18.893 ver 0.7.4:  added blog (first production version) as internal cgi module
+
+T18.823 ver 0.7.3:  added new mime types
+
+T18.760 ver 0.7.2:  added log as internal cgi module
+
+T18.746 ver 0.7.1:  added gentejs as internal cgi module
+
+T18.743 ver 0.7.0:  implemented internal cgi modules, added test module
+
+T18.740 ver 0.6.13: processing mpopen bytecode errors as statuses 520+error and 540+error
+
+*/

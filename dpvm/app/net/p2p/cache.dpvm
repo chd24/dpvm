@@ -1,0 +1,223 @@
+/* cache of objects with partial known dependents */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "deserialize.dpvmh"
+#include "cache.dpvmh"
+
+char cacheVersion[] = "p2p cache 0.1.3, T17.938-T19.705"; /* $DVS:time$
+
+history:
+
+T18.051 - ver 0.1.3: checked with new checker
+
+T17.958 - ver 0.1.2: changed interface for popObjs method
+
+T17.950 - ver 0.1.1: added dump method, fixed bug
+
+T17.948 - ver 0.1.0: first full implementation
+
+T17.941 - ver 0.0.1: written templates of class methods, added calls to them into p2p code
+
+T17.938 - implementation of the class started
+
+*/
+
+int N_BUCKETS = 0x1000;
+
+(volatile stateful cacheData cache) -> (int) cacheInit {
+    int i;
+    for (i = 0; i < N_BUCKETS; i += 1)
+        cache.indexes.ipush(-1);
+    return 0;
+}
+
+(const stateful char str[], int pos) -> (const int hash[4]) str2hash4 {
+    int hash[4];
+    hash[0] = str2int(str, pos);
+    hash[1] = str2int(str, pos + 8);
+    hash[2] = str2int(str, pos + 16);
+    hash[3] = str2int(str, pos + 24);
+    return hash;
+}
+
+(volatile stateful cacheData cache, const stateful int hash[4], int add) -> (volatile stateful cacheItem item, int nBucket, int nItem) getItem {
+    int nBucket = hash[0] & (N_BUCKETS - 1);
+
+    if (cache.indexes[nBucket] < 0) {
+        if (!add) { cacheItem item; return (item, -1, -1); }
+        cacheItem bucket[];
+        cache.indexes[nBucket] = cache.buckets.lsize;
+        cache.buckets.lpush(bucket);
+        cache.nBuckets += 1;
+    }
+    cacheItem bucket[] = cache.buckets[cache.indexes[nBucket]];
+
+    int i;
+    int size = bucket.lsize;
+    int nItem = -1;
+    for (i = 0; i < size; i += 1) {
+        int h[4] = bucket[i].hash;
+        if (hash[0] == h[0] && hash[1] == h[1] && hash[2] == h[2] && hash[3] == h[3])
+            nItem = i, i = size;
+    }
+    if (nItem < 0) {
+        cacheItem item;
+        if (!add) return (item, -1, -1);
+        item.hash = hash;
+        nItem = bucket.lsize;
+        bucket.lpush(item);
+        cache.nItems += 1;
+    }
+
+    return (bucket[nItem], nBucket, nItem);
+}
+
+(volatile stateful cacheData cache, const stateful int hash[4], volatile stateful char objects[][], volatile stateful int upHashes[4][]) -> (int) delItem {
+    cacheItem item;
+    int nBucket;
+    int nItem;
+    (item, nBucket, nItem) = getItem(cache, hash, 0);
+    if (nBucket < 0 || item.nrefs) return -1;
+
+    int i;
+    int size = item.upHashes.lsize;
+    for (i = 0; i < size; i += 1) {
+        cacheItem it;
+        int nb;
+        int ni;
+        (it, nb, ni) = getItem(cache, item.upHashes[i], 0);
+        if (nb >= 0 && it.nrefs) {
+            it.nrefs -= 1;
+            if (!it.nrefs)
+                upHashes.lpush(it.hash);
+        }
+    }
+
+    if (item.object.csize) {
+        objects.lpush(item.object);
+        cache.nObjects -= 1;
+    }
+
+    int bucketIndex = cache.indexes[nBucket];
+    cacheItem bucket[] = cache.buckets[bucketIndex];
+    if (nItem != bucket.lsize - 1)
+        bucket[nItem] = bucket[bucket.lsize - 1];
+    bucket.lpop(1);
+    cache.nItems -= 1;
+
+    if (!bucket.lsize) {
+        int lastIndex = cache.buckets.lsize - 1;
+        if (bucketIndex != lastIndex) {
+            int nLastBucket = cache.buckets[lastIndex][0].hash[0] & (N_BUCKETS - 1);
+            cache.buckets[bucketIndex] = cache.buckets[lastIndex];
+            cache.indexes[nLastBucket] = bucketIndex;
+        }
+        cache.buckets.lpop(1);
+        cache.indexes[nBucket] = -1;
+        cache.nBuckets -= 1;
+    }
+
+    return 0;
+}
+
+(volatile stateful cacheData cache, const char object[], const stateful int missedDepsPos[]) -> (int) cachePush {
+    int hash[4] = str2hash4(object, 0);
+    cacheItem item;
+    int nBucket;
+    int nItem;
+    (item, nBucket, nItem) = getItem(cache, hash, 1);
+    if (nBucket < 0 || item.object.csize)
+        return -1;
+    item.object = object;
+    cache.nObjects += 1;
+
+    int i;
+    int size = missedDepsPos.isize;
+    for (i = 0; i < size; i += 1) {
+        cacheItem it;
+        (it, nBucket, nItem) = getItem(cache, str2hash4(object, missedDepsPos[i]), 1);
+        if (nBucket >= 0) {
+            it.upHashes.lpush(hash);
+            item.nrefs += 1;
+        }
+    }
+
+    return 0;
+}
+
+(volatile stateful cacheData cache, volatile char objects[][], const stateful int hashes[]) -> (int res) cachePop {
+    int upHashes[4][];
+    int hash[4];
+
+    int i;
+    int size = hashes.isize;
+    for (i = 0; i < size; i += 4) {
+        hash[0] = hashes[i];
+        hash[1] = hashes[i + 1];
+        hash[2] = hashes[i + 2];
+        hash[3] = hashes[i + 3];
+        delItem(cache, hash, objects, upHashes);
+    }
+
+    for (i = 0; i < upHashes.lsize; i += 1)
+        delItem(cache, upHashes[i], objects, upHashes);
+
+    return 0;
+}
+
+(volatile stateful char out[], const stateful cacheData cache) -> () cacheDump {
+    strcat(out, "Cache dump:\r\nIndexes:\r\n");
+
+    int i;
+    for (i = 0; i < cache.indexes.isize; i += 1)
+        if (cache.indexes[i] >= 0) {
+            strcat(out, " - index 0x");
+            printhex(out, i, 3, 1);
+            strcat(out, " -> bucket ");
+            printint(out, cache.indexes[i], 1);
+            strcat(out, "\r\n");
+        }
+
+    strcat(out, "Buckets:\r\n");
+
+    for (i = 0; i < cache.buckets.lsize; i += 1) {
+        cacheItem bucket[] = cache.buckets[i];
+        strcat(out, " - bucket ");
+        printint(out, i, 1);
+        strcat(out, ":\r\n");
+
+        int j;
+        for (j = 0; j < bucket.lsize; j += 1) {
+            cacheItem item = bucket[j];
+            strcat(out, "   - ");
+            if (item.object.csize)
+                strcat(out, "obj");
+            else
+                strcat(out, "ref");
+            strcat(out, " (nrefs=");
+            printint(out, item.nrefs, 3);
+            strcat(out, ") ");
+            printobjname(out, item.hash[0] & (1 << 47) - 1);
+            strcat(out, " -> ");
+
+            int k;
+            for (k = 0; k < item.upHashes.lsize; k += 1) {
+                printobjname(out, item.upHashes[k][0] & (1 << 47) - 1);
+                if (k < item.upHashes.lsize - 1)
+                    strcat(out, ", ");
+            }
+
+            strcat(out, "\r\n");
+        }
+    }
+
+    return;
+}
+
+cacheClass cacheObj = {
+    cacheVersion,
+    cacheInit,
+    cachePush,
+    cachePop,
+    cacheDump
+};

@@ -1,0 +1,27 @@
+/* p2p logging object in hex; T19.706-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "p2p.dpvmake"
+
+(const stateful p2pdata data, const stateful char mess[], const stateful char objstr[], int begin, int end) -> ()
+		logObject = {
+	if (data.log_level >= 10) {
+		char m[];
+		strcat(m, mess);
+		strcat(m, " object of size ");
+		printint(m, end - begin, 1);
+		strcat(m, ":");
+		int i;
+		for (i = 0; i < end - begin; i += 1) {
+			if (!(i & 0x1f))
+				strcat(m, "\r\n  - ");
+			else if (!(i & 7))
+				strcat(m, "  ");
+			int ind = (begin + i) ^ 7;
+			if (ind >= end) ind = ind ^ 7;
+			printhex(m, objstr[ind], 2, 0);
+		}
+		write_log(data, m, 10);
+	}
+	return;
+};

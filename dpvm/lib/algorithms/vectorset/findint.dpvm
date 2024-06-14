@@ -1,0 +1,20 @@
+/* find int in vector-based set; T16.488-T17.634; $DVS:time$
+   returns index if found, or ~index if not found 
+   where index is potential index of number if add it to the set */
+
+(const stateful int set[], int n) -> (int index) {
+	int max = set.isize - 1;
+	int min;
+
+	while (max >= min) {
+		int index = (min + max) >> 1;
+		int s = set[index];
+		if (n == s) return index;
+		if (n < s)
+			max = index - 1;
+		else
+			min = index + 1;
+	}
+
+	return ~min;
+}

@@ -1,0 +1,10 @@
+/* test for run/wait bytecodes, call-using analogue; T17.890-T17.915; $DVS:time$ */
+
+(const (int) -> (int) f, int x, int y) -> (int fx, int fy) {
+	{
+		x = f(x);
+		y = f(y);
+	}
+
+	return (x, y);
+}

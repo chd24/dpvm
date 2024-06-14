@@ -1,0 +1,59 @@
+/* string to integer; T15.939-T17.632; $DVS:time$ */
+	
+#include "stdlib.dpvmake"
+
+(const stateful char str[], int begin, int end, int base) 
+		-> (int number, int error, int nextbegin) {
+	int n;
+	int c;
+	int d;
+	int err;
+	int minus;
+
+	(begin, end) = strtostr(str, begin, end);
+
+	if (!base) {
+		if (begin != end) {
+			c = str.c[begin];
+			if (c == '+') { begin = begin + 1; }
+			if (c == '-') { minus = 1; begin = begin + 1; }
+		}
+		base = 10;
+		if (begin != end) {
+			if (str.c[begin] == '0') {
+				base = 8;
+				if (begin + 1 != end) {
+					if (str.c[begin + 1] == 'x'
+					  | str.c[begin + 1] == 'X') {
+						base = 16;
+						begin = begin + 2;
+					}
+				}
+			}
+		}
+	}
+	
+	if (begin == end) {
+		err = -1;
+		return (n, err, end);
+	}
+
+	err = -2;
+	do {
+		c = str.c[begin];
+		d = -1;
+		if (c >= '0' & c <= '9') { d = c - '0'; }
+		if (c >= 'a' & c <= 'z') { d = c - 'a' + 10; }
+		if (c >= 'A' & c <= 'Z') { d = c - 'A' + 10; }
+		if (d < 0 | d >= base) {
+			if (minus) { n = -n; } 
+			return (n, err, begin); 
+		}
+		n = n * base + d;
+		err = 0;
+		begin = begin + 1;
+	} while (begin < end);	
+
+	if (minus) { n = -n; }
+	return (n, err, begin);
+}

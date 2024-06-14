@@ -1,0 +1,4 @@
+/* maker, external header; T18.349-T18.349; $DVS:time$ */
+
+type makerType = (const stateful any registry, const (volatile stateful any arg, const char res[]) -> () callback,
+                volatile stateful any arg, const char makefile[]) -> ();

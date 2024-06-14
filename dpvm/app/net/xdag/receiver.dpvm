@@ -1,0 +1,312 @@
+/* message received from the pool; T16.511-T19.569; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../../math/crypto/base64/base64.dpvmake"
+#include "xdag.dpvmake"
+
+int RECVSEQ_OFFSET	= 2;
+int TARGET_MIN		= 0x400000; /* minimum value of target for method 24 */
+
+(const stateful xdagdata data, const int values[]) -> () kill {
+	if (values.isize == 2) {
+		/* wait before kill */
+		const int vars1[] = {0};
+		int values1[];
+		values1.ipush(values[0] + KILL_DELAY);
+		setsys(code, data, vars1, values1);
+	} else {
+		/* kill work task */
+		const int vars1[] = {0x200};
+		const int values1[] = {-1};
+		setsys("", "", vars1, values1);
+	}
+	return;
+}
+
+(volatile stateful xdagdata data, int status) -> () resent = {
+	if (status != data.cdata.block.csize) {
+		log_block(data, data.cdata.blockhash, "Failed", 4);
+		return;
+	}
+
+	log_block(data, data.cdata.blockhash, "Resent", 6);
+
+	input(data.cdata.receiver, data, 0x1000, POOL_FIRST_READ_TIMEOUT);
+	return;
+};
+
+(volatile stateful xdagdata data, int port, int ip0, int ip1) -> () reconnect = {
+	char mess[];
+
+	if (port < 0) {
+		strcat(mess, "Can't reconnect to pool ");
+		strcat(mess, data.cdata.pooladdr);
+		strcat(mess, ":");
+		printint(mess, data.cdata.poolport, 1);
+		strcat(mess, ", error ");
+		printhex(mess, -port, 3, 0);
+		write_log(data, mess, 4);
+
+		if (data.reconnects >= RECONNECTS_MAX) {
+			const int vars[] = {0, 0};
+			getsys(kill, data, vars);
+		} else {
+			data.reconnects += 1;
+			connect(code, data, data.cdata.pooladdr, 0x406 << 16 | data.cdata.poolport);
+		}
+		return;
+	}
+
+	strcat(mess, "Reconnected to pool ");
+	strcat(mess, data.cdata.pooladdr);
+	strcat(mess, ":");
+	printint(mess, data.cdata.poolport, 1);
+	write_log(data, mess, 6);
+
+	data.recvseq = 0;
+	data.sendseq = data.cdata.sendseq;
+	data.text.cpop(data.text.csize);
+
+	output(resent, data, data.cdata.block);
+	return;
+};
+
+(volatile stateful xdagdata data, const int values[]) -> () wait_reconnect {
+	const int vars1[] = {0};
+	int values1[];
+	values1.ipush(values[0] + RECONNECT_DELAY);
+
+	setsysp("", "", vars1, values1);
+
+	data.reconnects += 1;
+	connect(reconnect, data, data.cdata.pooladdr, 0x406 << 16 | data.cdata.poolport);
+	return;
+}
+
+(volatile stateful xdagdata data, const stateful char text[], int status) -> () {
+	if (status <= 0) {
+		char mess[];
+		strcat(mess, "Disconnected from the pool ");
+		strcat(mess, data.cdata.pooladdr);
+		strcat(mess, ":");
+		printint(mess, data.cdata.poolport, 1);
+		write_log(data, mess, 5);
+
+		xdagaddr addr;
+		objcopyto(addr, data.addr);
+		addr.threadid = -1;
+
+		xdagshare s;
+		s.taskseq = -1;
+		msendp("", "", addr, s);
+
+		const int vars[] = {0, 0};
+		if (data.reconnects >= RECONNECTS_MAX) {
+			getsys(kill, data, vars);
+		} else {
+			getsys(wait_reconnect, data, vars);
+		}
+		return;
+	}
+
+	char m[];
+	strcat(m, "Receiv: ");
+	printhex(m, status, 2, 0);
+	strcat(m, ", remain: ");
+	printhex(m, data.text.csize, 2, 0);
+	strcat(m, ", recvseq: ");
+	printhex(m, data.recvseq, 4, 0);
+	strcat(m, ", messages: ");
+
+	if (!data.recvseq && !data.text.csize) {
+		xdagaddr addr;
+		objcopyto(addr, data.addr);
+		addr.threadid = -1;
+		mrecvp("", "", addr, 0);
+
+		sender(data);
+	}
+
+	if (data.text.csize) {
+		char text1[];
+		strcat(text1, data.text);
+		strcat(text1, text);
+		text = text1;
+		status += data.text.csize;
+		data.text.cpop(data.text.csize);
+	}
+
+	int arrs[][], recvseq = data.recvseq, taskPos = -1, balance = data.balance, i, taskOffset, parsed;
+
+	if ((data.cdata.method & 0xff) >= 16) {
+		char error[];
+		jsonMethods j = data.cdata.json.methods;
+
+		do {
+			int nextparsed;
+			jsonObject t, job;
+			(t, error, nextparsed) = j.deserialize(text, parsed, text.csize);
+			if (!error.csize) {
+				printf(m, "T%x", {nextparsed - parsed});
+				parsed = nextparsed;
+				job = j.getObjectByName(t, "params");
+				if (j.isNull(job)) {
+					jsonObject res = j.getObjectByName(t, "result");
+					job = j.getObjectByName(res, "job");
+					char id[];
+					j.getString(id, j.getObjectByName(res, "id"));
+					if (id.csize) {
+						m.cpush('i');
+						data.clientId = id;
+					}
+				}
+				if (!j.isNull(job)) {
+					m.cpush('j');
+					char blob[], jobId[];
+					j.getString(blob, j.getObjectByName(job, "blob"));
+					j.getString(blob, j.getObjectByName(job, "seed_hash"));
+					j.getString(blob, j.getObjectByName(job, "target"));
+					j.getString(jobId, j.getObjectByName(job, "job_id"));
+					if (blob.csize == 200) {
+						const int ipos[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,16,17,8,9,10,11,12,13,14,15,18};
+						int arr[] = intsArray(20), err;
+						for (i = 0; i < 25; i += 1) {
+							int n, e, x;
+							(n, e, x) = strtoi(blob, i << 3, (i + 1) << 3, 16);
+							arr[ipos[i]] = htonl(n);
+							err |= e;
+						}
+						if (!err && !arr[14] && !arr[15]) {
+							taskPos = 0;
+							taskOffset = arrs.lsize;
+							arrs.lpush(arr);
+							m.cpush('0' + taskOffset);
+							data.jobId = jobId;
+							arr[19] = arr[18];
+							if ((data.cdata.method & 0xff) >= 24 && arr[19] < TARGET_MIN)
+								arr[19] = TARGET_MIN;
+						}
+					}
+				}
+			}
+		} while (!error.csize);
+
+	} else {
+		int size = status & -0x20, isize = size >> 2, pattern[], offset;
+		for (offset = -RECVSEQ_OFFSET; offset <= RECVSEQ_OFFSET; offset += 1) {
+			data.recvseq = recvseq + offset;
+			arrs.lpush(decrypt(data, text, 0, size));
+		}
+		data.recvseq = recvseq;
+
+		for (i = 0; i < 6; i += 1)
+			pattern.ipush(htonl(data.cdata.blockhash[i]));
+		pattern.ipush(0);
+		pattern.ipush(0);
+
+		for (i = 0; i < isize; i += 8) {
+			for (offset = 0; offset < arrs.lsize; offset += 1) {
+				int mask, j, shareType, arr[] = arrs[offset];
+				for (j = 0; j < 8; j += 1)
+					mask |= (arr[i + j] == pattern[j]) << j;
+
+				if ((mask & 0x3f) == 0x3f)
+					shareType = 'B', balance = arr[i + 6] | arr[i + 7] << 32;
+				else if ((mask & 0xc0) == 0xc0 && i >= 8)
+					shareType = 'T', taskPos = i - 8, taskOffset = offset;
+
+				if (shareType) {
+					parsed = i + 8;
+					m.cpush(shareType);
+					m.cpush(i + 'a');
+					m.cpush(offset + '0');
+				}
+			}
+		}
+
+		if (isize - parsed > 8)
+			parsed = isize - 8;
+		data.recvseq += parsed >> 3;
+		parsed <<= 2;
+	}
+
+	write_log(data, m, 8);
+
+	if (parsed != status)
+		substrcat(data.text, text, parsed, status);
+
+	if (balance != data.balance) {
+		char mess[];
+		strcat(mess, "Balanc: ");
+		strcat(mess, base64_encode_beints32(data.cdata.blockhash, 0, 6));
+
+		float fbal = balance;
+		fbal /= (1 << 32);
+		mess.push(' ');
+		printfloat(mess, 9, fbal);
+
+		fbal = balance - data.balance;
+		fbal /= (1 << 32);
+		mess.push(' ');
+		if (fbal >= 0) mess.push('+');
+		printfloat(mess, 9, fbal);
+
+		write_log(data, mess, 6);
+
+		data.balance = balance;
+	}
+
+	if (taskPos >= 0) {
+		char str[];
+		strcat(str, "Task  : ");
+		data.task.seq += 1;
+		printint(str, data.task.seq, 1);
+		write_log(data, str, 7);
+
+		xdagtask t;
+		objcopyto(t, data.task);
+		t.task = arrs[taskOffset];
+		t.begin = taskPos;
+		t.clientId = data.clientId;
+		t.jobId = data.jobId;
+
+		int taskL[], taskH[];
+		copyints(taskL, t.task, taskPos, taskPos + 8);
+		copyints(taskH, t.task, taskPos + 8, taskPos + 16);
+		log_block(data, taskL, "TaskL", 8);
+		log_block(data, taskH, "TaskH", 8);
+		if ((data.cdata.method & 0xff) >= 16) {
+			int nonce[];
+			copyints(nonce, t.task, taskPos + 16, taskPos + 20);
+			while (nonce.isize < 8)
+				nonce.ipush(0);
+			log_block(data, nonce, "Nonce", 8);
+		}
+
+		for (i = 0; i < data.cdata.nminers; i += 1) {
+			xdagaddr addr;
+			objcopyto(addr, data.addr);
+			addr.threadid = i;
+
+			msendp("", "", addr, t);
+		}
+
+		xdagaddr addr;
+		objcopyto(addr, data.addr);
+		addr.threadid = -1;
+
+		if ((data.cdata.method & 0xff) >= 16) {
+			xdagshare s;
+			s.taskseq = ~t.seq;
+			s.clientId = t.clientId;
+			s.jobId = t.jobId;
+			s.hashhigh = t.task[taskPos + 19] << 32;
+
+			msendp("", "", addr, s);
+		}
+	}
+
+	input(code, data, 0x1000, POOL_READ_TIMEOUT);
+	return;
+}

@@ -1,0 +1,39 @@
+/* read conjunction from dnf; T16.488-T16.488; $DVS:time$ */
+
+(char dnf[], int begin, int end) -> (int conj[], int err, int nextbegin) {
+	int conj[];
+	int err;
+	int letter;
+	int digit;
+	int number;
+	int neg;
+
+	(begin, end) = harmonise_nothings_obtain(dnf, begin, end); /* strtostr() */
+
+	if (begin == end) { err = -1; return (conj, err, end); }
+
+	do {
+		letter = dnf.c[begin];
+		begin = begin + 1;
+
+		neg = -1;
+		if (letter >= 'a' & letter <= 'z') { neg = 0; letter = letter - 'a'; }
+		if (letter >= 'A' & letter <= 'Z') { neg = 1; letter = letter - 'A'; }
+		if (neg < 0) { err = -2; return (conj, err, end); }
+
+		number = 0;
+		if (begin < end) { do {
+			digit = dnf.c[begin] - '0';
+			if (digit >= 0 & digit <= 9) {
+				number = number * 10 + digit;
+				begin = begin + 1;
+			}
+		} while (begin < end & digit >= 0 & digit <= 9); }
+
+		number = number | letter << 58;
+		if (neg) { number = ~number; }
+		conj.push(number);
+	} while (begin != end);
+
+	return (conj, err, end);
+}

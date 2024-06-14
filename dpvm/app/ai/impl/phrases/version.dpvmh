@@ -1,0 +1,17 @@
+/* aiPhrases class, version */
+
+char version[] = "aiPhrases class, ver 0.0.4, T18.421-T18.441"; /* $DVS:time$ */
+
+int phrasesFormatVersion = 0x000100;
+
+/* history:
+
+T18.441 ver 0.0.4 - fixed bugs, added demo topPhrases
+
+T18.438 ver 0.0.3 - parseWords() method implemented
+
+T18.434 ver 0.0.2 - written all methods except of parseWords
+
+T18.421 ver 0.0.1 - class created as the copy of aiVocabulary class
+
+*/

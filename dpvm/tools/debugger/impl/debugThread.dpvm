@@ -1,0 +1,181 @@
+/* debugger class, debugThread internal method, T19.646-T20.171; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../lib/algorithms/hashtable/hash.dpvmake"
+#include "debugger.dpvmake"
+
+int HASH_SIZE = 0x1000;
+
+(const stateful thread t) -> () exit = {
+	debuggerMessage m;
+	m.pointer = 1 << 63;
+	msendp("", "", t.reportAddress, m);
+	msendp("", "", t.endAddress, "");
+	return;
+};
+
+(volatile stateful thread t, const char in[], int status) -> () debugThreadStep = {
+	debuggerImpl implArr[];
+	pushObject(t.debugger, implArr);
+	debuggerImpl impl = implArr[0];
+	(volatile stateful thread t) -> () bytecodes[256..] = impl.data.bytecodes;
+
+	char str[], parts[][] = splitString(in, " \t\r\n");
+	int outStack = 1, quit;
+
+	if (parts.lsize) {
+		if (parts[0].csize == 1) {
+			char c = parts[0][0];
+			if (c >= 'A' && c <= 'Z')
+				c += 'a' - 'A';
+
+			if (c == 'i')
+				t.mode = DEBUG_MODE_INTO;
+			else if (c == 'n')
+				t.mode = DEBUG_MODE_IN;
+			else if (c == 'o')
+				t.mode = DEBUG_MODE_OVER;
+			else if (c == 'q')
+				t.mode = DEBUG_MODE_STOP, outStack = 0, quit = -1;
+			else if (c == 'r')
+				t.mode = DEBUG_MODE_RUN;
+			else if (c == 't') {
+				int err = -1, next;
+
+				if (parts.lsize >= 2 && parts.lsize <= 3) {
+					t.breakpointFunctionHash = name2hash(parts[1], 0, parts[1].csize);
+					if (t.breakpointFunctionHash < 0 && parts[1].csize == 47) {
+						int hashes[];
+						if (!impl.data.base58Obj.methods.decodeHash(hashes, impl.data.base58Obj,
+								parts[1], 0, parts[1].csize))
+							t.breakpointFunctionHash = hashes[0] << 17 >> 17;
+					}
+					err = t.breakpointFunctionHash < 0;
+					if (!err && parts.lsize == 3)
+						(t.breakpointPosition, err, next) = strtoi(parts[2], 0, parts[2].csize, 0);
+					else
+						t.breakpointPosition = 0;
+				}
+
+				if (!err)
+					t.mode = DEBUG_MODE_TO;
+				else
+					printf(str, "Usage: %s function_short_hash [position]\r\n", {parts[0]}),
+					t.mode = DEBUG_MODE_STOP, outStack = 0;
+			} else if (c == 'u')
+				t.mode = DEBUG_MODE_OUT;
+			else
+				printf(str, "Unknown or unimplemented command (%s).\r\n", {parts[0]}),
+				t.mode = DEBUG_MODE_STOP, outStack = 0;
+		} else {
+			any obj = findObject(impl.data, t.stack, parts[0]), x;
+			if (obj != x.type)
+				printObject(str, obj);
+			else
+				printf(str, "Object not found (%s).\r\n", {parts[0]});
+			t.mode = DEBUG_MODE_STOP, outStack = 0;
+		}
+	} else if (status >= 0)
+		t.mode = DEBUG_MODE_INTO;
+
+
+	if (t.mode == DEBUG_MODE_RUN) {
+		do {
+			int cod = t.function.c[t.pointer];
+			t.pointer += 1;
+			bytecodes[cod](t);
+		} while (t.pointer >= 0);
+	} else if (t.mode == DEBUG_MODE_INTO) {
+		int cod = t.function.c[t.pointer];
+		t.pointer += 1;
+		bytecodes[cod](t);
+	} else if (t.mode == DEBUG_MODE_OVER) {
+		int level = t.functions.lsize;
+		do {
+			int cod = t.function.c[t.pointer];
+			t.pointer += 1;
+			bytecodes[cod](t);
+		} while (t.pointer >= 0 && t.functions.lsize > level);
+	} else if (t.mode == DEBUG_MODE_IN) {
+		int level = t.functions.lsize;
+		do {
+			int cod = t.function.c[t.pointer];
+			t.pointer += 1;
+			bytecodes[cod](t);
+		} while (t.pointer >= 0 && t.functions.lsize <= level);
+	} else if (t.mode == DEBUG_MODE_TO) {
+		int level = t.functions.lsize;
+		do {
+			int cod = t.function.c[t.pointer];
+			t.pointer += 1;
+			bytecodes[cod](t);
+		} while (t.pointer >= 0 && (t.function != t.breakpointFunctionHash || t.pointer != t.breakpointPosition));
+	} else if (t.mode == DEBUG_MODE_OUT) {
+		int level = t.functions.lsize;
+		do {
+			int cod = t.function.c[t.pointer];
+			t.pointer += 1;
+			bytecodes[cod](t);
+		} while (t.pointer >= 0 && t.functions.lsize >= level);
+	}
+
+	if (t.pointer < 0) {
+		t.pointer &= ~(1 << 63);
+		outStack = 1;
+		quit = 1;
+	}
+
+	if (outStack)
+		printStack(str, t);
+
+	if (quit < 0)
+		strcat(str, "Debug terminated by user request.\r\n");
+	else if (quit)
+		strcat(str, "Debug finished.\r\n");
+	else
+		strcat(str, "Into(=ENTER), iN, Over, Quit, Run, To func [pos], oUt, objname > ");
+
+	outputp("", "", str);
+
+	if (quit)
+		exit(t);
+	else
+		input(code, t, 256, -1);
+
+	return;
+};
+
+(const stateful thread t0, const int values[]) -> () debugThread = {
+	thread t;
+	objcopyto(t, t0);
+
+	any stack, functions[];
+	checker_data datas[];
+	int pointers[];
+	hashData hash;
+
+	objcopyto(stack, t.stack);
+	if (!stack.lsize) {
+		any x;
+		stack.lpush(x);
+	}
+	if (hashObj.initExt(hash, HASH_SIZE, hashFlagKeyValue)) {
+		outputp("", "", "Hash initialization error.\r\n");
+		exit(t);
+		return;
+	}
+	hashObj.findAddKeyValue(hash, t.function, t.checkerData);
+
+	t.stack = stack;
+	t.hash = hash;
+	t.functions = functions;
+	t.checkerDatas = datas;
+	t.pointers = pointers;
+	t.threadId = t0;
+
+	report(t, t.function.type.l[0]);
+
+	debugThreadStep(t, "", -1);
+	return;
+};

@@ -1,0 +1,17 @@
+/* write log of xdag miner; T16.508-T19.553; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "xdag.dpvmake"
+
+int params[] = {0};
+
+(const stateful xdagdata data, const char mess[], int level) -> () {
+	if (level > data.cdata.debuglevel) return;
+
+	xdagdata d = xdagcopy(data);
+	d.mess = mess;
+	d.level = level;
+
+	getsysp(writelog_fin, d, params);
+	return;
+}

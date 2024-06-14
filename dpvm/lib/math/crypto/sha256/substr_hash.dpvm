@@ -1,0 +1,13 @@
+/* sha256 of substring; T16.493-T17.687; $DVS:time$ */
+
+#include "sha256.dpvmake"
+
+(const stateful char str[], int begin, int end) -> (volatile int hash[]) {
+	int ctx[];
+	
+	sha256_init(ctx);
+	sha256_addSubstr(ctx, str, begin, end);
+	sha256_finalize(ctx);
+
+	return ctx;
+}

@@ -1,0 +1,15 @@
+/* converts int32[] subarray to string; T16.507-T16.510; $DVS:time$ */
+
+(const stateful int src[], int begin, int end) -> (volatile char arr[]) {
+	char arr[];
+	int i;
+	for (i = begin; i < end; i += 1) {
+		int n = src[i];
+		arr.cpush(n); n >>= 8; 
+		arr.cpush(n); n >>= 8; 
+		arr.cpush(n); n >>= 8; 
+		arr.cpush(n); 
+	}
+
+	return arr;
+}

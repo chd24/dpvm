@@ -1,0 +1,8 @@
+/* aiAlphabet class, makefile for constructor, T18.379-T18.413; $DVS:time$ */
+
+#include "alphabet.dpvmh"
+
+/*@ "impl/alphabet/create.dpvm": create alphabet object */
+() -> (volatile aiAlphabet obj)
+        aiAlphabetCreate = nibbles_worthless_payrolls;
+/* @*/          

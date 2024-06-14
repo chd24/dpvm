@@ -1,0 +1,10 @@
+/* dst += src[begin..end); T15.565-T16.598; $DVS:time$ */
+	
+(volatile stateful char dst[], const stateful char src[], int begin, int end) -> () {
+	int i;
+
+	for (i = begin; i < end; i = i + 1)
+		dst.cpush(src[i]);
+
+	return;
+}

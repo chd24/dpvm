@@ -1,0 +1,28 @@
+/* replace dst by remainder dst % src; T17.523-T17.526; $DVS:time$ */
+
+#include "long.dpvmake"
+
+(volatile stateful int dst[], const stateful int src[]) -> () {
+	int di = dst.isize;
+	int si = src.isize;
+	if (di < si)
+		return;
+
+	int s[];
+	int i;
+	int diff = di + 1 - si;
+
+	for (i = 0; i < diff; i += 1)
+		s.ipush(0);
+	for (i = 0; i < si; i += 1)
+		s.ipush(src[i]);
+
+	diff <<= 6;
+
+	for (i = 0; i < diff; i += 1) {
+		shr_1(s);
+		sub_cond_long(dst, s);
+	}
+
+	return;
+}

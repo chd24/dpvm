@@ -1,0 +1,18 @@
+/* converts string to floats array; T16.486-T16.486; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+
+(const stateful char str[]) -> (volatile float arr[]) {
+	float res[];
+	int pos;
+	int err;
+	float x;
+
+	while (!err) {
+		(err, pos, x) = strtof(str, pos, str.csize);
+		if (!err)
+			res.push(x);
+	}
+	
+	return res;
+}

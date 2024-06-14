@@ -1,0 +1,42 @@
+/* write long number to string; T16.475-T18.399; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "long.dpvmake"
+
+(volatile stateful char dst[], const stateful int src[], int upper) -> () write_hex {
+	int dig = 1;
+	int i;
+
+	for (i = src.isize - 1; i >= 0; i -= 1) {
+		printhex(dst, src[i], dig, upper);
+		dig = 16;
+	}
+
+	return;
+}
+
+(volatile stateful char dst[], const stateful int src[], int base, int upper) -> () {
+	int i = src.isize;
+	
+	if (!i) { dst.cpush('0'); return; }
+	
+	if (base == 16) { write_hex(dst, src, upper); return; }
+
+	char number[];
+	int j;
+
+	for (i -= 1; i >= 0; i -= 1) {
+		int n = src[i];
+		for (j = 63; j >= 0; j -= 1)
+			shl_1_base(number, base, n >> j & 1);
+	}
+	
+	for (i = number.csize - 1; i >= 0; i -= 1) {
+		int n = number[i];
+		if (n < 10) dst.cpush('0' + n);
+		else if (upper) dst.cpush('A' + n - 10);
+		else dst.cpush('a' + n - 10);
+	}
+	
+	return;
+}

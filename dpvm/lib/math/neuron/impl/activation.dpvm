@@ -1,0 +1,37 @@
+/* neuron class, activation functions, T19.373-T19.710; $DVS:time$ */
+
+#include "../neuron.dpvmh"
+
+(float x) -> (float y)
+	zero		= { return 0;				},
+	one		= { return 1;				},
+	id		= { return x;				},
+	step		= { return x >= 0;			},
+	relu		= { return x * (x >= 0);		},
+	dFromRelu	= { return x > 0;			},
+	softplus	= { return flog(1 + fexp(x));		},
+	dfromSoftplus	= { return 1 - 1 / fexp(x);		},
+	sigmoid		= { return 1 / (1 + fexp(-x));		},
+	dsigmoid	= { return 1 / (2 + fexp(x) + fexp(-x));},
+	dfromSigmoid	= { return x * (1 - x);			};
+
+inlineFunction
+	Fzero		= { zero	,	"0"				},
+	Fone		= { one,		"1"				},
+	Fid		= { id,			"%s"				},
+	Fstep		= { step,		"%s >= 0"			},
+	Frelu		= { relu,		"%s * (%s >= 0)"		},
+	FdFromRelu	= { dFromRelu,		"%s > 0"			},
+	Fsoftplus	= { softplus,		"flog(1 + fexp(%s))"		},
+	FdfromSoftplus	= { dfromSoftplus,	"1 - 1 / fexp(%s)"		},
+	Fsigmoid	= { sigmoid,		"1 / (1 + fexp(-%s))"		},
+	Fdsigmoid	= { dsigmoid,		"1 / (2 + fexp(%s) + fexp(-%s))"},
+	FdfromSigmoid	= { dfromSigmoid,	"%s * (1 - %s)"			};
+
+activationFunction activationFunctions[] = {
+	{ "id",		Fid,		Fone,		Fone		},
+	{ "step",	Fstep,		Fzero,		Fzero		},
+	{ "relu",	Frelu,		Fstep,		FdFromRelu	},
+	{ "softplus",	Fsoftplus,	Fsigmoid,	FdfromSoftplus	},
+	{ "sigmoid",	Fsigmoid,	Fdsigmoid,	FdfromSigmoid	}
+};

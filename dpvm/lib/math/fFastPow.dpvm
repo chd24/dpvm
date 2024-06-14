@@ -1,0 +1,24 @@
+/* fast power of float number; T19.829-T19.829; $DVS:time$ */
+
+(int degree, float base) -> (float pow) fFastPow = {
+	int neg;
+
+	if (degree < 0) {
+		neg = 1;
+		degree = -degree;
+	}
+
+	float res = 1;
+
+	while (degree) {
+		if (degree & 1)
+			res *= base;
+		base *= base;
+		degree >>= 1;
+	}
+
+	if (neg)
+		res = 1 / res;
+
+	return res;
+};

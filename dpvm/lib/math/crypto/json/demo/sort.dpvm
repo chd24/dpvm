@@ -1,0 +1,45 @@
+/* json class, sort demo (sorts subobjects of each object by name), T19.558-T19.560; $DVS:time$ */
+
+#include "../../../../algorithms/sort/sort.dpvmake"
+#include "../json.dpvmake"
+
+(const stateful any left, const stateful any right) -> (int res) compare = {
+	int leftNamed = left.c[0] & JSON_NAME, rightNamed = right.c[0] & JSON_NAME;
+	if (!leftNamed || !rightNamed)
+		return (leftNamed > rightNamed) - (leftNamed < rightNamed);
+	int i, lsize = left.csize, rsize = right.csize;
+	for (i = 1; i < lsize && i < rsize && left.c[i] && right.c[i]; i += 1) {
+		if (left.c[i] != right.c[i])
+			return (left.c[i] > right.c[i]) - (left.c[i] < right.c[i]);
+	}
+
+	int leftLonger = i < lsize && left.c[i], rightLonger =  i < rsize && right.c[i];
+	return (leftLonger > rightLonger) - (leftLonger < rightLonger);
+};
+
+(volatile stateful jsonObject obj) -> () sortRecurse = {
+	int i, size = obj.lsize;
+	for (i = 0; i < size; i += 1)
+		code(obj.l[i]);
+	if (size >= 2 && (obj.c[0] & ~JSON_NAME) == JSON_OBJECT)
+		quickSortAny(obj, compare, 0, size);
+	return;
+};
+
+(const stateful char input[]) -> (const char output[]) sort = {
+	jsonClass jsonObj = jsonCreate();
+	jsonObject obj;
+	char error[];
+	int begin;
+
+	(obj, error, begin) = jsonObj.methods.deserialize(input, 0, input.csize);
+	if (error.csize) return error;
+
+	sortRecurse(obj);
+
+	char out[];
+	error = jsonObj.methods.serialize(out, obj);
+	if (error.csize) return error;
+
+	return out;
+};

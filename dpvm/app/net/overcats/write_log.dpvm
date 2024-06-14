@@ -1,0 +1,21 @@
+/* write log of overcats; T17.465-T17.468; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "overcats.dpvmake"
+
+(const stateful overcats_data data, const char mess[], int level) -> () {
+	if (level > data.log_level) return;
+
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.service = OVERCATS_SERVICE_LOG;
+
+	overcats_mess m;
+	m.request = level;
+	m.thread_id = data.thread_id & 0xf | data.conn_id << 4;
+	m.data = mess;
+
+	msendp("", "", addr, m);
+	return;
+}

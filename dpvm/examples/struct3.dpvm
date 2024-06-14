@@ -1,0 +1,12 @@
+/* example of type mismatch in structure field; T17.996-T17.997; $DVS:time$ */
+
+type ex = {
+        int a[];
+};
+
+() -> (volatile ex res) {
+	ex s;
+	char b[];
+	s.a = b;
+	return s;
+}

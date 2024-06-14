@@ -1,0 +1,18 @@
+/* find rule that matches fragment of instructions list; T17.662-T17.676; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+(const stateful asm_instr list[], const stateful asm_instr rules[][], int index) -> (int res) {
+	int min = 0;
+	int max = rules.lsize - 1;
+
+	while (min <= max) {
+		int mid = (min + max) >> 1;
+		int res = match_rule(list, rules[mid], index);
+		if (!res) return mid;
+		if (res > 0) min = mid + 1;
+		else max = mid - 1;
+	}
+	
+	return -1;
+}

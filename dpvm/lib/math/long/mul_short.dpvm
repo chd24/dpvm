@@ -1,0 +1,27 @@
+/* mul dst[] by short number m; T17.523-T17.523; $DVS:time$ */
+
+int z = 0x8000000000000000;
+
+(int p, int q) -> (int l, int h) big_mul {
+	asm {mul ret};
+}
+
+(volatile stateful int dst[], int m) -> () {
+	int p;
+	int h;
+	int l;
+	int i;
+
+	for (i = 0; i < dst.isize; i += 1) {
+		(l, h) = big_mul(dst[i], m);
+		l += p;
+		if (l + z < p + z) h += 1;
+		dst[i] = l;
+		p = h;
+	}
+
+	if (p)
+		dst.ipush(p);
+
+	return;
+}

@@ -1,0 +1,45 @@
+/* apply rule to instructions list; T16.083-T17.684; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], const stateful asm_instr rule[], int index) 
+		-> (int res, int next) {
+	int params[];
+	int j;
+	int c;
+
+	int next = index;
+	int i;
+
+	for (i = rule[0].next; i && !rule[i].hex.csize; i = rule[i].next) {
+		if (rule[i].mnem != list[next].mnem)
+			return (0, index);
+
+		for (j = 2; j < 6; j += 1) {
+			params.ipush(list[next].i[j]);
+			int r = rule[i].i[j];
+			if (r && count_param(params, r))
+				return (0, index); 
+		}
+
+		next = list[next].next;
+		c += 1;
+	}
+
+	for (c = c; c; c -= 1)
+		next = asm_del(list, next);
+
+	for (i = i; i; i = rule[i].next) {
+		int ra = rule[i].i[2]; 
+		if (ra) ra = count_param(params, ra);
+		int rb = rule[i].i[3]; 
+		if (rb) rb = count_param(params, rb);
+		int rc = rule[i].i[4]; 
+		if (rc) rc = count_param(params, rc);
+		int rd = rule[i].i[5]; 
+		if (rd) rd = count_param(params, rd);
+		asm_add(list, rule[i].mnem, rule[i].hex, ra, rb, rc, rd, next);
+	}
+
+	return (1, next);
+}

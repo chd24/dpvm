@@ -1,0 +1,30 @@
+/* simple version of wget, makefile; T17.596-T18.002; $DVS:time$ */
+
+/* max time between subsequent reads data from server, 300 sec */
+int TIMEOUT = 300000000000; 
+
+type wget_data = {	/* program parameters to hold them together */
+	char	host[];	/* hostanme or ip address of server to connect */
+	char	path[];	/* path of file to get from server */
+	char	file[];	/* local filename to save reply from server */
+};
+
+/*@ "read_reply.dpvm": called after first reply read, reads subsequent replies and puts them info file */
+(wget_data data, const char text[], int status) -> ()
+	read_reply = endorsement_herewith_meatballs;
+/* @*/
+
+/*@ "written.dpvm": called after request written to server, reads first server reply */
+(wget_data data, int status) -> ()
+	written = intoxicant_analyses_partisans;
+/* @*/
+
+/*@ "connected.dpvm": called after connection established; outputs request to server */
+(wget_data data, int port, int ipaddr0, int ipaddr1) -> ()
+	connected = hers_monitoring_irksomeness;
+/* @*/
+
+/*@ "wget.dpvm": main file of project; puts parameters to wget_data and connects to host */
+(char host[], char path[], char file[], int port) -> ()
+	wget = pharmacies_boarder_barred;
+/* @*/

@@ -1,0 +1,164 @@
+/* dnet node, incoming packet processing; T17.559-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../math/crypto/crc32/crc32.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char packet[], int begin, int end) 
+		-> (int change) {
+	int change;
+
+	log_packet(ctx, "Packet from", packet, ctx.conns[0].in_packets, begin, end);
+	ctx.conns[0].in_packets += 1;
+
+	if (packet[begin] == DNET_PACKET_EXCHANGE) {
+		if (end - begin < 0x40C) {
+			ctx.conns[0].in_dropped += 1;
+			write_log(ctx, "Exchange packet dropped, too small size", 8);
+			return 0;
+		}
+
+		dnet_host h;
+                char key[];
+                substrcat(key, packet, begin + 8, begin + 0x408);
+                h.key = key;
+
+		int time = packet[begin + 0x408] | packet[begin + 0x409] << 8 
+			| packet[begin + 0x40A] << 16 | packet[begin + 0x40B] << 24;
+		h.last_time = ctx.last_time - time * 1000000000;
+
+		int pos;
+		for (pos = begin + 0x40C; pos < end && packet[pos]; pos += 1);
+                char name[];
+                substrcat(name, packet, begin + 0x40C, pos);
+                h.name = name;
+
+		if (pos < end) pos += 1;
+                char vers[];
+                substrcat(vers, packet, pos, end);
+                h.version = vers;
+
+		h.thread_id = ctx.conns[0].thread_id;
+
+		int n;
+		(change, n) = update_host(ctx, h);
+
+	} else if (packet[begin] == DNET_PACKET_UPDATE) {
+		if (end - begin & 7) {
+			ctx.conns[0].in_dropped += 1;
+			write_log(ctx, "Update packet dropped, illegal size", 8);
+			return 0;
+		}
+
+		dnet_host h;
+		h.thread_id = ctx.conns[0].thread_id;
+
+		int n;
+		int ch;
+		int j;
+		for (j = begin + 8; j < end; j += 8) {
+			h.crc = packet[j] | packet[j + 1] << 8 
+				| packet[j + 2] << 16 | packet[j + 3] << 24;
+
+			int time = packet[j + 4] | packet[j + 5] << 8 
+				| packet[j + 6] << 16 | packet[j + 7] << 24;
+			h.last_time = ctx.last_time - time * 1000000000;
+
+			(ch, n) = update_host(ctx, h);
+			change |= ch;
+		}
+
+	} else {
+		if (end - begin < 48) {
+			ctx.conns[0].in_dropped += 1;
+			write_log(ctx, "Stream packet dropped, too small size", 8);
+			return 0;
+		}
+
+		int crc_from = packet[begin + 8] | packet[begin + 9] << 8 
+			     | packet[begin + 10] << 16 | packet[begin + 11] << 24;
+		int crc_to = packet[begin + 12] | packet[begin + 13] << 8 
+			   | packet[begin + 14] << 16 | packet[begin + 15] << 24;
+
+		dnet_host h;
+		h.crc = crc_from;
+		h.last_time = ctx.last_time;
+		h.thread_id = ctx.conns[0].thread_id;
+
+		int n;
+
+		(change, n) = update_host(ctx, h);
+
+		if (crc_to != ctx.hosts[0].crc) {
+			int ttl = packet[begin + 1] - 1;
+			if (ttl <= 0) {
+				ctx.conns[0].in_dropped += 1;
+
+				char m[];
+				strcat(m, "Stream packet from ");
+				print_hostname(m, ctx, n, crc_from);
+				strcat(m, " to ");
+				print_hostname(m, ctx, -1, crc_to);
+				strcat(m, " dropped, ttl <= 0");
+
+				write_log(ctx, m, 8);
+				return change;
+			}
+
+			char p[];
+			substrcat(p, packet, begin, end);
+			p[1] = ttl;
+			send_packet(ctx, p);
+			return change;
+		}
+
+		if (!(ctx.hosts[n].flags & DNET_HOST_TRUSTED)) {
+			ctx.conns[0].in_dropped += 1;
+
+			char m[];
+			strcat(m, "Stream packet from ");
+			print_hostname(m, ctx, n, crc_from);
+			strcat(m, " to ");
+			print_hostname(m, ctx, 0, crc_to);
+			strcat(m, " dropped, untrusted host");
+
+			write_log(ctx, m, 8);
+			return change;
+		}
+
+		if (packet[begin] == DNET_PACKET_COMMAND) {
+			char p[];
+
+			int i;
+			for (i = 0; i < 48; i += 1) {
+				int j = i;
+				if (i < 8);
+				else if (i < 16) j ^= 4;
+				else if (i < 32) j ^= 8;
+				p.cpush(packet[begin + j]);
+			}
+			p[0] = DNET_PACKET_COMMAND_OUTPUT;
+			p[1] = 16;
+
+			ctx.streams[0].packet = p;
+			ctx.streams[0].thread_id = 0;
+
+			char res[];
+			int error;
+			int next = begin + 48;
+			while (next < end && error != 2) {
+				char tmp[];
+				(tmp, error, next) = process_commands(ctx, packet, next, end);
+				strcat(res, tmp);
+			}
+			if (res.csize) {
+				char pp[];
+				strcat(pp, p);
+				strcat(pp, res);
+				send_packet(ctx, pp);
+			}
+		}	
+	}
+
+	return change;
+}

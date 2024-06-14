@@ -1,0 +1,56 @@
+/* dpvm byte code translator, amd64 stack pointers to top; T16.080-T18.397; $DVS:time$ */
+
+/* 
+ 	rsi = ints stack end
+*/
+
+#include "../translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[], 
+		int i, int linksdiff) -> () {
+	stack_state t;
+	int n;
+		
+	if (!i)
+		t = data.l[0];
+	else
+		t = data.l[4].l[i - 1];
+
+	n = (t.i[0] - data.l[0].i[0] - linksdiff) << 3;
+	if (!n)
+		;
+	else if (n < 0x80 && n >= -0x80)
+		as(list, "lea rdi,[rdi+b]", "48 8D 7F 111", 0, n, 0, 0, 0);
+	else
+		as(list, "lea rdi,[rdi+d]", "48 8D BF 114", 0, n, 0, 0, 0);
+
+	n = (t.i[1] - data.l[0].i[1]) << 3;
+	if (!n)
+		;
+	else if (n < 0x80 && n >= -0x80)
+		as(list, "lea rsi,[rsi+b]", "48 8D 76 111", 0, n, 0, 0, 0);
+	else
+		as(list, "lea rsi,[rsi+d]", "48 8D B6 114", 0, n, 0, 0, 0);
+
+	n = (t.i[2] - data.l[0].i[2]) << 3;
+	if (!n)
+		as(list, "mov rdx,r11", "4C 89 DA", 0, 0, 0, 0, 0);
+	else if (n < 0x80 && n >= -0x80)
+		as(list, "lea rdx,[r11+b]", "49 8D 53 111", 0, n, 0, 0, 0);
+	else
+		as(list, "lea rdx,[r11+d]", "49 8D 93 114", 0, n, 0, 0, 0);
+
+	n = t.i[3] - data.l[0].i[3];
+	if (!n)
+		as(list, "mov rcx,r10", "4C 89 D1", 0, 0, 0, 0, 0);
+	else if (n < 0x80 && n >= -0x80)
+		as(list, "lea rcx,[r10+b]", "49 8D 4A 111", 0, n, 0, 0, 0);
+	else
+		as(list, "lea rcx,[r10+d]", "49 8D 8A 114", 0, n, 0, 0, 0);
+
+	return;
+}

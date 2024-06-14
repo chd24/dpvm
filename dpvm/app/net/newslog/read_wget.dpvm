@@ -1,0 +1,163 @@
+/* newslog: read and process wget output; T15.590-T19.591; $DVS:time$ */
+	
+#include "../../stdlib/stdlib.dpvmake"
+#include "newslog.dpvmake"
+
+int TELEGRAM_TEXT_MAX = 256;
+
+(volatile stateful news_data data, const char url[], const char text[]) -> () putRecord = {
+	char str[];
+	printf(str, "%s  <a href='%s'>%s</a>", {data.name, url, text});
+
+	if (db_find(data.news_db, str, 4) == -1) {
+		db_add(data.news_db, str, 4, 0);
+		char log[];
+		strftime(log, "%d.%m.%Y %H:%M:%S  ", data.time, data.offset);
+		strcat(log, str);
+		strcat(log, "\r\n");
+		writep("", "", data.news_file, log, -1);
+	}
+
+	return;
+};
+
+(volatile stateful news_data data) -> () readRSS = {
+	int l, r = data.text.csize, il, ir, tl, tr, ll, lr, xl, xr, win1251;
+
+	(il, ir) = get_fragment(data.text, "<?xml", "?>", l, r);
+	if (il >= 0) {
+		(tl, tr) = get_fragment(data.text, "=", "1251", il, ir);
+		if (tl >= 0) win1251 = 1;
+	}
+
+	do {
+		(il, ir) = get_fragment(data.text, "<item>", "</item>", l, r);
+		if (il == -1)
+			return;
+		l = ir + 7;
+		(tl, tr) = get_fragment(data.text, "<title>", "</title>", il, ir);
+		(ll, lr) = get_fragment(data.text, "<link>", "</link>", il, ir);
+		if (tl >= 0 && ll >= 0) {
+			(xl, xr) = get_fragment(data.text, "<![CDATA[", "]]>", tl, tr);
+			if (xl >= 0) { tl = xl; tr = xr; }
+			(xl, xr) = get_fragment(data.text, "<![CDATA[", "]]>", ll, lr);
+			if (xl >= 0) { ll = xl; lr = xr; }
+
+			char url[], txt[];
+			substrcat(url, data.text, ll, lr);
+			recode(txt, data.text, tl, tr, win1251);
+			putRecord(data, url, txt);
+		}
+	} while (1);
+
+	return;
+};
+
+(volatile stateful char out[], volatile stateful char word[], int space) -> (int agent, int space) processWord = {
+	if (word.csize) {
+		if (word == "НАСТОЯЩИЙ") {
+			word.cpop(word.csize);
+			return (1, 1);
+		} else {
+			if (space && out.csize)
+				out.cpush(' ');
+			strcat(out, word);
+			word.cpop(word.csize);
+			return (0, 0);
+		}
+	}
+	return (0, space);
+};
+
+(volatile stateful char out[], const stateful char in[], int l, int r) -> () recodeTelegram = {
+	int i, n, space, tag, agent;
+	char w[];
+	for (i = l; i < r; i += 1) {
+		int c = in[i];
+		if (tag) {
+			if (c == '>') tag = 0, agent = 0, space = 1;
+		} else if (c == '<') {
+			tag = 1;
+			(agent, space) = processWord(out, w, space);
+		} else if (!agent) {
+			if (c >= 0x80) {
+				w.cpush(c);
+			} else {
+				(agent, space) = processWord(out, w, space);
+
+				if (out.csize >= TELEGRAM_TEXT_MAX)
+					return;
+
+				if (!agent) {
+					if (c <= ' ')
+						space = 1;
+					else {
+						if (space) {
+							if (out.csize) out.cpush(' ');
+							space = 0;
+						}
+						out.cpush(c);
+					}
+				}
+			}
+		}
+	}
+	processWord(out, w, space);
+
+	return;
+};
+
+(volatile stateful news_data data) -> () readTelegram = {
+	int l, r = data.text.csize, il, ir, ul, ur;
+
+	do {
+		const char TXTL[] = "<div class=\"tgme_widget_message_text js-message_text\" dir=\"auto\">",
+			   TXTR[] = "</div>",
+			   URLL[] = "<a class=\"tgme_widget_message_date\" href=\"",
+			   URLR[] = "\"";
+		if (!il)
+			(il, ir) = get_fragment(data.text, TXTL, TXTR, l, r);
+		if (il == -1)
+			return;
+		l = ir + 6;
+
+		char txt[];
+		recodeTelegram(txt, data.text, il, ir);
+
+		(il, ir) = get_fragment(data.text, TXTL, TXTR, l, r);
+		ur = il;
+		if (ur == -1)
+			ur = r;
+		(ul, ur) = get_fragment(data.text, URLL, URLR, l, ur);
+
+		char url[];
+		if (ul != -1)
+			substrcat(url, data.text, ul, ur);
+		else
+			url = data.url;
+
+		putRecord(data, url, txt);
+	} while (1);
+
+	return;
+};
+
+(volatile stateful news_data data, const stateful char text[], int status) -> () read_wget = {
+	if (status > 0) {
+		strcat(data.text, text);
+		input(code, data, 0x100000, WGET_READ_TIME_OUT);
+		return;
+	}
+
+	if (strstr(data.url, "/t.me/") >= 0)
+		readTelegram(data);
+	else
+		readRSS(data);
+
+	data.name = "";
+	data.url = "";
+	char txt[];
+	data.text = txt;
+	delay(data);
+	return;
+};

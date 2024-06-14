@@ -1,0 +1,8 @@
+/* check_recursive, makefile; T17.638-T18.023; $DVS:time$ */
+
+#include "checker.dpvmh"
+
+/*@ "check_recursive.dpvm": check function and its subfunctions recursive */
+(const stateful any func) -> (const char error)
+	check_recursive = seducer_mexican_pleadingly;
+/* @*/                     

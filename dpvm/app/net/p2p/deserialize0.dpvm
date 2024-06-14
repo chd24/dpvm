@@ -1,0 +1,30 @@
+/* p2p deserialize object, stage 0: fast check validity; T16.968-T17.648; $DVS:time$ */
+
+#include "deserialize.dpvmh"
+
+(const stateful char str[], int begin, int end) -> (const char error[]) {
+	if (end - begin < 128)
+		return "Malformed object";
+
+	int head[8];
+	int i;
+	for (i = 0; i < 8; i += 1)
+		head[i] = str2int(str, begin + 32 + (i << 3));
+
+	if (head[0] != 32 || head[1] != 8 || head[2] != 8 || head[3] != 1)
+		return "Illegal basic type used in object";
+
+	int size = end - begin - 128;
+
+	for (i = 4; i < 8; i += 1) {
+		int arrsize = head[i] * head[i - 4];
+
+		if (head[i] < 0 || head[i] > size || arrsize > size
+				|| (i == 7 && arrsize != size))
+			return "Illegal size used in object";
+
+		size = size - arrsize;
+	}
+
+	return "";
+}

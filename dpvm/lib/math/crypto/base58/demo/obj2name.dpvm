@@ -1,0 +1,16 @@
+/* base58 class, obj2name demo, T19.570-T20.166; $DVS:time$ */
+
+#include "../../../../utils/utils.dpvmake"
+#include "../base58.dpvmake"
+
+(const stateful any obj) -> (const char name[]) obj2name = {
+	base58Class base58Obj = base58Create();
+
+	int hash0, hash1, hash2, hash3;
+	(hash0, hash1, hash2, hash3) = getfullhash(obj);
+
+	char out[];
+	base58Obj.methods.encodeHash(out, hash0, hash1, hash2, hash3);
+
+	return out;
+};

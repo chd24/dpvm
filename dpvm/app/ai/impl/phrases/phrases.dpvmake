@@ -1,0 +1,7 @@
+/* aiPhrases class, makefile for implementation, T18.421-T18.441; $DVS:time$ */
+
+#include "phrases.dpvmh"
+
+/*@ "methods.dpvm": methods implementation */
+aiPhrasesMethods aiPhrasesMethodsImpl = traits_arguably_heartlands;
+/* @*/       

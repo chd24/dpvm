@@ -1,0 +1,58 @@
+/* forex class, neuronTraining demo, T19.744-T19.771; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../forex.dpvmake"
+
+type demoData = {
+	volatile forexClass forexObj;
+	const char neuronNet[];
+	const float training_params[];
+	volatile stateful inputFile fl;
+	int graphX;
+	int graphY;
+	int testPart;
+	int trainingCycles;
+	int neuronFlags;
+};
+
+(volatile stateful any data, const char error[]) -> () callback = {
+	demoData darr[];
+	pushObject(data, darr);
+	demoData d = darr[0];
+
+	char out[];
+	if (error.csize)
+		printf(out, "%s\r\n", {error});
+
+	error = d.forexObj.methods.dump(out, d.forexObj, d.graphX, d.graphY);
+	if (error.csize)
+		printf(out, "%s\r\n", {error});
+
+	outputp("", "", out);
+
+	error = d.forexObj.methods.neuronTraining(d.forexObj, d.neuronNet, d.training_params,
+			d.testPart, d.trainingCycles, d.neuronFlags);
+
+	char out1[];
+	if (error.csize)
+		printf(out1, "%s\r\n", {error});
+	else
+		printf(out1, "Training finished.\r\n", {});
+
+	outputp("", "", out1);
+	return;
+};
+
+(const stateful any registry, const char filename[], const char neuronNet[], const float training_params[],
+		int nCurrency, int graphX, int graphY, int testPart, int trainingCycles, int neuronFlags)
+		-> (const char error[]) neuronTraining = {
+	inputFile f = {filename};
+	demoData d = {forexCreate(), neuronNet, training_params, f, graphX, graphY, testPart, trainingCycles, neuronFlags};
+
+	char error[] = d.forexObj.methods.setRegistry(d.forexObj, registry);
+	if (error.csize) return error;
+
+	d.forexObj.methods.readCryptoLog(d.forexObj, callback, d, f, nCurrency);
+	return "";
+};

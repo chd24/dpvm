@@ -1,0 +1,122 @@
+/* cgi interface, read query from input, T18.784-T18.893; $DVS:time$ */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "modules.dpvmake"
+
+int TIME_DELAY = 30000000000; /* 30 sec */
+
+type readQueryData = {
+    const (const char path[], const char env[][], const cgiFormField fields[]) -> (int status) callback;
+    const char path[];
+    const char env[][];
+    const cgiFormField fields[];
+    volatile char query[];
+    int length;
+};
+
+(volatile stateful readQueryData data, const char text[], int status) -> () inputCallback = {
+	if (status > 0) {
+		strcat(data.query, text);
+		if (data.query.csize < data.length) {
+			input(code, data, data.length - data.query.csize, TIME_DELAY);
+			return;
+		} else if (data.query.csize == data.length) {
+
+			/* multipart/mixed */
+			if (data.query.csize && data.query[0] == '-' && strchr(data.query, '\n') >= 0) {
+				char query[] = data.query, delim[] = "\n\n";
+				int p = strchr(query, '\n'), e = query.csize, q, CRLF = 1;
+				if (query[p - 1] == '\r')
+					p -= 1, CRLF = 2, delim = "\r\n\r\n";
+				char boundary[];
+				substrcat(boundary, query, 0, p);
+				cgiFormField fields[];
+
+				do {
+					q = substrstr(query, boundary, p, e);
+					if (q >= 0) {
+						cgiFormField field;
+						field.query = query;
+
+						int b = substrstr(query, delim, p, q);
+						if (b >= 0 && b + 2 * CRLF < q - CRLF) {
+							field.begin = b + 2 * CRLF;
+							field.end = q - CRLF;
+
+							int n = substrstr(query, " name=\"", p, b);
+							if (n >= 0) {
+								n += 7;
+								int ne = substrchr(query, n, b, '\"');
+								if (ne >= 0) {
+									char name[];
+									substrcat(name, query, n, ne);
+									field.name = name;
+
+									n = substrstr(query, " filename=\"", p, b);
+									if (n >= 0) {
+										n += 11;
+										ne = substrchr(query, n, b, '\"');
+										if (ne >= 0) {
+											char filename[];
+											substrcat(filename, query, n, ne);
+											field.filename = filename;
+										}
+									}
+
+									fields.lpush(field);
+								}
+							}
+						}
+
+						p = q + boundary.csize;
+					}
+				} while (q >= 0);
+
+				data.fields = fields;
+
+			} else {
+				char env[][], query[];
+				printf(query, "QUERY_STRING=%s", {data.query});
+				env.lpush(query);
+				int i, size = data.env.lsize;
+				for (i = 0; i < size; i += 1) {
+					if (strstr(data.env[i], "QUERY_STRING="))
+						env.lpush(data.env[i]);
+				}
+				data.env = env;
+			}
+		}
+	}
+
+	data.callback(data.path, data.env, data.fields);
+	return;
+};
+
+(const (const char path[], const char env[][], const cgiFormField fields[]) -> (int status) callback,
+	const char path[], const char env[][]) -> () readQuery = {
+    char lengthStr[];
+
+    if (!getEnv(lengthStr, env, "CONTENT_LENGTH") || !lengthStr.csize) {
+	cgiFormField fields[];
+	callback(path, env, fields);
+        return;
+    }
+
+    int length, err, next;
+
+    (length, err, next) = strtoi(lengthStr, 0, lengthStr.csize, 10);
+    if (err || length <= 0) {
+	cgiFormField fields[];
+	callback(path, env, fields);
+        return;
+    }
+
+    readQueryData data;
+    data.callback = callback;
+    data.path = path;
+    data.env = env;
+    data.length = length;
+
+    input(inputCallback, data, length, TIME_DELAY);
+    return;
+};

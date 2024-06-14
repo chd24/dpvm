@@ -1,0 +1,82 @@
+/* dpvm: return instruction; T15.441-T20.113; $DVS:time$ */
+
+/* return multiexpr; */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const Instr instr) -> (int status) {
+
+	/* read return keyword */
+
+	int pos;
+	int end;
+	int status;
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 16) return -1;
+
+	data.pos = pos;
+
+
+	/* read multi expression */
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	type t = data.dst.type.l[1];
+	type res;
+
+	if (status != 15) {
+		data.nlinks = 0;
+		data.nints = 0;
+		data.nfloats = 0;
+		data.nchars = 0;
+		int segments[];
+	
+		type castto;
+		castto.i[8] = t.i[8];
+		castto.i[9] = t.i[9];
+		castto.i[10] = t.i[10];
+		castto.i[11] = t.i[11];
+
+		(res, segments, status) = getmultiexpr(data, instr, getexpr, castto, 0);
+		if (status < 0 || status > 5 || status == 4) {
+			if (status != -2)
+				data.mess = "multi expression expected after return";
+			return -2;
+		}
+		if (status < 4) {
+			type t1;
+			t1.i[8 + status] = 1;
+			res = t1;
+		}
+	}
+
+
+	/* check type mismatch */
+
+	if (res.i[8] != t.i[8] || res.i[9] != t.i[9] || res.i[10] != t.i[10] || res.i[11] != t.i[11]) {
+		data.mess = "set ot types in multi expression mismatches return type of function";
+		return -2;
+	}
+
+
+	/* push 'ret' bytecode */
+
+	char c = 0x88; data.dst.push(c);
+	data.ndst++;
+	
+
+	/* read ; */
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 15) {
+		data.mess = "; expected after return instruction";
+		status = -2;
+	} else {
+		data.pos = pos;
+		status = 0;
+	}
+
+	return status;
+}

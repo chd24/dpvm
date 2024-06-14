@@ -1,0 +1,13 @@
+/* compute crc32 of substr; T16.508-T17.641; $DVS:time$ */
+
+#include "crc32.dpvmake"
+
+(const stateful char data[], int begin, int end) -> (int crc) {
+	int ctx[];
+
+	int crc = crc32_init(ctx);
+	crc = crc32_addsubstr(ctx, data, begin, end, crc);
+	crc = crc32_finalize(ctx, crc);
+
+	return crc;
+}

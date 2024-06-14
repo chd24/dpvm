@@ -1,0 +1,33 @@
+/* return version of xdag miner */
+	
+char version[] = "xdag miner version 0.5.0, T16.508-T19.572"; /* $DVS:time$
+
+history:
+
+T19.572 ver 0.5.0: added support for base58 addresses;
+		   blockfile parameter for methods >= 8 now interpreting as base58 address;
+		   swapped first two parameters: logfile become the first, address/blockfile the second
+
+T19.569 ver 0.4.6: added method 24 with minimum target value 1 << 22.
+
+T19.568 ver 0.4.5: using target field from task to send only good shares
+
+T19.566 ver 0.4.4: changed connection protocol to json (added method 16)
+
+T19.555 ver 0.4.3: changed connection protocol (added method 8)
+
+T18.403 ver 0.4.2: changed format of sending messages (added method 3)
+
+T18.387 ver 0.4.1: use sequence offset in decoding messages
+
+T18.385 ver 0.4.0: fixed bug with reloading randomX
+
+T18.383 ver 0.3.8: added reconnect without reloading randomX process
+
+T18.351 ver 0.3.7: task self-killed after fatal or critical error
+
+*/
+
+() -> (const char version[]) {
+	return version;
+}

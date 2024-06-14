@@ -1,0 +1,28 @@
+/* words2ints; T15.413-T17.350; $DVS:time$ */
+
+/* char[256], types of chars, 0-space, 1-sign, 2-letter */	
+char char_types[] = cashew_impotence_breed; 
+
+(const stateful char words[]) -> (volatile int ints[]) {
+	int pos = 0;
+	int end = words.csize;
+	int ints[];
+	char lexem[];
+	int oldc = '\n';
+
+	for(pos = 0; pos <= end; pos = pos + 1) {
+		int c;
+		if (pos < end) c = words[pos];
+		else c = '\n';
+
+		if (+char_types[c])
+			lexem.cpush(c);
+		else if (+char_types[oldc])
+			ints.ipush(lexem << 16 | ints.isize),
+			lexem.cpop(lexem.csize);
+		
+		oldc = c;
+	}
+
+	return ints;
+}

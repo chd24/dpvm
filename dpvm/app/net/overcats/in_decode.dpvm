@@ -1,0 +1,53 @@
+/* overcats decode of server output data; T17.470-T17.490; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "../math/crypto/base64/base64.dpvmake"
+#include "overcats.dpvmake"
+
+int M = 0x400000000000;
+
+(volatile stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () {
+	const char marker[] = "Content-Length: ";
+
+	int bstate = data.state >> 48;
+	int state = data.state & 0xffffffffffff;
+
+	char dsrc[];
+
+	int i;
+	for (i = 0; i < src.csize; i += 1) {
+		int c = src[i];
+	
+		if (state == 0) {
+			if (c == marker[0]) state = M + 1;
+		} else if (state < M) {
+			dsrc.cpush(c);
+			state -= 1;
+			if (!state) {
+				if (dsrc.csize) {
+					base64_decode_str(dst, dsrc, bstate);
+					dsrc.cpop(dsrc.csize);
+				}
+				bstate = 0;
+			}
+		} else if (state < M << 1) {
+			if (c == marker[state & 0xf]) {
+				state += 1;
+				if (state == M + marker.csize)
+					state = M << 1;
+			} else if (c == marker[0]) state = M + 1;
+			else state = 0;
+		} else if (c >= '0' && c <= '9') {
+			state = ((state & (M - 1)) * 10 + c - '0') | M << 1;
+		} else {
+			state = (state + 3) & (M - 1);
+		}
+	}
+	
+	if (dsrc.csize)
+		bstate = base64_decode_str(dst, dsrc, bstate);
+
+	data.state = state | bstate << 48;
+	return;
+}

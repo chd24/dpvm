@@ -1,0 +1,8 @@
+/* floats computational method for x86-64; T19.506-T19.585; $DVS:time$ */
+
+#include "amd64/floats/floats.dpvmake"
+
+translator_method amd64_floats_ = {
+	"amd64",
+	floatsMain
+};

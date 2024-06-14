@@ -1,0 +1,120 @@
+/* dnet node, encoding function; T17.566-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+int TIME_LAG = 5000000000; /* 5 sec */
+
+(volatile stateful dnet_context ctx, const stateful dnet_host h) -> 
+		(int change, int number) {
+	int change;
+	int i;
+	int crc;
+
+	if (h.key.csize)
+		crc = crc32(ctx.data, h.key, 0, 0x400);
+	else
+		crc = h.crc;
+
+	for (i = 0; i < ctx.hosts.lsize; i += 1) {
+		if (ctx.hosts[i].crc == crc) {
+			dnet_host g = ctx.hosts[i];
+
+			if (h.key.csize && g.key != h.key) {
+				if (g.key.csize) {
+					char m[];
+					strcat(m, "Two hosts with crc ");
+					printhex(m, h.crc, 8, 1);
+					strcat(m, " detected");
+					write_log(ctx, m, 4);
+				}
+				if (!(g.flags & DNET_HOST_LOCAL)) {
+					g.key = h.key;
+					change = 1;
+					g.flags |= DNET_HOST_CHANGED;
+				}
+			}
+
+			if (h.name.csize && g.name != h.name) {
+				g.name = h.name;
+				change = 1;
+				g.flags |= DNET_HOST_CHANGED;
+			}
+
+			if (h.version.csize && strcmp(h.version, g.version) > 0
+					&& !(g.flags & DNET_HOST_LOCAL)) {
+				g.version = h.version;
+				change = 1;
+				g.flags |= DNET_HOST_CHANGED;
+			}
+
+			int h_flags = h.flags & ~(DNET_HOST_IMMEDIATE 
+					| DNET_HOST_CHANGED | DNET_HOST_TRUST_CHANGED);
+			int h_start_time;
+
+			if (h.flags & DNET_HOST_IMMEDIATE) {
+				int j;
+				for (j = 0; j < ctx.conns.lsize; j += 1) {
+					if (h.thread_id == ctx.conns[j].thread_id 
+							&& !(ctx.conns[j].flags & DNET_CONN_FINISHED)) {
+						h_flags |= DNET_HOST_IMMEDIATE;
+						h_start_time = ctx.conns[j].start_time;
+						j = ctx.conns.lsize;
+					}
+				}
+			}
+
+			int g_flags = g.flags & ~DNET_HOST_IMMEDIATE;
+			int g_start_time;
+
+			if (g.flags & DNET_HOST_IMMEDIATE) {
+				int j;
+				for (j = 0; j < ctx.conns.lsize; j += 1) {
+					if (g.thread_id == ctx.conns[j].thread_id 
+							&& !(ctx.conns[j].flags & DNET_CONN_FINISHED)) {
+						g_flags |= DNET_HOST_IMMEDIATE;
+						g_start_time = ctx.conns[j].start_time;
+						j = ctx.conns.lsize;
+					}
+				}
+			}
+
+			g_flags |= h_flags;
+			if (g.flags != g_flags) {
+				if ((g.flags ^ g_flags) & DNET_HOST_TRUSTED)
+					g_flags |= DNET_HOST_TRUST_CHANGED;
+				g.flags = g_flags;
+				change = 1;
+			}
+
+			if (h.thread_id >= 0 && g.thread_id != h.thread_id
+					&& !(g.flags & DNET_HOST_LOCAL)
+					&& (h_flags & DNET_HOST_IMMEDIATE && h_start_time > g_start_time
+					|| !(g_flags & DNET_HOST_IMMEDIATE) && h.last_time > g.last_time + TIME_LAG)) {
+				g.thread_id = h.thread_id;
+				change = 1;
+			}
+
+			if (h.flags & DNET_HOST_MANUAL && h.route_crc > g.route_crc) {
+				g.route_crc = h.route_crc;
+				change = 1;
+			}
+
+			if (h.last_time > g.last_time)
+				g.last_time = h.last_time;
+
+			return (change, i);
+		}
+	}
+
+	dnet_host g;
+	objcopyto(g, h);
+	g.crc = crc;
+	g.flags |= DNET_HOST_CHANGED;
+	if (g.flags & DNET_HOST_TRUSTED && !(g.flags & DNET_HOST_LOCAL))
+		g.flags |= DNET_HOST_TRUST_CHANGED;
+	else
+		g.flags &= ~DNET_HOST_TRUST_CHANGED;
+	ctx.hosts.lpush(g);
+	return (1, ctx.hosts.lsize - 1);
+}

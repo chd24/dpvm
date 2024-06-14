@@ -1,0 +1,13 @@
+/* test for via-graphs translator for amd64, makefile; T16.615-T18.018; $DVS:time$ */
+
+#include "graphs.dpvmake"
+
+/*@ "printschema.dpvm": print contents of schema into char string */
+(volatile stateful schema s) -> (const char text[])
+	printschema = spared_journal_domineering;
+/* @*/
+
+/*@ "test.dpvm": print results of different stages of schema transformation */
+(const stateful any func, int stage) -> (const char text[])
+	graphs_test = notes_exmembers_discern;
+/* @*/          

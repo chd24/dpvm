@@ -1,0 +1,62 @@
+/* test schema of code segment; T16.570-T17.667; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "test.dpvmake"
+
+(const stateful any func, int stage) -> (const char text[]) {
+	char text[];
+
+	if (stage < 0) {
+		audience_trigs_modelling machcode;
+		amd64_graphs(machcode, func);
+
+		int i;
+		int size = machcode.csize;
+		for (i = 0; i < size; i = i + 1)
+			text.cpush(machcode.c[i]);
+		return text;
+	}
+
+	schema s;
+	asm_instr list[];
+	int status;
+
+	int begin = 0;
+	int end = findend(func, begin);
+	int beginstack = 0;
+
+	(s, status) = makeschema(func, begin, end, beginstack);
+
+	if (status) {
+		strcat(text, "Error in makeschema: ");
+		printhex(text, status, 1, 0);
+		return text;
+	}
+
+	if (stage >= 1) removeconst(s);
+	if (stage >= 2) removeleaf(s);
+	if (stage >= 3) shifts2rotates(s);
+	if (stage >= 4) addoutputleaf(s);
+	if (stage >= 5) split2chains(s);
+	if (stage >= 6) {
+		asm_instr a;
+		list.push(a);
+		assembly(list, func, s);
+	}
+
+	if (stage >= 7) {
+		audience_trigs_modelling machcode;
+		output(machcode, list);
+		int i;
+		int size = machcode.csize;
+		for (i = 0; i < size; i = i + 1)
+			text.cpush(machcode.c[i]);
+	} else if (stage >= 6) 
+		text = asm2str(list);
+	else
+		text = printschema(s);
+
+	destroyschema(s);
+
+	return text;
+}

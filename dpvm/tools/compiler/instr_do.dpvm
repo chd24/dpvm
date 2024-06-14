@@ -1,0 +1,96 @@
+/* dpvm: do-while statement; T15.502-T20.114; $DVS:time$ */
+
+/* do instr while (expr); */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const Instr instr) -> (int status) {
+	int pos;
+	int end;
+	int status;
+	char c;
+
+
+	/* read 'do' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 18) return -1;
+
+	data.pos = pos;
+
+
+	/* push 'lb' bytecode */
+	c = 0x90; data.dst.push(c);
+	data.ndst++;
+
+
+	/* compile instruction */
+	status = instr(data);
+	if (status) {
+		if (status == -1) 
+			data.mess = "instruction expected after do";
+		return -2;
+	}
+
+
+	/* read 'while' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 19) {
+		data.mess = "while expected in do-while";
+		return -2;
+	}
+	data.pos = pos;
+
+
+	/* read '(' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status) {
+		data.mess = "( expected after while";
+		return -2;
+	}
+	data.pos = pos;
+
+	
+	/* read expr */
+	data.nlinks = 0;
+	data.nints = 0;
+	data.nfloats = 0;
+	data.nchars = 0;
+	type res;
+	(res, status) = getexpr(data, instr);
+	if (status != 1) {
+		data.mess = "integer expression expected after (";
+		return -2;
+	}
+
+
+	/* read ')' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 1) {
+		data.mess = ") expected after expression";
+		return -2;
+	}
+	data.pos = pos;
+
+
+	/* push 'jnzb' bytecode */
+	c = 0x93; data.dst.push(c);
+	data.nints--;
+	data.ndst++;
+
+
+	/* read ';' */
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 15) {
+		data.mess = "; expected after )";
+		return -2;
+	}
+	data.pos = pos;
+
+
+	return 0;
+}

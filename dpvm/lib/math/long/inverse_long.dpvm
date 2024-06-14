@@ -1,0 +1,60 @@
+/* inverse long number by module; T17.925-T17.925; $DVS:time$ */
+
+#include "long.dpvmake"
+
+/* searches for inverse number to num by the module mod;
+ * it is assumed that num = 2k + 1, mod = 2^n (2m + 1), n <= 2;
+ * returns 0 if not succeed
+*/
+(const stateful int num[], const stateful int mod[]) -> (volatile int inv[]) {
+    int zero[];
+
+    if (!num.isize || !(num[0] & 1) || !mod.isize || !(mod[0] & 7))
+        return zero;
+
+    int mod4[] = copy_long(mod);
+    int mask;
+    while (!(mod4[0] & 1))
+        shr_1(mod4), mask <<= 1, mask |= 1;
+
+    int pn[] = copy_long(num);
+    int px[];
+    px.ipush(1);
+
+    int qn[] = copy_long(mod4);
+    int qx[];
+
+    do {
+        while (!(pn[0] & 1)) {
+            shr_1(pn);
+            if (px.isize && px[0] & 1) add_long(px, mod4);
+            shr_1(px);
+        }
+
+        while (!(qn[0] & 1)) {
+            shr_1(qn);
+            if (qx.isize && qx[0] & 1) add_long(qx, mod4);
+            shr_1(qx);
+        }
+
+        if (sub_cond_long(qn, pn) && qn.isize) {
+            if (!sub_cond_long(qx, px)) {
+                add_long(qx, mod4);
+                sub_cond_long(qx, px);
+            }
+        } else if (qn.isize && sub_cond_long(pn, qn)) {
+            if (!sub_cond_long(px, qx)) {
+                add_long(px, mod4);
+                sub_cond_long(px, qx);
+            }
+        }
+    } while (qn.isize);
+
+    if (pn.isize != 1 || pn[0] != 1)
+        return zero;
+
+    while ((num[0] ^ px[0]) & mask)
+        add_long(px, mod4);
+
+    return px;
+}

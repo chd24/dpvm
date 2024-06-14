@@ -1,0 +1,32 @@
+/* te, header, T18.319-T18.765; $DVS:time$ */
+
+type teContext = {
+        const int dfsCtx[];
+	const int crc32Ctx[];
+	const int passwordHash[];
+	const int dfsCtxHash[];
+	const int extT5_337SignatureHash[];
+	const int extT18_319SignatureHash[];
+	int crc32Init;
+	int passwordSet;
+	int sector0Pos;
+};
+
+type teUtilities = {
+	const char version[];
+	const any commands;
+	const (volatile stateful teContext ctx, const stateful char password[], const stateful int sector0[]) -> () teContextInit;
+	const (volatile stateful char dst[], const stateful teContext ctx) -> () teContextDump;
+	const (const stateful teContext ctx, volatile stateful int data[], const stateful any metaData, int begin, int size, int Nsector, int method) -> (int res) dfsEncryptInts32;
+	const (const stateful teContext ctx, volatile stateful int data[], const stateful any metaData, int begin, int size, int Nsector, int method) -> (int res) dfsDecryptInts32;
+	const (const stateful teContext ctx, const stateful int file[], int pos, int encrypted) -> (int extension, int sectorNo) teEntryTest;
+	const (volatile stateful char dst[], const stateful teContext ctx, const stateful int file[], int pos) -> () teEntryInfo;
+	const (const stateful teContext ctx, volatile stateful int file[], const stateful any seed, int pos, int time, int create, int extension) -> () teEntryCorrect;
+        const (int time) -> (int teTime) time2teTime;
+        const (int teTime) -> (int time) teTime2Time;
+};
+
+type teClass = {
+	const teUtilities utilities;
+	const (const char filename[]) -> () open;
+};

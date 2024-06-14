@@ -1,0 +1,49 @@
+/* dnet node, random sector generator; T17.545-T19.640; $DVS:time$ */
+
+#include "../../utils/utils.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx) -> (volatile int sector[]) {
+	int rand[];
+
+	rand.ipush(ctx.seed[0]);
+	rand.ipush(ctx.seed[1]);
+	rand.ipush(ctx.seed[2]);
+	rand.ipush(ctx.seed[3]);
+	rand.ipush(0);
+	rand.ipush(0);
+	rand.ipush(0);
+	rand.ipush(0);
+	rand.ipush(ctx.data.task_id);
+	rand.ipush(ctx.data.start_time);
+	rand.ipush(ctx.conns[0].thread_id);
+	rand.ipush(ctx.last_time);
+
+	char key[] = ctx.data.files[DNET_FILE_KEY];
+	int res[];
+	int i;
+	for (i = 0; i < 64; i += 1) {
+		int j;
+		for (j = 0; j < 8; j += 1) {
+			int k = i << 3 | j;
+			rand[4] <<= 8; rand[4] |= key[k];
+			rand[5] <<= 8; rand[5] |= key[(k * 11 + 3) & 0x1ff];
+			rand[6] <<= 8; rand[6] |= key[(k * 13 + 5) & 0x1ff];
+			rand[7] <<= 8; rand[7] |= key[(k * 19 + 7) & 0x1ff];
+		}
+
+		(rand[0], rand[1], rand[2], rand[3]) = getfullhash(rand);
+		int r = rand[0];
+		if ((i & 3) == 3) r &= (1 << 63) - 1;
+		res.ipush(r);
+	}
+	
+	int seed[4];
+	seed[0] = rand[0];
+	seed[1] = rand[1];
+	seed[2] = rand[2];
+	seed[3] = rand[3];
+	ctx.seed = seed;
+
+	return res;
+}

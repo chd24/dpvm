@@ -1,0 +1,293 @@
+/* compiler, test for new features: ?: operator and type casts; T20.097-T20.116; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "../../lib/math/math.dpvmake"
+#include "choose.dpvmb"
+
+type Test = {
+	const any testFunc;
+	const (const stateful any params) -> (int res) testHelper;
+	const (const stateful any params) -> (int res) verifyHelper;
+	int nlinks;
+	int nints;
+	int nfloats;
+	int nchars;
+};
+
+
+/* Test 1: ints */
+
+(int x, int a, int b, int c) -> (int res) test1_test = {
+	return x == a ? b : c;
+};
+
+(int x, int a, int b, int c) -> (int res) test1_verify = {
+	if (x == a) return b;
+	return c;
+};
+
+(const stateful any params) -> (int res) test1_testHelper = {
+	return test1_test(params.i[0], params.i[1], params.i[2], params.i[3]);
+};
+
+(const stateful any params) -> (int res) test1_verifyHelper = {
+	return test1_verify(params.i[0], params.i[1], params.i[2], params.i[3]);
+};
+
+Test test1 = {
+	test1_test,
+	test1_testHelper,
+	test1_verifyHelper,
+	0,
+	4,
+	0,
+	0
+};
+
+
+/* Test 2: ints twice */
+
+(int x, int a, int b, int c, int d, int e) -> (int res) test2_test = {
+	return x == a ? c : x == b ? d : e;
+};
+
+(int x, int a, int b, int c, int d, int e) -> (int res) test2_verify = {
+	if (x == a) return c;
+	if (x == b) return d;
+	return e;
+};
+
+(const stateful any params) -> (int res) test2_testHelper = {
+	return test2_test(params.i[0], params.i[1], params.i[2], params.i[3], params.i[4], params.i[5]);
+};
+
+(const stateful any params) -> (int res) test2_verifyHelper = {
+	return test2_verify(params.i[0], params.i[1], params.i[2], params.i[3], params.i[4], params.i[5]);
+};
+
+Test test2 = {
+	test2_test,
+	test2_testHelper,
+	test2_verifyHelper,
+	0,
+	6,
+	0,
+	0
+};
+
+
+/* Test 3: floats */
+
+(int x, int a, float b, float c) -> (float res) test3_test = {
+	return x == a ? b : c;
+};
+
+(int x, int a, float b, float c) -> (float res) test3_verify = {
+	if (x == a) return b;
+	return c;
+};
+
+(const stateful any params) -> (int res) test3_testHelper = {
+	return test3_test(params.i[0], params.i[1], params.i[2] * 1.0, params.i[3] * 1.0);
+};
+
+(const stateful any params) -> (int res) test3_verifyHelper = {
+	return test3_verify(params.i[0], params.i[1], params.i[2] * 1.0, params.i[3] * 1.0);
+};
+
+Test test3 = {
+	test3_test,
+	test3_testHelper,
+	test3_verifyHelper,
+	0,
+	4,
+	0,
+	0
+};
+
+
+/* Test 4: chars */
+
+(int x, int a, char b, char c) -> (char res) test4_test = {
+	return x == a ? b : c;
+};
+
+(int x, int a, char b, char c) -> (char res) test4_verify = {
+	if (x == a) return b;
+	return c;
+};
+
+(const stateful any params) -> (int res) test4_testHelper = {
+	char b = params.i[2], c = params.i[3];
+	return test4_test(params.i[0], params.i[1], b, c);
+};
+
+(const stateful any params) -> (int res) test4_verifyHelper = {
+	char b = params.i[2], c = params.i[3];
+	return test4_verify(params.i[0], params.i[1], b, c);
+};
+
+Test test4 = {
+	test4_test,
+	test4_testHelper,
+	test4_verifyHelper,
+	0,
+	4,
+	0,
+	0
+};
+
+
+/* Test 5: type cast, numbers */
+
+(int x, float f) -> (float res) test5_test = {
+	return (float)x + f;
+};
+
+(int x, float f) -> (float res) test5_verify = {
+	float res = x;
+	return res + f;
+};
+
+(const stateful any params) -> (int res) test5_testHelper = {
+	return test5_test(params.i[0], params.i[1] * 1.0);
+};
+
+(const stateful any params) -> (int res) test5_verifyHelper = {
+	return test5_verify(params.i[0], params.i[1] * 1.0);
+};
+
+Test test5 = {
+	test5_test,
+	test5_testHelper,
+	test5_verifyHelper,
+	0,
+	2,
+	0,
+	0
+};
+
+
+/* Test 6: type cast, arrays */
+
+(int x, int y) -> (volatile int res[]) test6_test = {
+	return (int[]){3, x, y, 4};
+};
+
+(int x, int y) -> (volatile int res[]) test6_verify = {
+	int res[] = {3, x, y, 4};
+	return res;
+};
+
+(const stateful any params) -> (int res) test6_testHelper = {
+	return test6_test(params.i[0], params.i[1]);
+};
+
+(const stateful any params) -> (int res) test6_verifyHelper = {
+	return test6_verify(params.i[0], params.i[1]);
+};
+
+Test test6 = {
+	test6_test,
+	test6_testHelper,
+	test6_verifyHelper,
+	0,
+	2,
+	0,
+	0
+};
+
+
+/* Test 7: type cast, const arrays */
+
+(int x) -> (const int res[]) test7_test = {
+	return (int[]){1, 2, 3, 4};
+};
+
+(int x) -> (const int res[]) test7_verify = {
+	const int res[] = {1, 2, 3, 4};
+	return res;
+};
+
+(const stateful any params) -> (int res) test7_testHelper = {
+	return test7_test(params.i[0]);
+};
+
+(const stateful any params) -> (int res) test7_verifyHelper = {
+	return test7_verify(params.i[0]);
+};
+
+Test test7 = {
+	test7_test,
+	test7_testHelper,
+	test7_verifyHelper,
+	0,
+	1,
+	0,
+	0
+};
+
+
+/* All tests */
+
+Test allTests[] = {
+	test1,
+	test2,
+	test3,
+	test4,
+	test5,
+	test6,
+	test7
+};
+
+
+/* Main routine */
+
+() -> (int res) compilerTest = {
+	outputp("", "", "Compiler tests:\r\n");
+
+	int i, totalRes = 1;
+	for (i = 0; i < allTests.lsize; i += 1) {
+		Test t = allTests[i];
+		char mess[];
+		printf(mess, "Test %d (%p)... ", {t.testFunc, i});
+		outputp("", "", mess);
+
+		int iters = fastPow(t.nints, t.nints), j, res = 1;
+		for (j = 0; j < iters; j += 1) {
+			any params;
+			int k, n = j;
+			for (k = 0; k < t.nints; k += 1) {
+				params.ipush(n % t.nints);
+				n /= t.nints;
+			}
+			int testValue = t.testHelper(params);
+			int verifyValue = t.verifyHelper(params);
+			if (testValue != verifyValue) {
+				char m[];
+				printf(m, "FAILED; parameters: ", {});
+				for (k = 0; k < t.nints; k += 1) {
+					printf(m, "%d", {params.i[k]});
+					if (k == t.nints - 1)
+						printf(m, "; ", {});
+					else
+						printf(m, ", ", {});
+				}
+				printf(m, "result: expected = %d, actual = %d.\r\n", {verifyValue, testValue});
+				printf(m, "Failed test function:\r\n%s\r\n", {disassemble(t.testFunc)});
+				outputp("", "", m);
+				res = 0;
+				j = iters;
+			}
+		}
+		if (res)
+			outputp("", "", "passed.\r\n");
+		totalRes &= res;
+	}
+
+	if (totalRes)
+		outputp("", "", "ALL TESTS PASSED.\r\n");
+
+	return totalRes;
+};

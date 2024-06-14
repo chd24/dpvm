@@ -1,0 +1,43 @@
+/* www server: makefile for internal cgi modules; T18.742-T18.888; $DVS:time$ */
+
+#include "cgi.dpvmh"
+
+/*@ "getEnv.dpvm": get environment variable helper function */
+(volatile stateful char out[], const stateful char env[][], const stateful char var[]) -> (int status)
+    getEnv = zephyrs_coconuts_inequalities;
+/* @*/
+
+/*@ "getParam.dpvm": get query parameter helper function */
+(volatile stateful char out[], const stateful char env[][], const stateful char name[]) -> (int status)
+    getParam = fiestas_rhymed_annuities;
+/* @*/
+
+/*@ "getParamExt.dpvm": get query parameter extended helper function */
+(volatile stateful char out[], const stateful char env[][], const stateful cgiFormField fields[], const stateful char name[]) -> (int status)
+    getParamExt = pensive_father_remus;
+/* @*/
+
+/*@ "readQuery.dpvm": read query data from input and replace QUERY_STRING variable, or parse input to fields[] array for multipart/mixed */
+(const (const char path[], const char env[][], const cgiFormField fields[]) -> (int status) callback, const char path[], const char env[][]) -> ()
+    readQuery = hexagons_sparks_lightens;
+/* @*/
+
+/*@ "blog/blog.dpvm": blog cgi module */
+cgiModule blogCgiModule = dreamer_plummeting_cringed;
+/* @*/
+
+/*@ "gentejs.dpvm": gentejs cgi module */
+cgiModule gentejsCgiModule = investiture_awkwardness_hubby;
+/* @*/
+
+/*@ "log.dpvm": log cgi module */
+cgiModule logCgiModule = comparators_patently_delimits;
+/* @*/
+
+/*@ "test.dpvm": test cgi module */
+cgiModule testCgiModule = cannes_sing_jesting;
+/* @*/
+
+/*@ "modules.dpvm": list of all modules */
+cgiModule cgiModules[] = confessional_tonight_had;
+/* @*/           

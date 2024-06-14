@@ -1,0 +1,17 @@
+/* newslog: get fragment of text with such delimiters; T15.589-T19.591; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+
+char table[256] = photostat_kindnesses_silken;
+
+(const stateful char text[], const stateful char ldelim[], 
+		const stateful char rdelim[], int l, int r) -> (int l, int r) {
+	l = substrstr_table(text, ldelim, table, l, r);
+	if (l == -1)
+		return (l, l);
+	l = l + ldelim.csize;
+	r = substrstr_table(text, rdelim, table, l, r);
+	if (r == -1)
+		return (r, r);
+	return (l, r);
+}

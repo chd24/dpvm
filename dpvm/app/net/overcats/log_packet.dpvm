@@ -1,0 +1,36 @@
+/* log packet in overcats; T17.476-T17.685; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "overcats.dpvmake"
+
+(const stateful overcats_data data, const stateful char mess[], 
+		const stateful char packet[]) -> () {
+	if (data.log_level < 9)
+		return;
+
+	char m[];
+
+	strcat(m, mess);
+	strcat(m, ", length = ");
+	printint(m, packet.csize, 1);
+
+	int sum;
+	int i;
+	for (i = 0; i < packet.csize; i += 1)
+		sum += packet[i]; 
+	strcat(m, ", sum = ");
+	printhex(m, sum, 2, 0);
+
+	strcat(m, ", bytes  ");
+	for (i = 0; i < packet.csize; i += 1) {
+		m.cpush(' ');
+		printhex(m, packet[i], 2, 0);
+		if (i == 7 && packet.csize > 16) {
+			strcat(m, " ...");
+			i = packet.csize - 8;
+		}
+	}
+
+	write_log(data, m, 9);
+	return;
+}

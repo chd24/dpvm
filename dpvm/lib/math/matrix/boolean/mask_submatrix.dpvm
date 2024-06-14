@@ -1,0 +1,15 @@
+/* return mask of zeroes in submatrix; T16.064-T16.065; $DVS:time$ */
+
+(int rows[], int cols[], int rowmask, int colmask) -> (int mask) {
+	int mask;
+	int i;
+	
+	i = 0; do {
+		if ((rowmask & 1 << rows.i[i]) != 0 & (colmask & 1 << cols.i[i]) != 0) {
+			mask = mask | 1 << i;
+		}
+		i = i + 1; 
+	} while (i < rows.isize);
+
+	return (mask);
+}

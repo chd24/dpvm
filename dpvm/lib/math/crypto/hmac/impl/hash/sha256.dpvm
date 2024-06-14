@@ -1,0 +1,88 @@
+/* hmac class, SHA-256 hash, T19.993-T20.069; $DVS:time$ */
+
+#include "../../../../../stdlib/stdlib.dpvmake"
+#include "../../../../../utils/utils.dpvmake"
+#include "../../../sha256/sha256.dpvmake"
+#include "../hmac.dpvmh"
+
+() -> (volatile any context) init = {
+	int ctx[];
+	sha256_init(ctx);
+	return ctx;
+};
+
+(const any context) -> (volatile any context) copyCtx = {
+	int ctx[];
+	objcopyto(ctx, context);
+	return ctx;
+};
+
+(volatile stateful any context, const char input[]) -> () addStr = {
+	int ctxs[][];
+	pushObject(context, ctxs);
+	int ctx[] = ctxs[0];
+
+	return sha256_addSubstr(ctx, input, 0, input.csize);
+};
+
+(volatile stateful char output[], volatile stateful any context) -> () finish = {
+	int ctxs[][];
+	pushObject(context, ctxs);
+	int ctx[] = ctxs[0];
+
+	sha256_finalize(ctx);
+
+	int size = ctx.isize, i;
+	for (i = 0; i < size; i += 1) {
+		int n = ctx[i], j;
+		for (j = 24; j >= 0; j -= 8)
+			output.cpush(n >> j);
+	}
+	return;
+};
+
+(volatile stateful char output[], const char input[]) -> () strToStrHash = {
+	int ctx[] = sha256_substrHash(input, 0, input.csize), size = ctx.isize, i;
+	for (i = 0; i < size; i += 1) {
+		int n = ctx[i], j;
+		for (j = 24; j >= 0; j -= 8)
+			output.cpush(n >> j);
+	}
+	return;
+};
+
+hmacHash sha256_hash = {
+	"SHA-256",
+	init,
+	copyCtx,
+	addStr,
+	finish,
+	strToStrHash,
+	{
+		{
+			"",
+			"",
+			"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			HMAC_TEST_HASH
+		},
+		{
+			"",
+			"The quick brown fox jumps over the lazy dog",
+			"D7A8FBB3 07D78094 69CA9ABC B0082E4F 8D5651E4 6D3CDB76 2D02D0BF 37C9E592",
+			HMAC_TEST_HASH
+		},
+		{
+			"",
+			"The quick brown fox jumps over the lazy cog",
+			"E4C4D8F3 BF76B692 DE791A17 3E053211 50F7A345 B46484FE 427F6ACC 7ECC81BE",
+			HMAC_TEST_HASH
+		},
+		{
+			"key",
+			"The quick brown fox jumps over the lazy dog",
+			"f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8",
+			HMAC_TEST_SIGNATURE
+		}
+	},
+	64
+};

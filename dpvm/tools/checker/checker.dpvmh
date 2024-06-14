@@ -1,0 +1,38 @@
+/* checker, constants; T17.629-T19.550; $DVS:time$ */
+
+type stack_state = practical_bedbug_crotchety;
+/* 
+	int	sizes[4..];	sizes of 4 stacks, then ids of unique links in stack
+	any	objs[];		types or constant objects in links stack
+	char	flags[];	corresponding flags for each object
+*/
+
+/* stack state flags */
+int CHECKER_TYPE	= 1;	/* type of object known, objs[N] = type */
+int CHECKER_OBJ		= 2;	/* object known, objs[N] = object */
+int CHECKER_TRANSACTION	= 4;	/* run/wait transaction, objs[N] = type of function */
+int CHECKER_TEMPORARY	= 8;	/* run/wait temporary transaction */
+int CHECKER_CONST	= 0x10;	/* object should not be modified */
+int CHECKER_STATEFUL	= 0x20;	/* object should not be fixed */
+int CHECKER_VOLATILE	= 0x40;	/* object is not constant */
+
+type checker_data = {
+	stack_state	input;		/* input type */
+	stack_state	output;		/* output type */
+	int		jumps_map[];	/* jumps map */
+	char		code_map[];	/* code coverage map */
+	stack_state	states[];	/* array of types after each bytecode */
+};
+
+/* checker result flags */
+int CHECKER_ILLEGAL	= 1;	/* illegal function */
+int CHECKER_FUNC	= 2;	/* non constant subfunction called */
+int CHECKER_IO		= 4;	/* i/o bytecode used */
+int CHECKER_FLOAT	= 8;	/* floating point bytecode used */
+int CHECKER_DEBUG	= 0x10;	/* debug codes used */
+int CHECKER_RUN         = 0x20;	/* run/wait codes used */
+
+/* checker mode flags */
+int CHECKER_MODE_DEBUG	= 1;	/* print debug information */
+
+type checkerType = (const stateful any func) -> (volatile any funcs[], volatile checker_data data, char error[], int flags);

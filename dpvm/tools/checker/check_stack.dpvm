@@ -1,0 +1,814 @@
+/* stack checker; T16.025-T20.132; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/algorithms/hashtable/hash.dpvmake"
+#include "checker.dpvmake"
+
+int HASH_SIZE = 0x100;
+
+(const stateful any from) -> (const type to) copyType {
+    type to;
+    if (from == to.type)
+        return to.type;
+    objcopyto(to, from);
+    return to;
+}
+
+(const stateful any func, const stateful stack_state t, const char mess[], int i, int j) -> (char error[]) func_error {
+	char error[];
+	strcat(error, mess);
+	if (j >= 0) {
+		strcat(error, ", link ");
+		printint(error, j, 1);
+	}
+	int c = func.c[i];
+        if (c == DPVM_CODE_RET) {
+		strcat(error, " in return");
+        } else if (c == DPVM_CODE_CALL || c == DPVM_CODE_RUN) {
+                if (c == DPVM_CODE_CALL)
+                    strcat(error, " in call of ");
+                else
+                    strcat(error, " in run of ");
+		if (t.c[t.csize - 1] & CHECKER_OBJ) {
+			printobjname(error, t.l[t.lsize - 1]);
+			strcat(error, "()");
+		} else {
+			strcat(error, "function of type ");
+			printobjname(error, t.l[t.lsize - 1]);
+		}
+	}
+	return mkerror(error, func, i);
+}
+
+(const stateful any func, int pos) -> (int num, int newpos) getConstInt = {
+	if (!pos)
+		return (0, -1);
+	pos -= 1;
+
+	int c = func.c[pos];
+
+	if (c <= DPVM_CODE_NUM_MAX) {
+		return (c, pos);
+
+	} else if (c == DPVM_CODE_ADD || c == DPVM_CODE_SUB || c == DPVM_CODE_MUL
+			|| c == DPVM_CODE_AND || c == DPVM_CODE_OR || c == DPVM_CODE_XOR
+			|| c == DPVM_CODE_SHL || c == DPVM_CODE_SHR
+			|| c == DPVM_CODE_EQ || c == DPVM_CODE_LT || c == DPVM_CODE_GT) {
+		int n, n1, n2;
+		(n2, pos) = code(func, pos);
+		if (pos < 0) return (0, pos);
+		(n1, pos) = code(func, pos);
+		if (pos < 0) return (0, pos);
+
+		     if (c == DPVM_CODE_ADD)	n = n1 + n2;
+		else if (c == DPVM_CODE_SUB)	n = n1 - n2;
+		else if (c == DPVM_CODE_MUL)	n = n1 * n2;
+		else if (c == DPVM_CODE_AND)	n = n1 & n2;
+		else if (c == DPVM_CODE_OR)	n = n1 | n2;
+		else if (c == DPVM_CODE_XOR)	n = n1 ^ n2;
+		else if (c == DPVM_CODE_SHL)	n = n1 << n2;
+		else if (c == DPVM_CODE_SHR)	n = n1 >> n2;
+		else if (c == DPVM_CODE_EQ)	n = n1 == n2;
+		else if (c == DPVM_CODE_LT)	n = n1 < n2;
+		else if (c == DPVM_CODE_GT)	n = n1 > n2;
+
+		return (n, pos);
+
+	} else if (c == DPVM_CODE_NEG || c == DPVM_CODE_NOT) {
+		int n1, n;
+		(n1, pos) = code(func, pos);
+		if (pos < 0) return (0, pos);
+
+		     if (c == DPVM_CODE_NEG)	n = -n1;
+		else if (c == DPVM_CODE_NOT)	n = ~n1;
+
+		return (n, pos);
+
+	} else if (c == DPVM_CODE_IGET) {
+		int n;
+		(n, pos) = code(func, pos);
+		if (pos <= 0) return (0, -1);
+		pos -= 1;
+
+		if (func.c[pos] == DPVM_CODE_CODE && n >= 0 && n < func.isize) {
+			return (func.i[n], pos);
+		}
+	}
+
+	return (0, -1);
+};
+
+(volatile stateful stack_state t, const stateful stack_state s) -> (int res) merge_stacks {
+	int res = 0;
+	int j;
+	int k;
+
+	for (j = t.i[0] - 1; j >= 0; j -= 1) {
+		if (t.c[j] != s.c[j] || t.l[j] != s.l[j]) {
+			any lastlink;
+			int lastlinktype;
+
+			if (t.c[j] & CHECKER_OBJ && s.c[j] & CHECKER_OBJ
+					&& t.l[j] == s.l[j]) {
+				lastlink = t.l[j];
+				lastlinktype = CHECKER_OBJ;
+			} else if (t.c[j] & (CHECKER_OBJ | CHECKER_TYPE)
+					&& s.c[j] & (CHECKER_OBJ | CHECKER_TYPE)) {
+				any tf = t.l[j];
+				any sf = s.l[j];
+				if (t.c[j] & CHECKER_OBJ) tf = tf.type;
+				if (s.c[j] & CHECKER_OBJ) sf = sf.type;
+				if (sf == tf) {
+					lastlink = sf;
+					lastlinktype = CHECKER_TYPE;
+				} else {
+					lastlink = wind_speeded_hogwash;
+					lastlinktype = 0;
+				}
+			} else {
+				lastlink = wind_speeded_hogwash;
+				lastlinktype = 0;
+			}
+
+			lastlinktype |= (t.c[j] | s.c[j]) 
+					& (CHECKER_CONST | CHECKER_STATEFUL)
+					| (t.c[j] & s.c[j]) & CHECKER_VOLATILE;
+
+			if (lastlinktype != t.c[j]) {
+				t.l[j] = lastlink;
+				t.c[j] = lastlinktype;
+				res = 1;
+			}
+		}
+
+		for (k = 0; k < j; k += 1) {
+			if (s.i[j + 4] == s.i[k + 4] && t.i[j + 4] != t.i[k + 4]) {
+				int from = t.i[k + 4];
+				int to = t.i[j + 4];
+				int l;
+				for (l = t.i[0] + 3; l >= 4; l -= 1)
+					if (t.i[l] == from)
+						t.i[l] = to;
+				res = 1;
+			}
+		}
+	}
+
+	return res;	
+}
+
+(volatile stateful hashData hash, const type stype) -> (int res) checkStatefulRecurse {
+    if (!hashObj.findAdd(hash, stype))
+        return 0;
+
+    stack_state str;
+    char mess[];
+    int res;
+    (str, mess, res) = check_struct_type_(stype);
+
+    int i;
+    if (!res) {
+        for (i = 0; i < str.i[0]; i += 1)
+            if (str.c[i] & CHECKER_STATEFUL)
+                return 1;
+    }
+
+    for (i = 2; i < stype.lsize; i += 1) {
+        if (code(hash, stype.l[i]))
+            return 1;
+    }
+
+    return 0;
+}
+
+(const stateful any func, const stateful int map[], const stateful char cover[], 
+                const stateful stack_state input, const stateful stack_state output, int mode)
+		-> (volatile stack_state stack_[], volatile any funcs[], 
+		char error[], int flags) {
+	any pattern;
+	stack_state st[];
+	any funcs[];
+	char error[];
+	int j;
+	int id = input.isize - 4;
+
+	int i;
+	int last = -1;
+	int flags = CHECKER_ILLEGAL;
+
+	for (i = 0; i < cover.csize; i += 1) {
+		stack_state t;
+
+		if (cover.c[i] != 0) {
+			stack_state t0;
+			if (last + 1 != i)
+				t0 = st.l[map.i[i]];
+			else if (last == -1)
+				t0 = input;
+			else if (isIfElse(func, map, i))
+				t0 = st.l[map[i]];
+			else
+				t0 = st.l[last];
+
+			objcopyto(t, t0);
+
+			stack_state tin;
+			stack_state tout;
+
+
+			/* obtain current code and its type */			
+
+			int c = func.c[i];
+			int ctype = codeinout.c[c]; /* codeinout.bin */
+			int cin;
+			int cout;
+
+			if (ctype >= 0x16) {
+				cin = ctype & 0xF;
+				cout = ctype >> 4;
+			} else {
+				cin = ctype;
+				cout = 0;
+			}
+
+
+			/* form tin and tout for general case and *popn */
+
+                        tin.i[0] = inoutset.c[cin << 2] + ((c >= DPVM_CODE_IO_MIN) << 1);
+			tin.i[1] = inoutset.c[(cin << 2) + 1];
+			tin.i[2] = inoutset.c[(cin << 2) + 2];
+			tin.i[3] = inoutset.c[(cin << 2) + 3];
+
+                        tout.i[0] = inoutset.c[cout << 2];
+                        tout.i[1] = inoutset.c[(cout << 2) + 1];
+                        tout.i[2] = inoutset.c[(cout << 2) + 2];
+                        tout.i[3] = inoutset.c[(cout << 2) + 3];
+
+
+                        /* debug output */
+
+                        if (mode & CHECKER_MODE_DEBUG) {
+                            char o[];
+                            strcat(o, "pos ");
+                            printhex(o, i, 3, 0);
+                            strcat(o, ": code=");
+                            printhex(o, c, 2, 0);
+                            strcat(o, " (");
+                            int p = o.csize;
+                            print_bytecode(o, c);
+                            p = o.csize - p;
+                            while (p < 8) o.cpush(' '), p += 1;
+                            strcat(o, ", ");
+                            for (j = 0; j < 4; j += 1) printhex(o, tin.i[j], 1, 0);
+                            strcat(o, "->");
+                            for (j = 0; j < 4; j += 1) printhex(o, tout.i[j], 1, 0);
+                            strcat(o, "), stack=(");
+                            for (j = 0; j < 4; j += 1) { printhex(o, t.i[j], 2, 0); if (j < 3) o.cpush(' '); }
+                            strcat(o, "), links=(");
+                            for (j = 0; j < t.lsize; j += 1) {
+                                printhex(o, t.c[j], 2, 0);
+                                o.cpush(':');
+                                if (t.i[j + 4] == -1)
+                                    strcat(o, " -1");
+                                else
+                                    printhex(o, t.i[j + 4], 3, 0);
+                                o.cpush(':');
+                                if (t.l[j] == pattern.type)
+                                    strcat(o, "any");
+                                else if (t.l[j] == pattern.type.type)
+                                    strcat(o, "type");
+                                else if (t.l[j] == func)
+                                    strcat(o, "code");
+                                else if (t.l[j] == o.type)
+                                    strcat(o, "char[]");
+                                else if (t.l[j] == map.type)
+                                    strcat(o, "int[]");
+                                else
+                                    printobjname(o, t.l[j]);
+                                if (j < t.lsize - 1) o.cpush(' ');
+                            }
+                            strcat(o, ")\r\n");
+                            outputp("", "", o);
+                        }
+
+
+                        /* continue form tin and tout for general case and *popn */
+
+                        if (c >= DPVM_CODE_LPOPN && c <= DPVM_CODE_CPOPN) { /* *popn */
+                                int n = DPVM_CODE_NUM_MAX + 1;
+				if (i) n = func.c[i - 1];
+                                if (n > DPVM_CODE_NUM_MAX) {
+					error = mkerror("*popn with non constant", func, i);
+					return (st, funcs, error, flags);
+				}
+				tin.i[c & 3] += n;
+			}
+
+			for (j = tin.i[0] - 1; j >= 0; j -= 1) {
+				tin.lpush(pattern.type);
+
+				int f = CHECKER_CONST | CHECKER_STATEFUL;
+                                if (c == DPVM_CODE_NEW || c == DPVM_CODE_FIX || c == DPVM_CODE_UNFIX
+						|| c == DPVM_CODE_CALL || c == DPVM_CODE_RUN || (c >= DPVM_CODE_IO_MIN
+                                                && (tin.csize != 1 || c >= DPVM_CODE_IOP_MIN || c == DPVM_CODE_BIND)))
+					f = CHECKER_CONST;
+                                else if (!j && c >= DPVM_CODE_LSET && c <= DPVM_CODE_CPOP) /* *set, *push, *pop */
+					f = CHECKER_VOLATILE | CHECKER_STATEFUL;
+
+				tin.cpush(f);
+			}
+
+
+			for (j = tout.i[0] - 1; j >= 0; j -= 1) {
+				tout.lpush(pattern.type);
+				tout.cpush(0);
+			}
+
+			any lastlink;
+			int lastlinktype;
+			int lastlinkid;
+
+			if (tin.i[0] && t.lsize) {
+				int n = t.lsize - 1;
+				lastlink = t.l[n];
+				lastlinktype = t.c[n];
+				lastlinkid = t.i[n + 4];
+			}
+
+
+                        /* form tin and tout for functions and structures */
+
+                        if (c == DPVM_CODE_RET) {
+                            stack_state tn;
+                            objcopyto(tn, output);
+                            tin = tn;
+
+                        } else if ((c == DPVM_CODE_WAIT || c == DPVM_CODE_CALL || c == DPVM_CODE_RUN) && t.lsize > 0) {
+				type ftype;
+                                if (c == DPVM_CODE_WAIT && !(lastlinktype & CHECKER_TRANSACTION)) {
+                                        error = mkerror("wait bytecode requires transaction", func, i);
+                                        return (st, funcs, error, flags);
+                                }
+                                if (lastlinktype & CHECKER_TRANSACTION) {
+                                        if (c != DPVM_CODE_WAIT) {
+                                                error = mkerror("using transaction as function", func, i);
+                                                return (st, funcs, error, flags);
+                                        }
+                                        ftype = copyType(lastlink);
+                                } else if (lastlinktype & CHECKER_OBJ) {
+					ftype = lastlink.type;
+					if (lastlink == func)
+						flags |= CHECKER_FUNC;
+					else
+						funcs.lpush(lastlink);
+				} else if (lastlinktype & CHECKER_TYPE) {
+                                        ftype = copyType(lastlink);
+					flags |= CHECKER_FUNC;
+				} else {
+					error = mkerror("unknown type of calling function", func, i);
+					return (st, funcs, error, flags);
+				}
+
+				stack_state fin;
+				stack_state fout;
+				char mess[];
+				int res;
+				(fin, fout, mess, res) = check_func_type_(ftype);
+
+				if (res & CHECKER_ILLEGAL) {
+					error = func_error(func, t, mess, i, -1);
+					return (st, funcs, error, res);
+				}
+                                if (c == DPVM_CODE_CALL || c == DPVM_CODE_RUN) {
+                                        if (c == DPVM_CODE_RUN) {
+                                            lastlinktype = CHECKER_TRANSACTION | CHECKER_CONST;
+                                            for (j = 0; j < fin.csize; j += 1) {
+                                                if (fin.c[j] & (CHECKER_VOLATILE | CHECKER_STATEFUL)) {
+                                                    lastlinktype |= CHECKER_TEMPORARY;
+                                                    if (!(fin.c[j] & CHECKER_VOLATILE))
+							fin.c[j] &= ~CHECKER_STATEFUL;
+                                                }
+                                            }
+                                            lastlink = ftype;
+                                            lastlinkid = id;
+                                            id += 1;
+                                        }
+                                        fin.i[0] += 1;
+                                        fin.lpush(tin.l[0]);
+                                        fin.cpush(tin.c[0]);
+                                        tin = fin;
+                                }
+                                if (c == DPVM_CODE_WAIT || c == DPVM_CODE_CALL) {
+                                    if (c == DPVM_CODE_WAIT && !(lastlinktype & CHECKER_TEMPORARY)) {
+                                        for (j = 0; j < fout.csize; j += 1) {
+                                            fout.c[j] &= ~CHECKER_VOLATILE;
+                                            fout.c[j] |= CHECKER_CONST;
+                                        }
+                                    }
+                                    tout = fout;
+                                }
+
+                        } else if (c >= DPVM_CODE_LGET && c <= DPVM_CODE_CPOP) {
+                            type stype;
+                            if (lastlinktype & CHECKER_OBJ)
+                                    stype = lastlink.type;
+                            else if (lastlinktype & CHECKER_TYPE) {
+                                    stype = copyType(lastlink);
+                            } else
+                                    stype = pattern.type;
+
+                            stack_state str;
+                            char mess[];
+                            int res;
+                            (str, mess, res) = check_struct_type_(stype);
+
+                            if (!res) {
+                                if (c >= DPVM_CODE_LPUSH)
+                                    return (st, funcs, mkerror("push/pop operations are illegal for structures", func, i), flags);
+
+                                if (!i)
+                                    return (st, funcs, mkerror("using non-fixed field of structure", func, i), flags);
+
+                                int n = func.c[i - 1];
+
+                                if (c == DPVM_CODE_LGET || c == DPVM_CODE_LSET || n <= DPVM_CODE_NUM_MAX) {
+                                    if (n > DPVM_CODE_NUM_MAX)
+                                        return (st, funcs, mkerror("using non-fixed field of structure", func, i), flags);
+
+                                    if (n >= str.i[c & 3])
+                                        return (st, funcs, mkerror("struct field does not exist", func, i), flags);
+                                }
+
+                                if (c == DPVM_CODE_LGET)
+                                    tout.c[0] |= str.c[n] & (CHECKER_CONST | CHECKER_STATEFUL | (CHECKER_VOLATILE & lastlinktype));
+                                else if (c == DPVM_CODE_LSET)
+                                    tin.c[0] &= ~(CHECKER_CONST | CHECKER_STATEFUL | CHECKER_VOLATILE),
+                                    tin.c[0] |= str.c[n] & (CHECKER_CONST | (CHECKER_STATEFUL & lastlinktype) | CHECKER_VOLATILE);
+                            } else if (c == DPVM_CODE_LGET)
+                                tout.c[0] |= lastlinktype & (CHECKER_CONST | CHECKER_STATEFUL | CHECKER_VOLATILE);
+
+                            if (c == DPVM_CODE_LSET && (lastlinktype & (CHECKER_OBJ | CHECKER_TYPE))) {
+                                if (i && func.c[i - 1] <= DPVM_CODE_NUM_MAX) {
+                                    int n = func.c[i - 1] + 4;
+                                    if (n >= stype.lsize)
+                                        n = (n & 1) + 2;
+                                    if (stype.l[n] != wind_speeded_hogwash)
+                                        tin.l[0] = stype.l[n],
+                                        tin.c[0] |= CHECKER_TYPE;
+                                } else if (stype.lsize == 4 && stype.l[2] == stype.l[3] && stype.l[2] != wind_speeded_hogwash)
+                                    tin.l[0] = stype.l[2],
+                                    tin.c[0] |= CHECKER_TYPE;
+                            }
+
+                        } else if (c >= DPVM_CODE_IO_MIN && c <= DPVM_CODE_IOP_MAX) {
+                            int n = t.lsize - tin.lsize;
+                            type ftype;
+                            int isempty;
+
+                            if (t.c[n] & CHECKER_OBJ)
+                                ftype = t.l[n].type,
+                                isempty = !t.l[n].csize;
+                            else if (t.c[n] & CHECKER_TYPE && t.l[n] != pattern.type) {
+                                ftype = copyType(t.l[n]);
+                                isempty = !ftype.i[15];
+                            } else
+                                isempty = 1;
+
+                            const int intarr[] = {0};
+
+                            if (!isempty) {
+                                stack_state fin;
+                                stack_state fout;
+                                char mess[];
+                                int res;
+                                (fin, fout, mess, res) = check_func_type_(ftype);
+                                if (res & CHECKER_ILLEGAL) {
+                                        error = mkerror(mess, func, i);
+                                        return (st, funcs, error, res);
+                                }
+
+                                const int callback_nlinks[] = {2, 1, 2, 1, 1, 1, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1};
+                                const int callback_nints [] = {1, 1, 1, 1, 3, 3, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0};
+
+                                if (fin.i[0] != callback_nlinks[c & 0xf] || fin.i[1] != callback_nints[c & 0xf] || fin.i[2] || fin.i[3])
+                                    return (st, funcs, mkerror("illegal number of parameters in i/o callback function", func, i), flags);
+
+                                int j0 = c < DPVM_CODE_IOP_MIN && c != DPVM_CODE_BIND;
+                                for (j = j0; j < fin.i[0]; j += 1) {
+                                    if (!(fin.c[j] & CHECKER_CONST) || fin.c[j] & CHECKER_VOLATILE) {
+                                        char m[];
+                                        strcat(m, "link parameter ");
+                                        printint(m, j, 1);
+                                        strcat(m, " of i/o callback function should ");
+                                        if (!(fin.c[j] & CHECKER_CONST))
+                                            strcat(m, "be const");
+                                        else
+                                            strcat(m, "not be volatile");
+                                        return (st, funcs, mkerror(m, func, i), flags);
+                                    }
+                                }
+
+                                if (fin.c[0] & CHECKER_TYPE)
+                                    tin.c[1] |= CHECKER_TYPE,
+                                    tin.l[1] = fin.l[0];
+
+                                if (c == DPVM_CODE_INPUT || c == DPVM_CODE_INPUTP || c == DPVM_CODE_READ || c == DPVM_CODE_READP) {
+                                    if (!(fin.c[1] & CHECKER_TYPE) || fin.l[1] != "".type)
+                                        return (st, funcs, mkerror("type of i/o callback parameter 1 should be char[]", func, i), flags);
+                                } else if (c == DPVM_CODE_GETSYS || c == DPVM_CODE_GETSYSP || c == DPVM_CODE_SETSYS || c == DPVM_CODE_SETSYSP) {
+                                    if (!(fin.c[1] & CHECKER_TYPE) || fin.l[1] != intarr.type)
+                                        return (st, funcs, mkerror("type of i/o callback parameter 1 should be int[]", func, i), flags);
+                                }
+                            }
+
+                            if (c == DPVM_CODE_OUTPUT || c == DPVM_CODE_OUTPUTP || c == DPVM_CODE_READ || c == DPVM_CODE_READP ||
+                                    c == DPVM_CODE_CONNECT || c == DPVM_CODE_CONNECTP || c == DPVM_CODE_MSTAT || c == DPVM_CODE_MSTATP)
+                                tin.c[2] |= CHECKER_TYPE,
+                                tin.l[2] = "".type;
+                            else if (c == DPVM_CODE_WRITE || c == DPVM_CODE_WRITEP)
+                                tin.c[2] |= CHECKER_TYPE,
+                                tin.l[2] = "".type,
+                                tin.c[3] |= CHECKER_TYPE,
+                                tin.l[3] = "".type;
+                            else if (c == DPVM_CODE_GETSYS || c == DPVM_CODE_GETSYSP || c == DPVM_CODE_MLOAD || c == DPVM_CODE_MLOADP)
+                                tin.c[2] |= CHECKER_TYPE,
+                                tin.l[2] = intarr.type;
+                            else if (c == DPVM_CODE_SETSYS || c == DPVM_CODE_SETSYSP)
+                                tin.c[2] |= CHECKER_TYPE,
+                                tin.l[2] = intarr.type,
+                                tin.c[3] |= CHECKER_TYPE,
+                                tin.l[3] = intarr.type;
+                            else if (c == DPVM_CODE_MPOPEN || c == DPVM_CODE_MPOPENP) {
+                                const char strarr[][] = {""};
+                                tin.c[2] |= CHECKER_TYPE,
+                                tin.l[2] = "".type,
+                                tin.c[3] |= CHECKER_TYPE,
+                                tin.l[3] = strarr.type;
+                            }
+                        }
+
+
+			/* check if tin matches current stack */
+
+			for (j = 0; j < 4; j += 1) {
+				if (t.i[j] < tin.i[j]) {
+					error = mkerror("too small stack", func, i);
+					return (st, funcs, error, flags);
+				}
+			}
+			
+			if (tin.i[0]) {
+				int k;
+				for (j = tin.i[0] - 1, k = t.i[0] - 1; j >= 0; j -= 1, k -= 1) {
+					if (tin.c[j] & (CHECKER_TYPE | CHECKER_OBJ)) {
+						type ftype = t.l[k];
+						if (t.c[k] & CHECKER_OBJ)
+							ftype = ftype.type;
+						else if (!(t.c[k] & CHECKER_TYPE))
+							ftype = pattern.type;
+						if (ftype != tin.l[j]) {
+							strcat(error, "type not match: ");
+							printobjname(error, ftype);
+							strcat(error, " != ");
+							printobjname(error, tin.l[j]);
+							error = func_error(func, t, error, i, j);
+							return (st, funcs, error, flags);
+						}
+					}
+
+					if (!(tin.c[j] & CHECKER_CONST) && t.c[k] & CHECKER_CONST) {
+						error = func_error(func, t, "const modifier lost", i, j);
+						return (st, funcs, error, flags);
+					}  
+
+					if (!(tin.c[j] & CHECKER_STATEFUL) && t.c[k] & CHECKER_STATEFUL) {
+						error = func_error(func, t, "stateful modifier lost", i, j);
+						return (st, funcs, error, flags);
+					}  
+
+					if (tin.c[j] & CHECKER_VOLATILE && !(t.c[k] & CHECKER_VOLATILE)) {
+						error = func_error(func, t, "volatile object required", i, j);
+						return (st, funcs, error, flags);
+					}  
+				}
+			}
+
+
+			/* substract tin from current stack */
+
+			t.i[0] -= tin.i[0];
+			t.i[1] -= tin.i[1];
+			t.i[2] -= tin.i[2];
+			t.i[3] -= tin.i[3];
+			
+			if (tin.i[0]) { 
+				int k = tin.i[0];
+				t.lpop(k);
+				int l = t.lsize;
+
+				for (j = 0; j < k; j += 1) {
+					if (!(tin.c[j] & CHECKER_STATEFUL)) {
+						int id0 = t.i[l + j + 4];
+						int m;
+						for (m = 0; m < l; m += 1) {
+							if (t.i[m + 4] == id0) {
+								t.c[m] &= ~CHECKER_VOLATILE;
+								t.c[m] |= CHECKER_CONST;
+							}
+						}
+					}
+				}
+				t.cpop(k);
+				t.ipop(k);
+			}
+
+
+			/* perform special operations */
+
+                        if (c >= DPVM_CODE_LLOAD && c <= DPVM_CODE_CSTORE) { /* *load, *store */
+                                int n = DPVM_CODE_NUM_MAX + 1;
+				if (i) n = func.c[i - 1];
+                                if (n > DPVM_CODE_NUM_MAX) {
+					error = mkerror("*load/*store with non constant", func, i);
+					return (st, funcs, error, flags);
+				}
+				if (t.i[c & 3] <= n) {
+					strcat(error, "illegal index for *load/*store (last stack change: ");
+					printint(error, t.i[c & 3] + tin.i[c & 3], 1);
+					strcat(error, " - ");
+					printint(error, tin.i[c & 3], 1);
+					strcat(error, " = ");
+					printint(error, t.i[c & 3], 1);
+					strcat(error, ", required index ");
+					printint(error, n, 1);
+					strcat(error, ")");
+					error = mkerror(error, func, i);
+					return (st, funcs, error, flags);
+				}
+
+				n = t.lsize - 1 - n;				
+                                if (c == DPVM_CODE_LLOAD) {
+					lastlink = t.l[n];
+					lastlinktype = t.c[n];
+					lastlinkid = t.i[n + 4];
+                                } else if (c == DPVM_CODE_LSTORE) {
+					t.l[n] = lastlink;
+					t.c[n] = lastlinktype;
+					t.i[n + 4] = lastlinkid;
+				}
+
+                        } else if (c == DPVM_CODE_CODE) {
+				lastlink = func;
+				lastlinktype = CHECKER_OBJ | CHECKER_CONST;
+				lastlinkid = -1;
+
+                        } else if (c == DPVM_CODE_UNFIX) {
+				lastlinktype &= ~(CHECKER_CONST | CHECKER_STATEFUL);
+				lastlinktype |= CHECKER_VOLATILE;
+				if (lastlinkid == -1) {
+					error = mkerror("current function can't be unfixed", func, i);
+					return (st, funcs, error, flags);
+				}
+				for (j = 0; j < t.i[0]; j += 1) {
+					if (lastlinkid == t.i[j + 4]) {
+						error = mkerror("unfixing object has one more reference from stack", func, i);
+						return (st, funcs, error, flags);
+					}
+				}
+
+                        } else if (c == DPVM_CODE_INFO) {
+				if (lastlinktype & CHECKER_OBJ) {
+					lastlink = lastlink.type;
+					lastlinktype = CHECKER_OBJ | CHECKER_CONST;
+				} else if (lastlinktype & CHECKER_TYPE)
+					lastlinktype = CHECKER_OBJ | CHECKER_CONST;
+				else {
+					lastlink = fattiest_salved_cheaters;
+					lastlinktype = CHECKER_TYPE | CHECKER_CONST;
+				}
+				lastlinkid = id;
+				id += 1;
+
+                        } else if (c == DPVM_CODE_NEW) {
+				if (!(lastlinktype & CHECKER_OBJ)) {
+					lastlink = pattern.type;
+					lastlinktype = CHECKER_VOLATILE;
+                                } else {
+					lastlinktype = CHECKER_TYPE | CHECKER_VOLATILE;
+
+                                        type stype = copyType(lastlink);
+                                        hashData hash;
+                                        hashObj.init(hash, HASH_SIZE);
+
+                                        if (checkStatefulRecurse(hash, stype))
+                                            lastlinktype |= CHECKER_STATEFUL;
+                                }
+
+				lastlinkid = id;
+				id += 1;
+
+                        } else if (c == DPVM_CODE_LGET) {
+				int f = 0, n, pos;
+				(n, pos) = getConstInt(func, i);
+
+                                if (lastlinktype & CHECKER_OBJ && pos >= 0) {
+					if (n >= lastlink.lsize) {
+						error = mkerror("illegal index for lget", func, i);
+						return (st, funcs, error, flags);
+					}
+					lastlink = lastlink.l[n];
+					f = 1;
+				}
+				if (!f && lastlinktype & CHECKER_OBJ) {
+					lastlink = lastlink.type;
+					lastlinktype &= ~CHECKER_OBJ;
+					lastlinktype |= CHECKER_TYPE;
+				}
+				if (!f && lastlinktype & CHECKER_TYPE) {
+                                        if (pos < 0 && lastlink.lsize == 4 && lastlink.l[2] == lastlink.l[3]) {
+						n = 0, pos = 0;
+					}
+                                        if (pos >= 0) {
+						int m;
+						if (n < lastlink.lsize - 4)
+							m = n + 4;
+						else
+							m = (n & 1) + 2;
+						lastlink = lastlink.l[m];
+						f = 1;
+					}
+				}
+				if (!f) {
+					lastlink = pattern.type;
+					lastlinktype &= ~CHECKER_TYPE;
+				}
+
+				lastlinkid = id;
+				id += 1;
+                                lastlinktype &= ~(CHECKER_CONST | CHECKER_STATEFUL | CHECKER_VOLATILE);
+                                lastlinktype |= tout.c[0] & (CHECKER_CONST | CHECKER_STATEFUL | CHECKER_VOLATILE);
+			}
+
+
+			/* apply tout to stack */
+
+			t.i[0] += tout.i[0];
+			t.i[1] += tout.i[1];
+			t.i[2] += tout.i[2];
+			t.i[3] += tout.i[3];
+			
+			if (tout.i[0]) {
+                                if (c != DPVM_CODE_WAIT && c != DPVM_CODE_CALL) {
+					t.lpush(lastlink);
+					t.cpush(lastlinktype);
+					t.ipush(lastlinkid);
+				} else {
+					for (j = 0; j < tout.i[0]; j += 1) {
+						t.lpush(tout.l[j]);
+						t.cpush(tout.c[j]);
+						t.ipush(id);
+						id += 1;
+					}
+				}
+			}
+
+
+			/* check stack equality for jumps */
+
+			if (map[i] < i) {
+				int k = map[i], ifelse = c == DPVM_CODE_LF && isIfElse(func, map, k - 1);
+
+				if (!ifelse || cover.c[k - 2] == 1 && cover.c[k - 3] == 1) {
+					int l = k - ifelse * 3;
+					any s = st.l[l];
+
+					for (j = 0; j < 4; j += 1) {
+						if (t.i[j] != s.i[j]) {
+							printf(error, "stacks differ on jump (st[%x][%x] = %d != %d = st[%x][%d])",
+								{l, j, s.i[j], t.i[j], i, j});
+							error = mkerror(error, func, i);
+							return (st, funcs, error, flags);
+						}
+					}
+
+					if (c == DPVM_CODE_LF)
+						merge_stacks(t, s);
+					else if (merge_stacks(s, t)) {
+						t = s;
+						st.lpop(i - k);
+						i = k;
+					}
+				}
+			}
+
+			if (cover.c[i] == 1) last = i;
+		}
+
+		st.push(t);
+	}
+
+	flags &= ~CHECKER_ILLEGAL;
+	return (st, funcs, error, flags);
+}

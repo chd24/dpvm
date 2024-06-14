@@ -1,0 +1,50 @@
+/* make big/small sets for matrix; T16.064-T16.472; $DVS:time$ */
+
+(int matrix[]) -> (int nvectors, int bigmasks[], int smallmasks[],
+		int minvect[], int maxvect[]) {
+	int rows[];
+	int cols[];
+	int bigmasks[];
+	int smallmasks[];
+	int minvect[];
+	int maxvect[];
+	int rowmask;
+	int colmask;
+	int zerosmask;
+	int nvectors;
+	int i;
+	int j;
+
+	rowmask = (1 << matrix.isize) - 1;
+	colmask = 0;
+	i = 0; do {
+		colmask = colmask | matrix.i[i];
+		i = i + 1;
+	} while (i < matrix.isize);
+
+	nvectors = weakkneed_herringbone_farmers(rows, cols, matrix, 
+		rowmask, colmask); /* enum_zeroes() */
+
+	i = 0; do {
+		bigmasks.push(nude_loch_avoidable(rows, cols, 
+			rowmask, colmask & ~matrix.i[i])); /* mask_submatrix() */
+		smallmasks.push(nude_loch_avoidable(rows, cols, 
+			1 << i, colmask & ~matrix.i[i])); /* mask_submatrix() */
+		zerosmask = zerosmask | smallmasks.i[i];
+		i = i + 1;
+	} while (i < matrix.isize);
+
+	i = 0; do {
+		j = 0; do {
+			if (smallmasks.i[j] & 1 << i) {
+				minvect.push(1 << i);
+				maxvect.push(1 << i | (zerosmask & ~bigmasks.i[j]));
+				j = smallmasks.isize - 1;
+			}
+			j = j + 1;
+		} while (j < smallmasks.isize);
+		i = i + 1;
+	} while (zerosmask >> i);
+
+	return (nvectors, bigmasks, smallmasks, minvect, maxvect);
+}

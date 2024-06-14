@@ -1,0 +1,138 @@
+/* debugger class, handler, T19.651-T20.133; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "debugger.dpvmake"
+#include "version.dpvmh"
+
+type handlerData = {
+	const stateful thread t;
+	const int values[];
+};
+
+(const stateful handlerData data, const any objs, int status) -> () received = {
+	debuggerImpl implArr[];
+	pushObject(data.t.debugger, implArr);
+	debuggerImpl impl = implArr[0];
+
+	debuggerMessage arr[];
+	int i, threadId = -1;
+
+	if (objs.lsize == 1)
+		objs = objs.l[0];
+
+	for (i = 0; i < objs.lsize; i += 1) {
+		if (objs.l[i].type == debuggerMessage) {
+			debuggerMessage M[];
+			pushObject(objs.l[i], M);
+			debuggerMessage m = M[0];
+			if (threadId == -1)
+				threadId = m.threadId;
+			if (m.threadId == threadId) {
+				int cod = DPVM_CODE_CALL;
+				if (m.pointer >= 0)
+					cod = m.function.c[m.pointer];
+				if (cod == DPVM_CODE_CALL)
+					arr.lpush(m);
+				else if (cod == DPVM_CODE_RET)
+					arr.lpop(1);
+			}
+		}
+	}
+
+	char str[];
+	int func = data.values[4], pos = data.values[3], cod = data.values[2], err = data.values[1] & 0x1f;
+
+	for (i = 0; i < 0x100; i += 1) {
+		if (arr.lsize && func == impl.data.bytecodes[i]
+				&& (cod == i || pos >= 0 && impl.data.bytecodes[i].c[pos] == i)) {
+			debuggerMessage m = arr[arr.lsize - 1];
+			func = m.args.l[m.args.lsize - 1];
+			cod = i;
+			pos = -1;
+			i = 0x100;
+		}
+	}
+
+	printf(str, "%s: program in task %04x", {version, data.values[5]});
+	if (threadId != -1) {
+		strcat(str, ", thread ");
+		printobjname(str, threadId);
+	}
+	strcat(str, " failed at ");
+	strftime(str, "%Y/%m/%d %H:%M:%S", data.values[0], impl.data.registry.timeZone);
+
+	strcat(str, " with error ");
+	printhex(str, err, 2, 0);
+	strcat(str, " (");
+	print_error(str, err);
+
+	strcat(str, ") in ");
+	printobjname(str, func);
+	strcat(str, "() pos ");
+	if (pos == -1)
+		strcat(str, "???");
+	else
+		printhex(str, pos, 3, 0);
+
+	strcat(str, " code ");
+	if (cod == -1)
+		strcat(str, "??");
+	else {
+		cod &= 0xff;
+		printhex(str, cod, 2, 0);
+		strcat(str, " (");
+		print_bytecode(str, cod);
+		strcat(str, ")");
+	}
+	strcat(str, ".\r\n");
+
+	if (arr.lsize)
+		strcat(str, "Backtrace:\r\n");
+
+	for (i = arr.lsize - 1; i >= 0; i -= 1) {
+		debuggerMessage m = arr[i];
+		any args = m.args;
+		printf(str, "#%d. %p(", {args.l[args.lsize - 1], i});
+		int j, was;
+		for (j = 0; j < args.lsize - 1; j += 1) {
+			if (was) str.cpush(',');
+			printobjname(str, args.l[j].i[0]);
+			was = 1;
+		}
+		for (j = 0; j < args.isize; j += 1) {
+			if (was) str.cpush(',');
+			printf(str, "%d", {args.i[j]});
+			was = 1;
+		}
+		for (j = 0; j < args.fsize; j += 1) {
+			if (was) str.cpush(',');
+			printf(str, "%.15f", {args.f[j]});
+			was = 1;
+		}
+		for (j = 0; j < args.csize; j += 1) {
+			if (was) str.cpush(',');
+			printf(str, "%02X", {+args.c[j]});
+			was = 1;
+		}
+		str.cpush(')');
+		if (m.pointer >= 0)
+			printf(str, " from %p() pos %x", {m.function, m.pointer});
+		strcat(str, "\r\n");
+	}
+
+	outputp("", "", str);
+	msendp("", "", data.t.endAddress, "");
+	return;
+};
+
+(const stateful thread t, const int values[]) -> () handler = {
+	handlerData data = {t, values};
+	debuggerMessage m;
+	m.pointer = 1 << 63;
+	msendp("", "", t.reportAddress, m);
+	mrecv(received, data, t.handleAddress, -1);
+	return;
+};

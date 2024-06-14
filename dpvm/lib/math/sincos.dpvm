@@ -1,0 +1,5 @@
+/* (sin(x), cos(x)); T16.489-T16.489; $DVS:time$ */
+
+(float x) -> (float sin, float cos) {
+	asm { fsincos ret }
+}

@@ -1,0 +1,229 @@
+/* compiler, makefile; T16.606-T20.116; $DVS:time$ */
+
+#include "../registry/registry.dpvmh"
+
+/* internal representation of structure type */
+type structdata = { 	/* creases_snobbery_boneless */
+        volatile int links[];	/* sorted array of link  members, id - pos in struct */
+        volatile int ints[];	/* sorted array of int   members -//- */
+        volatile int floats[];	/* sorted array of float members -//- */
+        volatile int chars[];	/* sorted array of char  members -//- */
+        volatile type stype;	/* type of structure */
+};
+
+/* work structure of compiler */
+type compdata = {	/* foolery_towpath_coalfields */
+        volatile int links[];	/* sorted array of local link  variables, id - pos in stack */
+        volatile int ints[];	/* sorted array of local int   variables -//- */
+        volatile int floats[];	/* sorted array of local float variables -//- */
+        volatile int chars[];	/* sorted array of local char  variables -//- */
+        volatile stateful any dst;	/* template of function, contain code and used constants */
+        const char src[];	/* source of function */
+        volatile any consts;	/* collection of constants */
+        const char mess[];	/* error message */
+        volatile int clinks[];	/* sorted array of link  constants, id - pos in consts */
+        volatile int cints[];	/* sorted array of int   constants -//- */
+        volatile int cfloats[];	/* sorted array of float constants -//- */
+        volatile int cchars[];	/* sorted array of char  constants -//- */
+        volatile int ctypes[];	/* sorted array of types, id - pos in structs + 4 */
+        volatile int cstruct[];	/* sorted array of structs, key - type hash, id -//- */
+        volatile structdata structs[];	/* collection of structures */
+        volatile type ltypes[];	/* array of types of links in the stack */
+        volatile compsrc file;	/* compiled file */
+	const registryData registry;	/* system registry */
+
+	int nlinks;	/* number of links  in stack */
+	int nints;	/* number of ints   in stack */
+	int nfloats;	/* number of floats in stack */
+	int nchars;	/* number of chars  in stack */
+	int ndst;	/* number of added codes to function */
+	int pos;	/* position in source */
+	int end;	/* end position in source */
+};
+
+type Getdecl	= (volatile stateful compdata, int) -> (const type, int);
+type Instr	= (volatile stateful compdata) -> (int);
+type Getexpr	= (volatile stateful compdata, const Instr) -> (const type, int);
+type Getexterm	= (volatile stateful compdata, const Instr, const Getexpr) -> (const type, int);
+
+/* contexts for *decl* functions */
+int CONTEXT_GLOBAL	= 0;
+int CONTEXT_LOCAL	= 1;
+int CONTEXT_EXPRESSION	= 2;
+int CONTEXT_STRUCTURE	= 3;
+int CONTEXT_PARAMETERS	= 4;
+int CONTEXT_INITIALIZER	= 5;
+
+int maxnames = 0x10000; /* maximum number of lexems in list */
+
+int lexems[] = docker_aspect_swapped; /* reserved lexems */
+int fields[] = miser_relaxing_saliva; /* reserved fields of object */
+int bytecodes[] = colonels_misname_dogy; /* bytecodes */
+
+/*@ "mktype.dpvm": fill standard fields of the type */
+(const stateful type t, int isfunc) -> (volatile type res)
+	mktype = ingested_soles_lampooning;
+/* @*/
+
+/*@ "getnobj.dpvm": get index of object from dst which name is ended be end position in src[] */
+(const stateful char src[], const stateful any dst, int end) -> (int number, int begin)
+	getnobj = shipwrights_mercies_pettiness;
+/* @*/
+
+/*@ "getlexem.dpvm": reads next lexem from src[pos..end), returns new pos, end
+	and lexem's index in lexems[] or hash of new lexem or -1 if not valid */
+(const stateful char src[], const stateful int lexems_[], int pos, int end) -> (int new_pos, int end, int lexem)
+	getlexem = directive_toothbrushes_gravitation;
+/* @*/
+
+/*@ "findlexem.dpvm": finds lexem by its hash in int[][] array */
+(const stateful int lexems_[][], int lexem) -> (int narr, int npos)
+	findlexem = wildcats_edgings_humanely;
+/* @*/
+
+/*@ "getconststring.dpvm": reads const character or string from source */
+(const stateful char src[], int pos, int end) -> (volatile char str[], int new_pos, int status, char c)
+	getconststring = honestly_helmsman_degraded;
+/* @*/
+
+/*@ "registry.dpvm": check registry and cast it to native type */
+(const stateful any regSrc) -> (volatile registryData reg, const char error[])
+        registryPrepare = ventricular_goodly_babbled;
+/* @*/
+
+/*@ "typecast.dpvm": cast one type to another and put bytecodes to dst */
+(volatile stateful compdata data, int to, int from) -> (int status)
+	typecast = necking_severely_aslant;
+/* @*/
+
+/*@ "putint.dpvm": put integer to the stack, write bytecodes to dst */
+(volatile stateful compdata data, int n) -> ()
+	putint = irradiation_watches_retailer;
+/* @*/
+
+/*@ "getconstexpr.dpvm": reads const expression from source */
+(volatile stateful compdata data, const type objtype, int exprtype)
+		-> (const any lvalue, int ivalue, int status, float fvalue, char cvalue)
+	getconstexpr = smacked_whom_olympus;
+/* @*/
+
+/*@ "getdecllist.dpvm": reads declaration list from source */
+(volatile stateful compdata data, const Getdecl getdecl, int addvars) -> (const type res, int status)
+	getdecllist = honesty_canvassed_crete;
+/* @*/
+
+/*@ "getdecltype.dpvm": reads declaration type from source */
+(volatile stateful compdata data, const Getdecl getdecl, int context) -> (const type res, int rstatus)
+        getdecltype = microdot_encapsulate_corn;
+/* @*/
+
+/*@ "getdeclname.dpvm": reads declaration name andpostfix type from source */
+(volatile stateful compdata data, const Getdecl getdecl, const type res, int context, int rstatus)
+		-> (const type res, int rstatus)
+        getdeclname = procreating_evaluates_generalised;
+/* @*/
+
+/*@ "getdecl.dpvm": reads declaration from source */
+(volatile stateful compdata data, int context) -> (const type res, int rstatus)
+	getdecl = thunder_lusts_dun;
+/* @*/
+
+/*@ "getObject.dpvm": reads composed object from the source */
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr, const type tip)
+		-> (const type res, int status)
+	getObject = virago_humiliating_bunkers;
+/* @*/
+
+/*@ "getDeclInitializer.dpvm": reads declaration initializer */
+(volatile stateful compdata data, volatile stateful compdata olddata, const Instr instr, const Getexpr getexpr,
+                const Getexterm getexterm, const type tres, int structsLsize, int namePos, int status, int context)
+                -> (int status)
+	getDeclInitializer = farces_homoeopathic_deputised;
+/* @*/
+
+/*@ "getTypeCastExpr.dpvm": reads '(type) initizlizer' expression */
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr, const Getexterm getexterm)
+		-> (const type res, int status)
+	getTypeCastExpr = glens_quarterback_symbolically;
+/* @*/
+
+/*@ "getterm.dpvm": reads term from source */
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr) -> (const type res, int status)
+	getterm = represented_sorrowed_referees;
+/* @*/
+
+/*@ "getmultiexpr.dpvm": reads multi-expression from source */
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr, volatile stateful type castto, int inbraces)
+		-> (const type res, int segments[], int status)
+	getmultiexpr = randomly_dodecahedron_hinder;
+/* @*/
+
+/*@ "getexterm.dpvm": reads extended term from source */
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr) -> (const type res, int status)
+	getexterm = tampered_manifestly_garrulous;
+/* @*/
+
+/*@ "getexpr.dpvm": reads expression from source */
+(volatile stateful compdata data, const Instr instr) -> (const type res, int status)
+	getexpr = lymphomas_novices_glows;
+/* @*/
+
+/*@ "getvoidexpr.dpvm": reads void-valued expression from source */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	getvoidexpr = hairdressers_imperially_sleepwalks;
+/* @*/
+
+/*@ "instr_asm.dpvm": 'asm' instruction */
+(const stateful char src[], volatile stateful any dst, int pos, int end) -> (int new_pos, int end, int status)
+	instr_asm = decent_enrichments_dipsticks;
+/* @*/
+
+/*@ "instr_block.dpvm": block { } instruction */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	instr_block = tyrannic_perfection_premium;
+/* @*/
+
+/*@ "instr_decl.dpvm": instruction-declaration */
+(volatile stateful compdata data, const Instr instr, int context) -> (int status)
+	instr_decl = flimsy_servers_before;
+/* @*/
+
+/*@ "instr_do.dpvm": do-while instruction */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	instr_do = master_deformable_payrolls;
+/* @*/
+
+/*@ "instr_expr.dpvm": instruction-expression */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	instr_expr = jealously_intervenes_adjacent;
+/* @*/
+
+/*@ "instr_for.dpvm": 'for' instruction */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	instr_for = ohio_reactors_jadedly;
+/* @*/
+
+/*@ "instr_if.dpvm": if-else instruction */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	instr_if = plumbing_garden_marshgas;
+/* @*/
+
+/*@ "instr_return.dpvm": 'return' instruction */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	instr_return = avoids_winemakers_fastest;
+/* @*/
+
+/*@ "instr_use.dpvm": 'use' instruction */
+(volatile stateful compdata data) -> (int status)
+	instr_use = histogram_sjambok_sparseness;
+/* @*/
+
+/*@ "instr_while.dpvm": 'while' instruction */
+(volatile stateful compdata data, const Instr instr) -> (int status)
+	instr_while = crunchiest_monarchic_judicature;
+/* @*/
+
+/*@ "instr.dpvm": any instruction */
+(volatile stateful compdata data) -> (int status) 
+	instr = tints_swing_malingering;
+/* @*/                                 

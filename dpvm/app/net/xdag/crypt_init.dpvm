@@ -1,0 +1,24 @@
+/* initialize crypt context for miner; T16.507-T19.553; $DVS:time$ */
+
+#include "../../math/crypto/dfs/dfs.dpvmake"
+
+() -> (int ctx[]) {
+	int data[];
+	int seq[];
+	int ctx[] = dfs_init("minersgonnamine");
+
+	int c = 0x1947f3ac;
+	int i;
+	for (i = 0; i < 0x80; i += 1) {
+		data.push(c);
+		seq.push(c);
+		c = (c + 0x82e9d1b5) & 0xffffffff;
+	}
+
+	for (i = 0; i < 0x80; i += 1) {
+		dfs_set_data(ctx, data);
+		dfs_encrypt(ctx, data, 0, 0x80, seq.i[i]);
+	}
+
+	return ctx;
+}

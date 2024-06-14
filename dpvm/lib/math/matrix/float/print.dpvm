@@ -1,0 +1,30 @@
+/* write matrix as string; T17.917-T17.917; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "matrix.dpvmake"
+
+(volatile stateful char dst[], const stateful matrix m, int precision) -> () {
+    printint(dst, m.rows, 1);
+    dst.cpush(' ');
+    printint(dst, m.columns, 1);
+    dst.cpush('\n');
+
+    int rows = m.rows;
+    int columns = m.columns;
+    int N = rows * columns;
+    int i;
+    int j;
+    float values[] = m.elements;
+
+    for (i = 0, j = 0; i < N; i += 1) {
+        printfloat(dst, precision, values[i]);
+        j += 1;
+        if (j == columns) {
+            dst.cpush('\n');
+            j = 0;
+        } else
+            dst.cpush(' ');
+    }
+
+    return;
+}

@@ -1,0 +1,21 @@
+/* show entry metainformation command, T18.320-T18.328; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandInfo {
+	if (data.pos + 144 > data.file.isize)
+		return "End of database.\r\n";
+
+	char dst[];
+	data.utilities.teEntryInfo(dst, data.ctx, data.file, data.pos);
+
+	return dst;
+}
+
+teCommand cmdInfo = {
+        "info",
+        "show metainformation of database entry",
+        commandInfo
+};
+
+

@@ -1,0 +1,19 @@
+/* compute hash of a block; T16.507-T19.553; $DVS:time$ */
+
+#include "../../math/crypto/sha256/sha256.dpvmake"
+
+(const stateful char block[]) -> (volatile int behash[]) {
+	int ctx[];
+	int ctxb[];
+	int res;
+
+	sha256_init(ctx);
+	sha256_addSubstr(ctx, block, 0, 0x200);
+	sha256_finalize(ctx);
+
+	sha256_init(ctxb);
+	sha256_addInts32(ctxb, ctx, 0, 8);
+	sha256_finalize(ctxb);
+
+	return (ctxb);
+}

@@ -1,0 +1,78 @@
+/* form amd64 optimization rules array; T16.083-T17.662; $DVS:time$ */
+
+#include "../../translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], 
+		const stateful char mnem[], const stateful char hex[], 
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	a = asm_add;
+
+(volatile stateful asm_instr list[][]) -> () {
+	asm_instr r[];
+
+	r = new_rule();
+	a(r, "mov [rsi+b],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+b]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rcx,d", "48 C7 C1 124", 0, 0, 0x4600, 0, 0);
+	a(r, "cmp rcx,rax", "48 39 C1", 0, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+d],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+d]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rcx,d", "48 C7 C1 124", 0, 0, 0x4600, 0, 0);
+	a(r, "cmp rcx,rax", "48 39 C1", 0, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+b],rdx", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+b]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rax,d", "48 C7 C0 124", 0, 0, 0x4600, 0, 0);
+	a(r, "cmp rax,rdx", "48 39 D0", 0, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+d],rdx", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+d]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rax,d", "48 C7 C0 124", 0, 0, 0x4600, 0, 0);
+	a(r, "cmp rax,rdx", "48 39 D0", 0, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+b],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,[rsi+b]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rcx,d", "48 C7 C1 124", 0, 0, 0x4600, 0, 0);
+	a(r, "bop rax,rcx", "48 101 C1", 0x4800, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+d],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,[rsi+d]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rcx,d", "48 C7 C1 124", 0, 0, 0x4600, 0, 0);
+	a(r, "bop rax,rcx", "48 101 C1", 0x4800, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+b],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "mul rax,[rsi+b]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rcx,d", "48 C7 C1 124", 0, 0, 0x4600, 0, 0);
+	a(r, "mul rax,rcx", "48 0F AF C1", 0, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov [rsi+d],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "mul rax,[rsi+d]", "", 0, 0xC1080000, 0, 0, 0);
+	a(r, "mov rcx,d", "48 C7 C1 124", 0, 0, 0x4600, 0, 0);
+	a(r, "mul rax,rcx", "48 0F AF C1", 0, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	return;
+}

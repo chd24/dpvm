@@ -1,0 +1,6 @@
+/* hello, world!; T15.538-T17.596; $DVS:time$ */
+	
+() -> () {
+	outputp("", "", "Hello, world!\r\n");
+	return;
+}

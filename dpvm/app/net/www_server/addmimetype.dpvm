@@ -1,0 +1,46 @@
+/* add mime type; T15.547-T17.643; $DVS:time$ */
+	
+(volatile stateful blip_crazed_electrolytic mime, const char ext[], const char type0[])
+		-> () {
+	char type1[];
+	int n1;
+	int size;
+	int i;
+	int j;
+	int t;
+	int z;
+	char c;
+
+	int n0;
+	for (i = ext.csize - 1; i >= 0; i -= 1) {
+		n0 <<= 8;
+		n0 |= ext[i];
+	}
+
+	mime.ipush(n0);
+	mime.lpush(type0);
+
+	size = mime.isize;
+	if (size < 2)
+		return;
+
+	i = size - 2;
+	do {
+		j = i + 1;
+		n0 = mime.i[i];
+		n1 = mime.i[j];
+		t = n0 > n1;
+		if (t) {
+			mime.i[i] = n1;
+			mime.i[j] = n0;
+			type0 = mime.l[i];
+			type1 = mime.l[j];
+			mime.l[i] = type1;
+			mime.l[j] = type0;
+			i -= 1;
+			t = i >= 0;
+		}
+	} while (t);
+
+	return;
+}

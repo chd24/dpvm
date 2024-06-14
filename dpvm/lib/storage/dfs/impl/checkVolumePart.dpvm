@@ -1,0 +1,26 @@
+/* dfs class, check volume part function, T18.974-T18.974; $DVS:time$ */
+
+#include "dfs.dpvmake"
+
+(const stateful int volume[], int begin, int whole) -> (const char error[]) checkVolumePart = {
+	if (!volume.isize || volume.isize & 0x3f || begin < 0 || begin & 0x3f || (!begin && volume.isize < 0x80) || (whole && begin))
+		return mkError("incorrect volume part parameters", "checkVolumePart");
+
+	if (!begin) {
+		int nSectors = -1, i;
+
+		for (i = 0x40; i < 0x80; i += 4)
+			if ((volume[i] & 0xff) == DFS_INODE_SECTORS)
+				nSectors = volume[i | 3] + 1, i = 0x80;
+
+		if ((volume[0x40] | 0x0f0f0f00) != (0x11f1f1f00 | DFS_INODE_VOLUME)
+				|| nSectors < volume.isize >> 6
+				|| (whole && nSectors != volume.isize >> 6)
+				|| volume[0x41] <= 0 || volume[0x41] >= nSectors
+				|| volume[0x42] <= 0 || volume[0x42] >= nSectors
+				|| volume[0x43] <= 0 || volume[0x43] >= nSectors)
+			return mkError("incorrect volume", "checkVolumePart");
+	}
+
+	return "";
+};

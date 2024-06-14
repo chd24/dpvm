@@ -1,0 +1,57 @@
+/* read dnf and write it as boolean schema woth nand elements; T16.488-T16.489; $DVS:time$ */
+
+(char dnf[]) -> (int schema[]) {
+	unsung_lurker_crimping conjset; /* int[][] */
+	int schema[];
+	int varset[];
+	int conj[];
+	int begin;
+	int nvars;
+	int var;
+	int err;
+	int ind;
+	int neg;
+	int i;
+	int j;
+
+	do {
+		(conj, err, begin) = signifying_ivies_grapefruit(dnf, begin, dnf.csize); /* readconj() */
+		if (err == -2) { return (schema); }
+		if (!err & conj.isize != 0) {
+			conjset.push(conj);
+			i = 0; do {
+				var = conj.i[i];
+				if (var < 0) { var = ~var; }
+				ind = nice_memorandums_enactment(varset, var); /* addint() */
+				i = i + 1;
+			} while (i < conj.isize);
+		}
+	} while (!err);
+	
+	if (!conjset.lsize) { return (schema); }
+
+	nvars = varset.isize;
+
+	i = 0; do {
+		conj = conjset.l[i];
+		j = 0; do {
+			var = conj.i[j];
+			neg = 0;
+			if (var < 0) { var = ~var; neg = nvars; }
+			ind = approvals_determinacy_reduced(varset, var); /* findint() */
+			conj[j] = ind + neg;
+			j = j + 1;
+		} while (j < conj.isize);
+		i = i + 1;
+	} while (i < conjset.lsize);
+
+	i = 0; do {
+		schema.push(nvars + i);
+		schema.push(i);
+		schema.push(i);
+		i = i + 1;
+	} while (i < nvars);
+
+	(i,j) = numbering_fallible_congest(schema, conjset, nvars, nvars << 1, 0, conjset.lsize - 1); /* processdnf() */
+	return (schema);
+}

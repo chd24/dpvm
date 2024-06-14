@@ -1,0 +1,39 @@
+/* input class, dump demo, T20.229-T20.229; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../input.dpvmake"
+
+type demoData = {
+	volatile stateful inputClass inputObj;
+	const any callback;
+	volatile stateful any data;
+	volatile stateful char line[];
+	int maxSize;
+	int timeout;
+};
+
+(volatile stateful any data, const char error[]) -> () inputCallback = {
+	demoData arr[];
+	pushObject(data, arr);
+	demoData d = arr[0];
+
+	char mess[];
+	if (error.csize)
+		printf(mess, "Error: %s;  ", {error});
+	printf(mess, "Line: '%s'\r\n", {d.line});
+	outputp("", "", mess);
+	return;
+};
+
+(const any callback, volatile stateful any data, int maxSize, int timeout) -> () inputExt = {
+	inputClass inputObj = inputCreate();
+
+	demoData d = {inputObj, callback, data, (volatile char[]){}, maxSize, timeout};
+
+	char error[] = inputObj.methods.setFlags(inputObj, 0);
+	if (error.csize) return inputCallback(d, error);
+
+	inputObj.methods.inputExt(d.line, inputObj, inputCallback, d, maxSize, timeout);
+	return;
+};

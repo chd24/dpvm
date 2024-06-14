@@ -1,0 +1,73 @@
+/* get mime types object; T15.547-T18.830; $DVS:time$ */
+
+#include "www_server.dpvmake"
+	
+() -> (blip_crazed_electrolytic mime) {
+	const (volatile stateful blip_crazed_electrolytic mime, 
+		const char ext[], const char type0[]) -> () a = addmimetype;
+	blip_crazed_electrolytic m;
+
+	/* html */
+	a(m, "class",	"application/java");
+    a(m, "css",     "text/css");
+    a(m, "htm",     "text/html;charset=utf-8");
+	a(m, "html",	"text/html;charset=utf-8");
+    a(m, "js",      "application/javascript");
+
+	/* text */
+    a(m, "asm",     "text/plain;charset=utf-8");
+    a(m, "c",       "text/plain;charset=utf-8");
+    a(m, "cpp",     "text/plain;charset=utf-8");
+	a(m, "dpvm",	"text/plain;charset=utf-8");
+    a(m, "dpvmake",	"text/plain;charset=utf-8");
+    a(m, "dpvmh",	"text/plain;charset=utf-8");
+    a(m, "h",       "text/plain;charset=utf-8");
+	a(m, "ldus",	"text/plain;charset=utf-8");
+    a(m, "log",     "text/plain;charset=utf-8");
+    a(m, "md",      "text/markdown;charset=utf-8");
+    a(m, "txt",     "text/plain;charset=utf-8");
+
+	/* images */
+    a(m, "bmp",     "image/bmp");
+	a(m, "djvu",	"image/vnd.djvu");
+    a(m, "gif",     "image/gif");
+    a(m, "ico",     "image/x-icon");
+	a(m, "jpeg",	"image/jpeg");
+    a(m, "jpg",     "image/jpeg");
+    a(m, "png",     "image/png");
+
+	/* audio */
+    a(m, "mid",     "audio/midi");
+    a(m, "mp3",     "audio/mpeg");
+    a(m, "ogg",     "audio/ogg");
+    a(m, "wav",     "audio/x-wav");
+
+	/* video */
+    a(m, "avi",     "video/x-msvideo");
+    a(m, "mp4",     "video/mp4");
+	a(m, "mpeg",	"video/mpeg");
+    a(m, "mpg",     "video/mpeg");
+    a(m, "swf",     "video/x-shockwave-flash");
+
+	/* documents */
+    a(m, "doc",     "application/msword");
+    a(m, "dvi",     "application/x-dvi");
+    a(m, "odt",     "application/vnd.oasis.opendocument.text");
+    a(m, "ogg",     "application/ogg");
+    a(m, "pdf",     "application/pdf");
+    a(m, "ppt",     "application/vnd.ms-powerpoint");
+    a(m, "ps",      "application/postscript");
+    a(m, "tex",     "application/x-tex");
+	a(m, "torrent",	"application/x-bittorrent");
+
+	/* archives */
+    a(m, "bz2",     "application/x-bzip");
+    a(m, "gz",      "application/x-gzip");
+    a(m, "rar",     "application/x-rar-compressed");
+    a(m, "tar",     "application/x-tar");
+    a(m, "tgz",     "application/x-tgz");
+    a(m, "xz",      "application/x-xz");
+    a(m, "zip",     "application/zip");
+
+	return m;
+}

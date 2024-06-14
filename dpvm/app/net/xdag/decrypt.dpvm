@@ -1,0 +1,23 @@
+/* decrypt int32[] incoming data; T16.508-T19.555; $DVS:time$ */
+
+#include "../../utils/utils.dpvmake"
+#include "../../math/crypto/dfs/dfs.dpvmake"
+#include "xdag.dpvmake"
+
+(volatile stateful xdagdata data, const stateful char raw[], int begin, int end) -> (int arr[]) {
+	int arr[] = chars2ints32(raw, begin, end);
+
+	if ((data.cdata.method & 0xff) >= 8) {
+		data.recvseq += arr.isize >> 3;
+		return arr;
+	}
+
+	int seq = data.recvseq;
+	int i;
+	for (i = 0 ; i < arr.isize; i += 8, seq += 1)
+		dfs_decrypt(data.cdata.dfsctx, arr, i, 8, seq);
+
+	data.recvseq = seq;
+
+	return arr;
+}

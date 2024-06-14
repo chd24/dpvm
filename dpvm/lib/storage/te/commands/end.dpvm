@@ -1,0 +1,19 @@
+/* view last entry of database, T18.327-T18.334; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandEnd {
+	data.pos = data.file.isize - 144;
+	if (data.pos < 0)
+		data.pos = 0;
+
+	return "view";
+}
+
+teCommand cmdEnd = {
+        "end",
+        "view last entry of database",
+        commandEnd
+};
+
+

@@ -1,0 +1,52 @@
+/* decrypt subarray of int32[] using dfs context; T16.506-T16.513; $DVS:time$ */
+
+#include "dfs.dpvmake"
+
+int ff = 0xffffffff;
+int f = 0xffff;
+
+(const stateful int ctx[], volatile stateful int data[], int begin, int size, 
+		int sequence) -> (int err) {
+	int x;
+	int y;
+	int z;
+	int t;
+	int a;
+	int b;
+	int c;
+	int d;
+	int i;
+
+	if (!size || size & 1)
+		return 1;
+
+	(x, y, z, t) = dfs_prepare(ctx, sequence);
+
+	size += begin;
+
+	for (i = begin; i < size; i += 1) {
+		c = (((t * (x + ctx[z >> 16] & ff)) >> 16) ^ ctx[y & f]) & ff;
+		d = (((x * (y + ctx[t >> 16] & ff)) >> 16) ^ ctx[z & f]) & ff;
+		data[i] = (data[i] + d) & ff;
+		a = (((y * (z + ctx[x >> 16] & ff)) >> 16) ^ ctx[t & f] ^ ~data[i]) & ff;
+		b = (((z * (t + ctx[y >> 16] & ff)) >> 16) ^ ctx[x & f]) & ff;
+		i += 1;
+
+		z = (((d * (a + ctx[c >> 16] & ff)) >> 16) ^ ctx[b & f]) & ff;
+		t = (((a * (b + ctx[d >> 16] & ff)) >> 16) ^ ctx[c & f]) & ff;
+		data[i] = (data[i] + t) & ff;
+		x = (((b * (c + ctx[a >> 16] & ff)) >> 16) ^ ctx[d & f] ^ ~data[i]) & ff;
+		y = (((c * (d + ctx[b >> 16] & ff)) >> 16) ^ ctx[a & f]) & ff;
+	}
+
+	c = 1615037507;
+	d = 43385317;
+
+	for (i = size - 1; i >= begin; i -= 1) {
+		a = c * d;
+		c = data[i];
+		data[i] = (c ^ a) & ff;
+	}
+
+	return 0;
+}

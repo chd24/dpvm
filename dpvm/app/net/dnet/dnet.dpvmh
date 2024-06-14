@@ -1,0 +1,142 @@
+/* dnet module, types and constants; T17.591-T19.640; $DVS:time$ */
+
+#include "../../tools/registry/registry.dpvmh"
+
+type dnet_data = {                  /* dnet node const data structure */
+        const char version[];       /* dnet version */
+        const char help[];          /* help message */
+        const char log_file[];      /* file for logging */
+        const char catalog[];       /* catalog for dnet files */
+        const char random_text[];   /* random text for key generation */
+        const char filenames[][];   /* full names of dnet files */
+        const char files[][];       /* contents of dnet files */
+        const int crc32_ctx[];      /* precomputed data for crc32 */
+        const any connection;       /* main function of connection */
+	const registryData registry;/* system registry */
+        int	control_port;       /* port to listen control connections */
+        int     flags;              /* flags, see DNET_FLAG_* */
+        int	timezone;           /* local timezone */
+        int	log_level;          /* max level of log messages output to logfile */
+        int	crc32_ini;          /* initial value for crc32 */
+        int	start_time;         /* start time of dnet */
+        int	task_id;            /* task id of process */
+};
+
+int DNET_FLAG_FIRST_RUN = 1;    /* first run, random text will be asked and rsa key file generated */
+int DNET_FLAG_MOBILE	= 2;    /* run on mobile device, create weak crypto keys */
+
+int DNET_FILE_KEY	= 0;	/* private and public keys of the host */
+int DNET_FILE_KEYS	= 1;	/* public keys of trusted hosts */
+int DNET_FILE_NAME	= 2;	/* name of teh host */
+int DNET_FILE_PROFILE	= 3;	/* list of startup commands */
+
+char dnet_filenames[][] = {
+	"dnet_key.dat",
+	"dnet_keys.dat",
+	"dnet_name.txt",
+	"dnet_profile.txt"
+};
+
+type dnet_connection = {	/* connection data */
+        const char host[];	/* ip hostname of another side */
+	int	ip0;		/* ipv4 address of half of ipv6 address of another side */
+	int	ip1;		/* other part of ipv6 address */
+	int	port;		/* port of another side */
+	int	flags;		/* connection flags */
+	int	start_time;	/* start time of connection */
+	int	last_time;	/* last time of connection activity */
+	int	thread_id;	/* thread id inside task */
+	int	in_packets;	/* number of input packets */
+	int	out_packets;	/* number of output packets */
+	int	in_dropped;	/* number of dropped input packets */
+	int	out_dropped;	/* number of dropped output packets */
+	int	in_bytes;	/* number of input bytes */
+	int	out_bytes;	/* number of input bytes */
+};
+
+/* connection flags */
+int DNET_CONN_OVERCATS_CLIENT	= 1;
+int DNET_CONN_OVERCATS_SERVER	= 2;
+int DNET_CONN_RECONNECT		= 4;
+int DNET_CONN_FINISHED		= 8;
+int DNET_CONN_CONTROL		= 0x10;
+int DNET_CONN_PROFILE		= 0x20;
+
+type dnet_host = {		/* host data */
+        const char key[];	/* public key */
+        const char name[];	/* host name inside dnet */
+        const char version[];	/* dnet client version (only TN.NNN part) */
+	int	crc;		/* crc of host key */
+	int	flags;		/* host flags, see DNET_HOST_* */
+	int	thread_id;	/* thread id of connection to route to host */
+	int	last_time;	/* last time host had seen in network */
+	int	route_crc;	/* crc of gateway for this host */
+};
+
+int DNET_HOST_TRUSTED		= 1;	/* is host trusted */
+int DNET_HOST_LOCAL		= 2;	/* is host local */
+int DNET_HOST_IMMEDIATE 	= 4;	/* is host immediate connected */
+int DNET_HOST_MANUAL		= 8;	/* is host manual routed */
+int DNET_HOST_AUTO		= 0;	/* is host auto routed */
+int DNET_HOST_CHANGED		= 0x10;	/* is host static data changed */
+int DNET_HOST_TRUST_CHANGED	= 0x20;	/* is host trusted flag changed */
+
+type dnet_stream = {		/* stream data */
+        const char packet[];	/* packet header to incapsulate stream data */
+	int	thread_id;	/* thread id to send stream data to */
+};
+
+type dnet_context = {                           /* context from which command is issued */
+        const dnet_data	data;                   /* const data */
+        volatile dnet_connection conns[1..];	/* info on all connections */
+        volatile dnet_host	hosts[];	/* info on all known hosts */
+        volatile dnet_stream	streams[1..];	/* info on all active streams */
+        const int		seed[4];	/* seed for random generator */
+        int                     last_time;	/* last known time */
+};
+
+/* thread ids of pseudo connections and corresponding contexts (ctx.conn.thread_id) */
+int DNET_THREAD_ID_STARTUP	= -1;
+int DNET_THREAD_ID_MEDIATOR	= -2;
+int DNET_THREAD_ID_LOGGER	= -3;
+int DNET_THREAD_ID_HANDLER	= -4;
+int DNET_THREAD_ID_TMP		= -5;
+
+type dnet_addr = { 		/* address for internal messages inside node */
+        const char version[];	/* program version */
+	int	task_id;	/* task id of this dnet task */
+	int	thread_id;	/* thread id of connection listen on this addr */
+	int	service;	/* id of service performed by listener */
+};
+
+int DNET_SERVICE_CONN_IN	= 1; /* input thread of connection */
+int DNET_SERVICE_CONN_OUT	= 2; /* output thread of connection */
+int DNET_SERVICE_MEDIATOR	= 3; /* mediator */
+int DNET_SERVICE_LOG		= 4; /* logger */
+
+type dnet_mess = {                              /* message for internal messaging */
+        const dnet_context	ctx;		/* known info to exchange between threads */
+        const char		mess[];		/* text message */
+        int                     request;	/* request id for desired service */
+        int                     thread_id;	/* thread id of caller */
+};
+
+int DNET_REQUEST_SEND_PACKET	= 1; /* send single packet in mess[] */
+int DNET_REQUEST_MERGE_CONTEXT	= 2; /* merge context ctx into self one */
+int DNET_REQUEST_STOP		= 3; /* stop service */
+
+int DNET_PACKET_EXCHANGE 	= 0x80;
+int DNET_PACKET_UPDATE 		= 0x81;
+int DNET_PACKET_COMMAND 	= 0x82;
+int DNET_PACKET_COMMAND_OUTPUT 	= 0x83;
+
+type dnet_command = {               /* dnet command */
+        const char	name[];     /* command name */
+        const char	help[];     /* command description for help */
+        const (volatile stateful dnet_context ctx, const char args[][])
+		-> (const char res[], int error) 
+                func;               /* function which implements the command;
+                                       return text result and error status */
+        int	min_nargs;          /* minimum number of command arguments */
+        int	max_nargs;          /* maximum number of command arguments */
+};

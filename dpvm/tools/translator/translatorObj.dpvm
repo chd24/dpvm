@@ -1,0 +1,127 @@
+/* translator object for registry; T17.668-T20.100; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "translatorObj.dpvmake"
+#include "version.dpvmh"
+
+char std_addrs[][] = {
+        "stack0",
+        "stack1",
+        "stack2",
+        "stack3",
+        "any",
+	"check",
+	"code",
+        "fmerge",
+        "free",
+        "fsplit",
+	"hash",
+	"io",
+	"match_type",
+	"new",
+	"reserve0",
+	"reserve1",
+	"reserve2",
+	"reserve3",
+        "run",
+        "thread",
+        "wait"
+};
+
+int func_offset = 0x100;
+int addr_pattern = 0x10001000100010001000100010001;
+
+(const stateful any func, volatile stateful any funcs[], const stateful checker_data data, const stateful char arch[],
+		int level) -> (const char res[]) translatorTestHelper = {
+	addrs_list addrs;
+	int i;
+
+	for (i = 0; i < std_addrs.lsize; i += 1) {
+		addrs.lpush(std_addrs[i]);
+		int addr;
+		if (i < 4) addr = 0;
+		else addr = i * addr_pattern;
+		addrs.ipush(addr);
+	}
+
+	for (i = 0; i < funcs.lsize; i += 1) {
+		addrs.lpush(funcs[i]);
+		addrs.ipush((i + func_offset) * addr_pattern);
+	}
+
+	if (level >= 0) {
+		addrs.lpush("debug");
+		addrs.ipush(level);
+	}
+
+	mach_code m;
+	int res;
+	(m, res) = translator(func, addrs, data, arch);
+
+	if (level == -2) {
+		char mess[];
+		strcat(mess,     "Links  stack: ");
+		printint(mess, m.i[0], 1);
+		strcat(mess, "\r\nInts   stack: ");
+		printint(mess, m.i[1], 1);
+		strcat(mess, "\r\nFloats stack: ");
+		printint(mess, m.i[2], 1);
+		strcat(mess, "\r\nCodes  stack: ");
+		printint(mess, m.i[3], 1);
+		strcat(mess, "\r\n");
+		return mess;
+	}
+
+	if (res) {
+		char err[];
+		strcat(err, "Translator failed with error ");
+		if (res < 0)
+			printint(err, res, 1);
+		else {
+			strcat(err, "0x");
+			printhex(err, res, 1, 0);
+		}
+		strcat(err, ".\r\n");
+		return err;
+	}
+
+	char text[];
+	for (i = 0; i < m.csize; i += 1)
+		text.cpush(m.c[i]);
+
+	return text;
+};
+
+(const stateful any registry, const stateful any func, const stateful char arch[], int level) -> (const char res[])
+		translatorTest = {
+	any funcs[];
+	checker_data data;
+	char error[];
+	int flags;
+	registryData reg;
+
+	(reg, error) = registryPrepare(registry);
+	if (error.csize)
+		return error;
+
+	(funcs, data, error, flags) = reg.checker(func);
+
+	if (level == -3) {
+		char res[];
+		strcat(res, "Checker returns flags: 0x");
+		printhex(res, flags, 1, 0);
+		strcat(res, ".\r\n");
+		return res;
+	}
+
+	if (flags & CHECKER_ILLEGAL)
+		return error;
+
+	return translatorTestHelper(func, funcs, data, arch, level);
+};
+
+translatorClass translatorObj = {
+        version,
+        translator,
+        translatorTest
+};

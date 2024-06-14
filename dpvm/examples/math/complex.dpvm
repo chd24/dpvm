@@ -1,0 +1,17 @@
+/* example of the function using complex numbers; T16.541-T20.069; $DVS:time$ */
+
+type complex = {
+	float re;
+	float im;
+};
+
+(const complex c) -> (float res) mod = {
+	float re = c.re;
+	float im = c.im;
+	return fsqrt(re * re + im * im);
+};
+
+() -> (float res) complex_example = {
+	complex x = {3.0, 4.0};
+	return mod(x);
+};

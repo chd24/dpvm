@@ -1,0 +1,9 @@
+/* neuron class, registryPrepare internal method; T19.379-T19.643; $DVS:time$ */
+
+#include "../../../../tools/registry/registry.dpvmake"
+
+(const stateful any regSrc) -> (volatile registryData reg, const char error[]) registryPrepare = {
+	registryData reg = registryObj.copy(regSrc);
+	char error[] = registryObj.check(reg, REGISTRY_COMPILER | REGISTRY_TRANSLATOR);
+	return (reg, error);
+};

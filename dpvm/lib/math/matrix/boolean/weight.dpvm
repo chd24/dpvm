@@ -1,0 +1,12 @@
+/* weight of vector; T16.064-T16.064; $DVS:time$ */
+
+(int vector) -> (int res) {
+	int res;
+
+	if (vector) { do {
+		vector = vector & (vector - 1);
+		res = res + 1;
+	} while (vector); }
+
+	return (res);
+}

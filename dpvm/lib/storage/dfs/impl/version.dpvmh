@@ -1,0 +1,55 @@
+/* dfs class, version */
+
+char version[] = "dfs class, ver 0.3.2, T18.798-T19.351"; /* $DVS:time$
+
+history:
+
+T19.351 ver 0.3.2 - fix bug in begin parameter of writeCallback
+
+T19.341 ver 0.3.1 - added method addToCatalogue
+
+T19.015 ver 0.3.0 - added methods get/setFlags, debug flag, fix bug in getFileRuns
+
+T19.012 ver 0.2.6 - fullversion of resizeFile method
+
+T19.002 ver 0.2.5 - calculate maximum size of file for existing topology in resizeFile
+
+T18.990 ver 0.2.4 - added first version of resizeFile method
+
+T18.974 ver 0.2.3 - added building-in one dfs volume into another
+
+T18.915 ver 0.2.2 - added time2dfsTime and dfsTime2Time methods, set mtime attribute
+
+T18.883 ver 0.2.1 - added support for UTF-16 and modification time attribute (in DFStime format)
+
+T18.882 ver 0.2.0 - fixed bug, working version of makeVolume demo
+
+T18.880 ver 0.1.7 - added rolloutVolume method and makeVolume demo
+
+T18.876 ver 0.1.6 - adding rolloutVolume method and makeEmptyVolume demo, part 2
+
+T18.861 ver 0.1.5 - adding rolloutVolume method and makeEmptyVolume demo, part 1
+
+T18.858 ver 0.1.4 - added addPath method
+
+T18.841 ver 0.1.3 - fixed bug in findPath
+
+T18.839 ver 0.1.2 - added demo listCatalogue, fixed bugs in listCatalogue method
+
+T18.836 ver 0.1.1 - added method listCatalogue
+
+T18.830 ver 0.1.0 - fixed crash bug in getFileRuns
+
+T18.825 ver 0.0.6 - supported old structure of catalogue
+
+T18.816 ver 0.0.5 - fixed bug in getFileRuns
+
+T18.814 ver 0.0.4 - rewritten to use several parts of the volume instead of one
+
+T18.809 ver 0.0.3 - added method getFileRuns and demo extractFile
+
+T18.805 ver 0.0.2 - added method and demo findPath
+
+T18.798 ver 0.0.1 - class development started, template for the class written
+
+*/

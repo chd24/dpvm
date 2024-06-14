@@ -1,0 +1,266 @@
+/* dpvm: get constant expression; T15.535-T20.056; $DVS:time$ */
+
+/* read constant expression and return value:
+ * exprtype:
+ *   bits 0..1: obj type (link, int, float, char
+ *   bit     2: is constant expression allowed (not just constant term)
+ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "compiler.dpvmake"
+#include "lexems.dpvmh"
+
+(volatile stateful compdata data, const type objtype, int exprtype)
+		-> (const any lvalue, int ivalue, int status, float fvalue, char cvalue) constexprterm {
+	any lvalue;
+	any dst;
+	int consts[];
+	int ivalue;
+	float fvalue;
+	char cvalue;
+	int pos;
+	int begin;
+	int end;
+	int status;
+
+
+	/* read next lexem */
+
+	exprtype &= 3;
+	if (!exprtype) consts = data.clinks;
+	else if (exprtype == 1) consts = data.cints;
+	else if (exprtype == 2) consts = data.cfloats;
+	else consts = data.cchars;
+
+	(pos, end, status) = getlexem(data.src, consts, data.pos, data.end);
+
+
+	/* named constant */
+
+	if (status >= 0 && status < maxnames) {
+		if (!exprtype) {
+			lvalue = data.consts.l[status];
+			if (lvalue.type != objtype && objtype != wind_speeded_hogwash) {
+				data.mess = "type mismatch in constant initializer";
+				return (lvalue, ivalue, -2, fvalue, cvalue);
+			}
+		} else if (exprtype == 1) ivalue = data.consts.i[status];
+		else if (exprtype == 2) fvalue = data.consts.f[status];
+		else cvalue = data.consts.c[status];
+
+		data.pos = pos;
+		status = 0;
+	}
+
+
+	else if (!exprtype) {
+
+		/* named type */
+
+		(pos, end, status) = getlexem(data.src, data.ctypes, data.pos, data.end);
+
+		if (status >= 0 && status < maxnames) {
+			if (status < 4) {
+				data.mess = "built-in type can't be used as constant";
+				return (lvalue, ivalue, -2, fvalue, cvalue);
+			}
+			lvalue = data.structs.l[status - 4].stype;
+			if (lvalue.type != objtype && objtype != wind_speeded_hogwash) {
+				data.mess = "type mismatch in constant initializer";
+				return (lvalue, ivalue, -2, fvalue, cvalue);
+			}
+
+			status = 0;
+			data.pos = pos;
+			return (lvalue, ivalue, status, fvalue, cvalue);
+		}
+
+
+		/* named object */
+
+		(status, begin) = getnobj(data.src, data.file.links, pos);
+		if (~status) {
+			if (status >= 0) {
+				lvalue = data.file.links.l[status];
+				if (lvalue.type != objtype && objtype != wind_speeded_hogwash) {
+					data.mess = "type mismatch in constant initializer";
+					return (lvalue, ivalue, -2, fvalue, cvalue);
+				}
+
+				status = 0;
+				data.pos = pos;
+			} else {
+				char mess[];
+				strcat(mess, "object with name '");
+				substrcat(mess, data.src, begin, pos);
+				strcat(mess, "' missed");
+				data.mess = mess;
+			}
+			return (lvalue, ivalue, status, fvalue, cvalue);
+		}
+
+		
+		/* string */
+
+		(lvalue, pos, status, cvalue) = 
+				getconststring(data.src, data.pos, data.end);
+
+		if (!status) {
+			if (lvalue.type != objtype && objtype != wind_speeded_hogwash) {
+				data.mess = "type mismatch in constant initializer";
+				return (lvalue, ivalue, -2, fvalue, cvalue);
+			}
+			data.pos = pos;
+			return (lvalue, ivalue, status, fvalue, cvalue);
+		}
+
+
+		/* agregator { expr, ..., } */
+
+		(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+        if (status == LEX_FIGURE_L) {
+            any a;
+			type t;
+			int i;
+			int j;
+
+			data.pos = pos;
+			dst = objtype;
+            if (dst == a.type) dst = dst.type;
+			dst = new_object(objtype,
+				dst.i[0], dst.i[1], dst.i[2], dst.i[3],
+				objtype.i[8], objtype.i[9], objtype.i[10], objtype.i[11]);
+
+			(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+			i = 0; j = 0;
+            while (status != LEX_FIGURE_R) {
+				while (j >= objtype.i[12 + i]) {
+					i = i + 1;
+					if (i >= 4) {
+						data.mess = "extra members in const agregate initializer";
+						return (lvalue, ivalue, -2, fvalue, cvalue);
+					}
+					j = 0;
+				}
+
+				if (!i) {
+					if (j + 4 < objtype.lsize) 
+						t = objtype.l[j + 4];
+					else
+						t = objtype.l[j & 1 | 2];
+				}
+
+				(lvalue, ivalue, status, fvalue, cvalue) = code(data, t, i);
+
+				if (status < 0) {
+					if (status == -1) {	
+						data.mess = "next member expected in const agregate initializer";
+						status = -2;
+					}
+					return (lvalue, ivalue, status, fvalue, cvalue);
+				}
+
+				if (!i) {
+					if (j < dst.lsize) dst.l[j] = lvalue;
+					else dst.lpush(lvalue);
+				} else if (i == 1) {
+					if (j < dst.isize) dst.i[j] = ivalue;
+					else dst.ipush(ivalue);
+				} else if (i == 2) {
+					if (j < dst.fsize) dst.f[j] = fvalue;
+					else dst.fpush(fvalue);
+				} else {
+					if (j < dst.csize) dst.c[j] = cvalue;
+					else dst.cpush(cvalue);
+				}
+				
+				j = j + 1;				
+
+				(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+				if (status != 5 & status != 6) {
+					data.mess = "} or , expected in const agregate initializer";
+					return (lvalue, ivalue, -2, fvalue, cvalue);
+				}
+				data.pos = pos;
+			}
+
+            data.pos = pos;
+			lvalue = dst;
+			status = 0;
+		} else
+			status = -1;
+
+
+	/* integer */
+
+	} else if ((exprtype & 3) == 1) {
+		(ivalue, status, pos) = strtoi(data.src, data.pos, data.end, 0);
+
+		if (!status) data.pos = pos;
+
+
+	/* float */
+
+	} else if ((exprtype & 3) == 2) {
+		(status, pos, fvalue) = strtof(data.src, data.pos, data.end);
+
+		if (!status) data.pos = pos;
+
+
+	/* 'c' */
+
+	} else {
+		(lvalue, pos, status, cvalue) = 
+				getconststring(data.src, data.pos, data.end);
+
+		if (status == 3) { data.pos = pos; status = 0; }
+	}
+
+
+	return (lvalue, ivalue, status, fvalue, cvalue);
+}
+
+(volatile stateful compdata data, const type objtype, int exprtype)
+		-> (const any lvalue, int ivalue, int status, float fvalue, char cvalue) {
+
+	any lvalue;
+	int ivalue = 0;
+	int status;
+	float fvalue;
+	char cvalue;
+
+	int oper = '+';
+	int expr_allowed = (exprtype & 4 && (exprtype & 3) == 1);
+
+	do {
+		int ival;
+		(lvalue, ival, status, fvalue, cvalue) = constexprterm(data, objtype, exprtype & 3);
+
+		if (status)
+			return (lvalue, ival, status, fvalue, cvalue);
+
+		if (oper == '+') ivalue += ival;
+		else if (oper == '-') ivalue -= ival;
+
+		oper = 0;
+
+		if (expr_allowed) {
+			int pos;
+			int end;
+			(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+			if (status == 20) oper = '+';
+			else if (status == 21) oper = '-';
+
+			if (oper) data.pos = pos;
+
+			status = 0;
+		}
+	} while (oper);
+
+	return (lvalue, ivalue, status, fvalue, cvalue);
+}

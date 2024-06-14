@@ -1,0 +1,29 @@
+/* make error for amd64 float computations translator; T19.509-T20.125; $DVS:time$ */
+
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "floats.dpvmh"
+#include "version.dpvmh"
+
+int FLOATS_MAGIC = 0x666c6f617473; /* "floats" */
+
+(volatile stateful floatsData data, const char function[], const char error[]) -> (int res) mkError = {
+	if (data.debugOutput) {
+		char mess[];
+		printf(mess, "[%s:%s(): %s]\r\n", {floatsShortVersion, function, error});
+		outputp("", "", mess);
+
+		if (data.debugLevel == -3)
+			return 0;
+	}
+
+	data.d.machcode.cpop(data.d.machcode.csize);
+
+	if (data.debugLevel == FLOATS_MAGIC) {
+		char mess[];
+		printf(mess, "%s: Error in function %s: %s\r\n", {floatsVersion, function, error});
+		objcopyto(data.d.machcode, mess);
+		return 0;
+	}
+
+	return -1;
+};

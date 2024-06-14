@@ -1,0 +1,17 @@
+/* compute average sums by given array of values and period; T16.117-T20.069; $DVS:time$ */
+
+(const stateful int arr[], int period) -> (volatile int res[]) average = {
+	int res[], i, n, sum;
+
+	for (i = 0; i < arr.isize; i += 1) {
+		sum += arr[i];
+		n += 1;
+		if (n > period) { 
+			sum -= arr[i - period];
+			n -= 1;
+		}
+		res.ipush(sum / n);
+	}
+
+	return res;
+};

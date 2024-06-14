@@ -1,0 +1,18 @@
+/* converts string to ints array; T16.117-T16.968; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+
+(const stateful char str[]) -> (volatile int arr[]) {
+	int res[];
+	int pos;
+	int n;
+	int err;
+
+	while (!err) {
+		(n, err, pos) = strtoi(str, pos, str.csize, 0);
+		if (!err)
+			res.push(n);
+	}
+	
+	return res;
+}

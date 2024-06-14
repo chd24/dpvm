@@ -1,0 +1,12 @@
+/* make a copy of long number; T17.547-T17.547; $DVS:time$ */
+
+(const stateful int src[]) -> (volatile int dst[]) {
+	int dst[];
+	int i;
+	int size = src.isize;
+
+	for (i = 0; i < size; i += 1)
+		dst.ipush(src[i]);
+
+	return dst;
+}

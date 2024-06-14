@@ -1,0 +1,45 @@
+/* read long number from string; T16.475-T17.525; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "long.dpvmake"
+
+(const stateful char str[], int begin, int end, int base) -> (volatile int long[], int err, int nextbegin) {
+	int res[];
+	int err;
+	int n;
+	int c;
+	int dig;
+
+	(begin, end) = strtostr(str, begin, end);
+	
+	if ((base == 0 || base == 16) && end - begin >= 2 && str[begin] == '0' &&
+				(str[begin + 1] == 'x' || str[begin + 1] == 'X'))
+		begin += 2,
+		base = 16;
+	else if ((base == 0 || base == 8) && end - begin >= 1 && str[begin] == '0')
+		begin += 1,
+		base = 8;
+	else if (base == 0)
+		base = 10;
+	else if (base < 0 || base > 36)
+		return (res, -1, begin);
+
+	if (begin == end) return (res, -2, begin);
+
+	do {
+		c = str[begin];
+		if (c >= '0' && c <= '9' && c < '0' + base) n = c - '0';
+		else if (c >= 'A' && c < 'A' + base - 10) n = c - 'A' + 10;
+		else if (c >= 'a' && c < 'a' + base - 10) n = c - 'a' + 10;
+		else {
+			if (!dig) err = -3;
+			return (res, err, begin);
+		}
+		mul_short(res, base);
+		add_short(res, n);
+		begin += 1;
+		dig = 1;
+	} while (begin < end);
+
+	return (res, err, begin);
+}

@@ -1,0 +1,226 @@
+/* p2p connection; T16.950-T19.705; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "p2p.dpvmake"
+#include "message.dpvmh"
+#include "mailbox.dpvmh"
+
+int PING_PERIOD = 30000000000; /* 30 s */
+
+(volatile stateful p2pdata data, const char text[], int error) -> () disconnect {
+	char mess[];
+	strcat(mess, text);
+	strcat(mess, " host ");
+	strcat(mess, data.remote_host);
+	strcat(mess, ":");
+	printint(mess, data.remote_port, 1);
+	if (error) {
+		strcat(mess, ", error ");
+		printhex(mess, error, 3, 0);
+	}
+	write_log(data, mess, 5);
+
+	p2pmess m;
+	m.task = P2P_DISCONN;
+	m.host = data.remote_host;
+	m.port = data.remote_port;
+
+	p2paddr a;
+	a.module = P2P_MODULE;
+	a.service = P2P_ADDRMAN;
+	a.task_id = data.task_id;
+
+	msendp("", "", a, m);
+
+	if (!error)
+		msendp("", "", data.mboxaddr, m);
+
+	return;
+}
+
+(volatile stateful p2pdata data, const char text[], int status) -> () read_conn {
+	if (status <= 0) {
+		disconnect(data, "Disconnected from", 0);
+		return;
+	}
+
+	strcat(data.input, text);
+	int begin;
+	int end;
+	int messtype;
+	int error;
+
+	do {
+		(begin, end, messtype, error) = message_read(data, data.input, end,
+			data.input.csize);
+		if (!error)
+			error = message_process(data, data.input, begin, end, messtype);
+	} while (!error);
+
+	if (error < 0) {
+		disconnect(data, "Disconnecting from malicious", 0);
+		return;
+	}
+
+	if (end) {
+		for (begin = end; begin != data.input.csize; begin = begin + 1)
+			data.input[begin - end] = data.input[begin];
+		data.input.cpop(end);
+	}
+
+	input(code, data, 0x100000, 2 * PING_PERIOD);
+	return;	
+}
+
+(volatile stateful p2pdata data, const any objs, int status) -> () write_conn {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received a mail in connection to host ");
+		strcat(m, data.remote_host);
+		strcat(m, ":");
+		printint(m, data.remote_port, 1);
+		strcat(m, ", service stopped");
+		write_log(data, m, 2);
+		mrecvp("", "", data.mboxaddr, 1 << 63);
+		return;
+	}
+
+	int i;
+	char out[];
+
+	for (i = 0; i < objs.lsize; i = i + 1) {
+	    p2pmess m;
+	    if (m.type != objs.l[i].type) {
+		char mess[];
+		strcat(mess, "Dropped mailbox message of illegal format");
+		write_log(data, mess, 5);
+	    } else {
+		objcopyto(m, objs.l[i]);
+
+		if (m.task == P2P_DISCONN) {
+			char mess[];
+			strcat(mess, "Finished writing thread of connection to host ");
+			strcat(mess, data.remote_host);
+			strcat(mess, ":");
+			printint(mess, data.remote_port, 1);
+			write_log(data, mess, 8);
+			mrecvp("", "", data.mboxaddr, 1 << 63);
+			return;
+                } else if (m.task == P2P_BROADOBJS)
+			message_write(data, out, m.data, P2P_OBJ);
+                else if (m.task == P2P_REQOBJS)
+                        message_write(data, out, m.data, P2P_GETOBJS);
+            }
+	}
+
+	if (out.csize) {
+		outputp("", "", out);
+		data.last_sent = 0;
+	}
+
+	const int vars[] = {0};
+	getsys(data.func, data, vars);
+	return;
+}
+
+(volatile stateful p2pdata data, const int values[]) -> () get_time {
+	if (!data.last_sent)
+		data.last_sent = values[0];
+	else if (values[0] - data.last_sent >= PING_PERIOD) {
+		char out[];
+		message_write(data, out, "", P2P_PING);
+		outputp("", "", out);
+		data.last_sent = values[0];
+	}
+
+	mrecv(write_conn, data, data.mboxaddr, 
+		PING_PERIOD - (values[0] - data.last_sent));
+	return;
+}
+
+(const stateful p2pdata cdata, const int values[]) -> () write_start {
+	p2pdata data;
+	objcopyto(data, cdata);
+	data.func = get_time;
+	data.last_sent = 0;
+	get_time(data, values);
+	return;
+}
+
+(volatile stateful p2pdata data, int status) -> () conn_start {
+	if (status <= 0) {
+		disconnect(data, "Failed connection to", 0xfff);
+		return;
+	}
+
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+	addr.service = P2P_SENDOBJ;
+	addr.task_id = data.task_id;
+	addr.host = data.remote_host;
+	addr.port = data.remote_port;
+	data.mboxaddr = addr;
+
+	mrecvp("", "", data.mboxaddr, 0);
+
+	p2pdata d;
+	objcopyto(d, data);
+	const int vars[] = {0};
+	getsysp(write_start, d, vars);
+
+	char in[];
+	data.input = in;
+	
+	input(read_conn, data, 0x100000, 2 * PING_PERIOD);
+	return;
+}
+
+(const stateful p2pdata d, int port, int ip0, int ip1) -> () {
+	p2pdata data;
+	objcopyto(data, d);
+
+	char mess[];
+
+	if (port < 0) {
+		disconnect(data, "Failed connection to", -port);
+		return;
+	}	
+
+	if (!data.remote_host.csize) {
+		char remote_host[];
+		printip(remote_host, ip0, ip1);
+		data.remote_host = remote_host;
+		data.remote_port = port & 0xffff;
+	}
+
+	strcat(mess, "Connected to host ");
+	strcat(mess, data.remote_host);
+	strcat(mess, ":");
+	printint(mess, data.remote_port, 1);
+	write_log(data, mess, 6);
+
+	char out[];
+	message_write(data, out, data.version, P2P_VERSION);
+
+	char flags[];
+	if (data.flags & P2P_MBOX)
+		strcat(flags, " mbox");
+	message_write(data, out, flags, P2P_FLAGS);
+
+	char myaddr[];
+	strcat(myaddr, data.extaddr);
+	strcat(myaddr, ":");
+	printint(myaddr, data.port, 1);
+	message_write(data, out, myaddr, P2P_MYADDR);
+
+	char youraddr[];
+	strcat(youraddr, data.remote_host);
+	strcat(youraddr, ":");
+	printint(youraddr, data.remote_port, 1);
+	message_write(data, out, youraddr, P2P_YOURADDR);
+
+	output(conn_start, data, out);
+	return;
+}

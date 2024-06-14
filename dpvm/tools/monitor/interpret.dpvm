@@ -1,0 +1,160 @@
+/* monitor: interpret text with set of objects; T16.456-T19.700; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+#include "monitor.dpvmake"
+
+int handler_params[] = {DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ERROR, DPVM_SYS_PARAM_CODE, DPVM_SYS_PARAM_POS,
+			DPVM_SYS_PARAM_FUNC_SHORT, DPVM_SYS_PARAM_ID};
+
+(const mondata data, const int values[]) -> () run_cmd {
+	if (data.mode >= 0) {
+		getsysp(handler, data, handler_params);
+
+		any mess;
+		mess.ipush(values[0]);
+		mess.ipush(data.time);
+		msendp("", "", data.address, mess);
+	}
+
+	char str[];
+	any obj;
+
+	if (data.mode == 2) {
+		debuggerClass debugger;
+		objcopyto(debugger, data.debugger);
+		str = debugger.methods.debug(debugger, data.text, data.objs, DEBUG_MODE_STOP);
+	} else
+		(obj, str) = data.registry.interpreter(data.registry, data.text, data.objs);
+
+	if (data.mode >= 0) {
+		any mess;
+		mess.ipush(values[0]);
+		mess.ipush(data.time);
+		mess.lpush(obj);
+		mess.lpush(str);
+		msend("", "", data.address, mess);
+	}
+	return;
+}
+
+(volatile stateful mondata data, const int values[]) -> () check_task {
+	if (values[0] < 0)
+		data.flags = -1;
+	mrecv(data.recv_mess, data, data.address, 1000000000);
+	return;
+}
+
+(volatile stateful mondata data, const any mess, int status) -> () recv_mess {
+	int task = -1;
+
+	int i;
+	for (i = mess.lsize - 1; i >= 0; i -= 1) {
+		if (mess.l[i].isize >= 2 && mess.l[i].i[1] == data.time) {
+			if (mess.l[i].lsize >= 2 && (task == -1 || task == mess.l[i].i[0])) {
+				if (data.mode == 1 && mess.l[i].l[0] != wind_speeded_hogwash) {
+					any objs;
+					objs.lpush(mess.l[i].l[0]);
+					msave_p2p(save_object, data, objs);
+				} else {
+					char text[];
+					objcopyto(text, mess.l[i].l[1]);
+					out_result(data, text);
+				}
+				return;
+			} else if (task == -1)
+				task = mess.l[i].i[0];
+		}
+	}
+
+	if (task == -1)
+		task = data.task;
+	else
+		data.task = task;
+
+	if (data.flags == -1)
+		out_result(data, "Task finished.");
+	else if (task == -1)
+		mrecv(code, data, data.address, 1000000000);
+	else {
+		data.recv_mess = code;
+		int params[];
+		params.ipush(task << 16 | DPVM_SYS_PARAM_ID);
+		getsys(check_task, data, params);
+	}
+	return;
+}
+
+(volatile stateful mondata data, const int values0[]) -> () getTime = {
+	int values[];
+	int vars[];
+
+	vars.ipush(DPVM_SYS_PARAM_ID); values.ipush(0);
+	vars.ipush(DPVM_SYS_PARAM_FLAGS); values.ipush(data.registry.taskFlags);
+	vars.ipush(DPVM_SYS_PARAM_MEMORY_QUOTA); values.ipush(data.registry.taskMemory);
+
+	int i;
+	int size = data.name.csize;
+	int value;
+	int shift;
+	int var = DPVM_SYS_PARAM_NAME;
+
+	int stop;
+	while (size && !stop) {
+		int c = data.name[size - 1];
+		if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+			size -= 1;
+		else
+			stop = 1;
+	} 
+
+	stop = 0;
+	while (i < size && !stop) {
+		int c = data.name[i];
+		if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+			i += 1;
+		else
+			stop = 1;
+	}
+
+	for (0; i < size; i += 1) {
+		value |= data.name[i] << shift;
+		shift += 8;
+		if (shift == 64 || i == size - 1) {
+			vars.ipush(var);
+			values.ipush(value);
+			var += 1;
+			value = 0;
+			shift = 0;
+		}
+	}
+
+	data.time = values0[0];
+
+	mondata data1;
+	data1.address = data.address;
+	data1.time = data.time;
+	data1.text = data.text;
+	(data1.objs, data.objs) = (data.objs, data1.objs);
+	data1.registry = data.registry;
+	data1.debugger = data.debugger;
+	data1.mode = data.mode;
+
+	setsysp(run_cmd, data1, vars, values);
+	
+	if (data.mode >= 0) {
+		data.task = -1;
+		data.flags = 0;
+		mrecv(recv_mess, data, data.address, 1000000000);
+	}
+	return;
+};
+
+(volatile stateful mondata data, const any objs) -> () interpret = {
+	const int vars[] = {DPVM_SYS_PARAM_TIME};
+	data.objs = objs;
+	getsys(getTime, data, vars);
+	return;
+};

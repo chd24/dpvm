@@ -1,0 +1,30 @@
+/* p2p message format; T16.954-T16.955; $DVS:time$ */
+
+/* message format:
+
+	4 bytes: magic string: */
+char P2P_MAGIC[] = "DPVM"; /*
+
+	4 bytes: message type: */
+int P2P_VERSION	 =  0;	/* p2p client version */
+int P2P_FLAGS	 =  1;	/* list of supported flags separated by spaces */
+int P2P_PING	 =  2;	/* any message */
+int P2P_PONG	 =  3;	/* the same message as in ping */
+int P2P_MYADDR	 =  4;	/* external address of p2p client: host:port */
+int P2P_YOURADDR =  5;	/* address of other side p2p client: host:port */
+int P2P_GETADDRS =  6;	/* no; request for all known addresses */
+int P2P_ADDRS	 =  7;	/* list of known host addresses separated by spaces */
+int P2P_OBJ	 =  8;	/* hash, then body of object */
+int P2P_GETOBJS	 =  9;	/* list of object hashes to send to this client */
+int P2P_ID	 = 10;	/* client id (open key) */
+int P2P_PRIV	 = 11;	/* id of receiver, id of sender, signature,
+			   message type, private message */
+int P2P_MAX	 = 11;	/*
+
+	4 bytes: body length;
+
+	4 bytes: crc of the whole message where crc field = 0
+
+	? bytes: body
+*/
+

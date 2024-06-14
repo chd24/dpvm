@@ -1,0 +1,21 @@
+/* monitor: output result and goto input; T15.570-T19.547; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "monitor.dpvmake"
+
+(volatile stateful mondata data, const char text[]) -> () {
+	char str[];
+
+	if (text.csize) {
+		strcat(str, text);
+		strcat(str, "\r\n");
+	}
+
+	if (!data.out_func.csize) {
+		strcat(str, "dpvm> ");
+		output(input_cmd, data, str);
+	} else if (str.csize)
+		data.out_func(data.out_data, str);
+
+	return;
+}

@@ -1,0 +1,47 @@
+/* bubble sort; T15.417-T17.632; $DVS:time$ */
+
+(const int array[]) -> (const int sorted[]) {
+    asm {
+0
+0 lload info
+2 iload 
+
+0 iload 2 lt
+jzf
+	lpops ret
+lf
+
+8 istore new
+0 iload
+lb
+	1 sub
+	1 lload 0 iload iget
+	0 lload 1 iload iset
+	0 iload
+jnzb
+ipops
+0 lstore
+1 sub
+lb
+	0
+	1 iload
+	lb
+		0 iload 0 lload iget
+		1 iload 1 sub 0 lload iget
+		1 iload 1 iload lt
+		jzf
+			2 iload 0 lload iset
+			1 iload 1 sub 0 lload iset
+			1 1 istore
+			0 0
+		lf
+		2 ipopn
+		1 sub
+		0 iload
+	jnzb
+	ipops
+jnzb
+ipops
+ret
+    }
+}

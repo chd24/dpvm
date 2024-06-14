@@ -1,0 +1,6 @@
+/* create new object; T16.467-T17.635; $DVS:time$ */
+	
+(const any typ, int a, int b, int c, int d, int e, int f, int g, int h) 
+		-> (volatile any obj) {
+	asm { new ret }
+}

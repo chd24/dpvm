@@ -1,0 +1,33 @@
+/* forex class, statistics internal methods, T19.796-T19.796; $DVS:time$ */
+
+(const stateful float data[], int begin, int end) -> (float res)
+	average = {
+		int i;
+		float res;
+		for (i = begin; i < end; i += 1)
+			res += data[i];
+		return res / (end - begin);
+	},
+	min = {
+		int i;
+		float res = data[begin];
+		for (i = begin + 1; i < end; i += 1)
+			if (data[i] < res)
+				res = data[i];
+		return res;
+	},
+	max = {
+		int i;
+		float res = data[begin];
+		for (i = begin + 1; i < end; i += 1)
+			if (data[i] > res)
+				res = data[i];
+		return res;
+	},
+	first = {
+		return data[begin];
+	},
+	last = {
+		return data[end - 1];
+	},
+	statistics[] = {average, min, max, first, last};

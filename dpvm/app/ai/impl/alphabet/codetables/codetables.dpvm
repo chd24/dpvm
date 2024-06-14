@@ -1,0 +1,9 @@
+/* aiAlphabet class, codetables array, T18.383-T18.413"; $DVS:time$ */
+
+#include "codetables.dpvmake"
+
+aiAlphabetPredefinedCodeTable aiAlphabetPredefinedCodeTables[] = {
+	ai_utf_8_ru,
+	ai_utf_8_ru_fb2,
+	ai_koi8_r_ru_txt
+};

@@ -1,0 +1,642 @@
+/* blog class, methods implementation, T18.716-T19.350; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../algorithms/sort/sort.dpvmake"
+#include "../../../math/rand/rand.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "../../te/te.dpvmake"
+#include "blog.dpvmake"
+#include "version.dpvmh"
+
+int MESSAGES_HASH_SIZE = 0x400;
+
+(volatile stateful any blogObj, const char root[]) -> (const char error[]) setRoot = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "setRoot");
+	if (err.csize) return err;
+
+	impl.data.root = root;
+
+	return "";
+};
+
+(volatile stateful any blogObj, int dfsFlags) -> (const char error[]) setFlags = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "setFlags");
+	if (err.csize) return err;
+
+	impl.data.message.dfsFlags = dfsFlags;
+
+	return "";
+};
+
+(volatile stateful int pwd[], int time, int shift) -> () recodePwd = {
+	randData r;
+	randObj.initObj(r, {blogClass, randObj, code, (time >> 40) - shift});
+	int i;
+	for (i = 0; i < 4; i += 1)
+		pwd[i] ^= randObj.getLimited(r, 0x100000000);
+	return;
+};
+
+(volatile stateful any blogObj, const char name[], const char password[], int currentTime, int existing) -> (const char recodedPassword[], const char error[]) internalAddUser = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "internalAddUser");
+	if (err.csize) return (password, err);
+
+	if (currentTime > impl.data.currentTime)
+		impl.data.currentTime = currentTime;
+
+	blogUser user;
+	(user, err) = findUser(impl.data, name);
+	if (!existing && !err.csize) {
+		char mess[];
+		strcat(mess, "User '");
+		strcat(mess, name);
+		strcat(mess, "' already exists");
+		return (password, mkError(mess, "internalAddUser"));
+	} else if (existing && err.csize)
+		return (password, err);
+
+	if (password.csize) {
+		int pwd[], decoded, i;
+		if (currentTime) {
+			if (password.csize == 48) {
+				int e, n, next;
+				for (i = 40; i >= 0 && !e; i -= 8) {
+					(n, e, next) = strtoi(password, i, i + 8, 16);
+					if (!e && next == i + 8)
+						pwd.ipush(n);
+					else
+						e = 1;
+				}
+
+				if (pwd.isize == 6) {
+					n = pwd[5];
+					pwd.ipop(1);
+					if ((pwd & 0xffffffff) == n) {
+						n = pwd[4];
+						pwd.ipop(1);
+						for (i = 0; i < 4 && !decoded; i += 1) {
+							recodePwd(pwd, currentTime, i);
+							if ((pwd & 0xffffffff) == n)
+								decoded = 1;
+							else
+								recodePwd(pwd, currentTime, i);
+						}
+					}
+				}
+			}
+
+			if (!decoded) {
+				char p[];
+				int size = password.csize;
+				for (i = 0; i < size; i += 1) {
+					char c = password[i];
+					if (c == '%' && i + 2 < size) {
+						int n, e, next;
+						(n, e, next) = strtoi(password, i + 1, i + 3, 16);
+						if (!e && next == i + 3)
+							c = n, i += 2;
+					}
+					p.cpush(c);
+				}
+				password = p;
+			}
+		}
+
+		user.dfsCtx = dfs_init(password);
+
+		if (currentTime) {
+			if (decoded) {
+				for (i = 0; i < 4; i += 1)
+					user.dfsCtx[0x10000 + i] = pwd[i];
+			}
+
+			pwd.ipop(pwd.isize);
+			for (i = 0; i < 4; i += 1)
+				pwd.ipush(user.dfsCtx[0x10000 + i]);
+			i = pwd & 0xffffffff;
+			recodePwd(pwd, currentTime, 0);
+			pwd.ipush(i);
+			pwd.ipush(pwd & 0xffffffff);
+
+			char p[];
+			for (i = 5; i >= 0; i -= 1)
+				printf(p, "%08X", {pwd[i]});
+			password = p;
+		}
+	}
+
+	if (!existing) {
+		user.name = name;
+		impl.data.users.lpush(user);
+	}
+
+	return (password, "");
+};
+
+(volatile stateful any blogObj, const char name[], const char password[], int currentTime) -> (const char recodedPassword[], const char error[]) addUser = {
+	return internalAddUser(blogObj, name, password, currentTime, 0);
+};
+
+(volatile stateful any blogObj, const char name[], const char password[], int currentTime) -> (const char recodedPassword[], const char error[]) changePassword = {
+	return internalAddUser(blogObj, name, password, currentTime, 1);
+};
+
+(volatile stateful any blogObj, const char userName[], const stateful int file[], int begin, int end) -> (const char error[]) setupEnvironment = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "setupEnvironment");
+	if (err.csize) return err;
+
+	blogUser user;
+	(user, err) = findUser(impl.data, userName);
+	if (err.csize) return err;
+
+	if (begin < 0 || begin > end || end > file.isize)
+		return mkError("illegal parameters", "setupEnvironment");
+
+	char str[] = ints32_2chars(file, begin, end), env[][];
+	begin = 0, end = str.csize;
+	while (begin < end) {
+		int pos = substrchr(str, begin, end, 0);
+		if (pos < 0)
+			return mkError("illegal environment", "setupEnvironment");
+		if (pos == begin)
+			begin = end;
+		else {
+			char var[];
+			substrcat(var, str, begin, pos);
+			env.lpush(var);
+			begin = pos + 1;
+		}
+	}
+
+	if (env.lsize & 1)
+		return mkError("non-parity environment", "setupEnvironment");
+
+	user.env = env;
+	return "";
+};
+
+(volatile stateful any blogObj, const char userName[], volatile stateful int file[]) -> (const char error[], int changed) saveEnvironment = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "saveEnvironment");
+	if (err.csize) return (err, 0);
+
+	blogUser user;
+	(user, err) = findUser(impl.data, userName);
+	if (err.csize) return (err, 0);
+
+	if (!file.isize || file.isize & 0x7f)
+		return (mkError("illegal file length", "saveEnvironment"), 0);
+
+	if (!user.envChanged)
+		return ("", 0);
+
+	char out[], env[][] = user.env;
+	int i;
+	for (i = 0; i < env.lsize; i += 1) {
+		strcat(out, env[i]);
+		out.cpush(0);
+	}
+
+	do {
+		out.cpush(0);
+	} while (out.csize & 0x1ff);
+
+	file.ipop(file.isize - 0x80);
+	copyints(file, chars2ints32(out, 0, out.csize), 0, out.csize >> 2);
+	user.envChanged = 0;
+
+	return ("", 1);
+};
+
+(volatile stateful any blogObj, const char userName[], const char var[]) -> (const char value[], const char error[]) getEnvVar = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "getEnvVar");
+	if (err.csize) return ("", err);
+
+	blogUser user;
+	(user, err) = findUser(impl.data, userName);
+	if (err.csize) return ("", err);
+
+	int i;
+	for (i = 0; i < user.env.lsize; i += 2) {
+		if (var == user.env[i])
+			return (user.env[i + 1], "");
+	}
+
+	return ("", "");
+};
+
+(volatile stateful any blogObj, const char userName[], const char var[], const char value[]) -> (const char error[]) setEnvVar = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "setEnvVar");
+	if (err.csize) return err;
+
+	blogUser user;
+	(user, err) = findUser(impl.data, userName);
+	if (err.csize) return err;
+
+	int i;
+	for (i = 0; i < user.env.lsize; i += 2) {
+		if (var == user.env[i]) {
+			if (value != user.env[i + 1]) {
+				char v[];
+				strcat(v, value);
+				user.env[i + 1] = v;
+				user.envChanged = 1;
+			}
+			return "";
+		}
+	}
+
+	char v[], vr[];
+	strcat(v, var);
+	strcat(vr, value);
+	user.env.lpush(v);
+	user.env.lpush(vr);
+	user.envChanged = 1;
+
+	return "";
+};
+
+(volatile stateful any blogObj, const stateful int file[], int fileIndex, int beginItemIndex, int endItemIndex)
+        -> (const char error[]) addMessages = {
+    blogImpl impl;
+    char err[] = convertObjToImpl(impl, blogObj, "addMessages");
+    if (err.csize) return err;
+
+    if (beginItemIndex < 0 || beginItemIndex & 7 || endItemIndex < 0 || endItemIndex & 7 || beginItemIndex > endItemIndex
+            || endItemIndex > file.isize)
+        return mkError("illegal item indexes", "addMessages");
+
+    int files[] = impl.data.fileIndexes;
+    int fIndex = files.isize;
+
+    int i;
+    for (i = 0; i < fIndex; i += 1)
+        if (files[i] == fileIndex)
+            return mkError("file index already used", "addMessages");
+
+    hashData hash = impl.data.messagesHash;
+    int messages[][] = impl.data.messages;
+
+    if (!fIndex) {
+        if (hashObj.initExt(hash, MESSAGES_HASH_SIZE, hashFlagKeyValue))
+            return mkError("hash table initialization error", "addMessages");
+        int mess[];
+        mess.ipush(-1); /* fileN  */
+        mess.ipush(0);  /* pos    */
+        mess.ipush(-1); /* parent */
+        mess.ipush(0);  /* count  */
+        messages.lpush(mess);
+    }
+
+    files.ipush(fileIndex);
+
+    for (i = beginItemIndex; i < endItemIndex; i += 8) {
+        int time = file[i] | file[i + 1] << 32;
+
+        if (time) {
+            int parentTime = file[i + 2] | file[i + 3] << 32, key[] = {time}, found, n, pn;
+            any res;
+
+            if (parentTime && parentTime < time) {
+                int pkey[] = {parentTime};
+                (res, found) = hashObj.findGetValue(hash, pkey);
+                if (found)
+                    pn = res.i[0];
+                else {
+                    pn = messages.lsize;
+                    int mess[], value[] = {pn};
+                    hashObj.findAddKeyValue(hash, pkey, value);
+                    mess.ipush(-1);
+                    mess.ipush(0);
+                    mess.ipush(-1);
+                    mess.ipush(0);
+                    messages.lpush(mess);
+                }
+            } else
+                pn = 0;
+
+            (res, found) = hashObj.findGetValue(hash, key);
+            if (found)
+                n = res.i[0];
+            else {
+                n = messages.lsize;
+                int mess[], value[] = {n};
+                hashObj.findAddKeyValue(hash, key, value);
+                mess.ipush(-1);
+                mess.ipush(0);
+                mess.ipush(-1);
+                mess.ipush(0);
+                messages.lpush(mess);
+            }
+
+            if (messages[n][0] < 0) {
+                messages[n][0] = fIndex;
+                messages[n][1] = i;
+                messages[n][2] = pn;
+                messages[pn].ipush(time);
+                int c = messages[n][3] + 1;
+                messages[n][3] = 0;
+                while (n >= 0) {
+                    messages[n][3] += c;
+                    n = messages[n][2];
+                }
+            }
+        }
+    }
+
+    return "";
+};
+
+(volatile stateful int out[], volatile stateful blogData data, int messNo, int begin, int end) -> () outMessages = {
+    hashData hash = data.messagesHash;
+    int messages[][] = data.messages, mess[] = messages[messNo];
+
+    if (begin < 0)
+        begin = 0;
+    if (end > mess[3])
+        end = mess[3];
+    if (begin >= end)
+        return;
+
+    int sum = mess[0] >= 0;
+
+    if (begin == 0 && sum) {
+        out.ipush(mess[1]);
+        out.ipush(data.fileIndexes[mess[0]]);
+        begin = 1;
+    }
+
+    if (begin >= end)
+        return;
+
+    out.ipush(-1);
+
+    int size = mess.isize;
+
+    if (size >= 6)
+        quickSortInts(mess, 4, size);
+
+    int i;
+    for (i = size - 1; i >= 4 && begin < end; i -= 1) {
+        int key[] = {mess[i]}, found;
+        any res;
+        (res, found) = hashObj.findGetValue(hash, key);
+        int n = res.i[0], sumadd = messages[n][3];
+        if (begin < sum + sumadd) {
+            int tmpend = sum + sumadd;
+            if (tmpend > end)
+                tmpend = end;
+            code(out, data, n, begin - sum, tmpend - sum);
+            begin = sum + sumadd;
+        }
+        sum += sumadd;
+    }
+
+    out.ipush(-2);
+    return;
+};
+
+(volatile stateful any blogObj, int begin, int end) -> (volatile int itemfileIndexes[], const char error[]) sortMessages = {
+    int itemFileIndexes[];
+    blogImpl impl;
+    char err[] = convertObjToImpl(impl, blogObj, "sortMessages");
+    if (err.csize) return (itemFileIndexes, err);
+
+    outMessages(itemFileIndexes, impl.data, 0, begin, end);
+    return (itemFileIndexes, "");
+};
+
+(volatile stateful any blogObj, int time) -> (const char error[], int fileIndex, int itemIndex) findMessage = {
+    blogImpl impl;
+    char err[] = convertObjToImpl(impl, blogObj, "findMessage");
+    if (err.csize) return (err, -1, -1);
+
+    any res;
+    int key[] = {time}, found;
+    (res, found) = hashObj.findGetValue(impl.data.messagesHash, key);
+    if (!found)
+        return (mkError("message not found", "findMessage"), -1, -1);
+
+    int message[] = impl.data.messages[res.i[0]];
+    return ("", impl.data.fileIndexes[message[0]], message[1]);
+};
+
+(volatile stateful any blogObj, const stateful int file[], int beginItemIndex, int endItemIndex, int time)
+	-> (const char error[], int index) setMessage = {
+    blogImpl impl;
+    char err[] = convertObjToImpl(impl, blogObj, "setMessage");
+    if (err.csize) return (err, -1);
+
+    if (!impl.data.root.csize)
+	return (mkError("blog root is not set", "setMessage"), -1);
+
+    if (beginItemIndex < 0 || beginItemIndex & 7 || endItemIndex < 0 || endItemIndex & 7 || beginItemIndex > endItemIndex
+                    || endItemIndex > file.isize)
+	return (mkError("illegal item indexes", "setMessage"), -1);
+
+    blogMessage m = impl.data.message;
+
+    if (m.path.csize || m.raw.csize || m.dfsCtx.isize)
+	return (mkError("message already set", "setMessage"), -1);
+
+    if (m.time && m.time != time)
+	return (mkError("message time differ", "setMessage"), -1);
+
+    int i, j;
+    for (i = beginItemIndex; i < endItemIndex; i += 8) {
+        int t = file[i] | file[i + 1] << 32;
+        if (time == t) {
+            m.raw = ints32_2chars(file, i, i + 8);
+            char path[];
+            printf(path, "%s/%08X/%02X/%08X.dfs", {impl.data.root, t >> 32, t >> 24 & 0xfc, t & 0xffffffff});
+            m.path = path;
+            char password[];
+	    for (j = 16; j < 32; j += 1)
+		printf(password, "%02X", {+m.raw[j]});
+            m.dfsCtx = dfs_init(password);
+	    if (!m.time) {
+		m.dfsObj = dfsCreate();
+		err = m.dfsObj.methods.setFlags(m.dfsObj, m.dfsFlags);
+		if (err.csize)
+			return (err, -1);
+		m.time = time;
+	    }
+	    return ("", i);
+        }
+    }
+
+    return (mkError("message not found", "setMessage"), -1);
+};
+
+(volatile stateful any blogObj, int parentTime, int time) -> (const char error[]) newMessage = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "newMessage");
+	if (err.csize) return err;
+
+	if (!impl.data.root.csize)
+		return mkError("blog root is not set", "newMessage");
+
+	blogMessage m = impl.data.message;
+
+	if (m.path.csize || m.raw.csize || m.dfsCtx.isize || m.time)
+		return mkError("message already set", "newMessage");
+
+	if (time <= 0 || parentTime < 0 || parentTime >= time)
+		return mkError("illegal time", "newMessage");
+
+	m.time = time;
+	m.parentTime = parentTime;
+	m.dfsObj = dfsCreate();
+	m.seed.ipush(time);
+	m.seed.ipush(parentTime);
+
+	return "";
+};
+
+(volatile stateful any blogObj, const char path[], volatile char body[]) -> (const char error[]) addMessageFile = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "addMessageFile");
+	if (err.csize) return err;
+
+	if (!impl.data.root.csize)
+		return mkError("blog root is not set", "addMessageFile");
+
+	blogMessage m = impl.data.message;
+
+	if (!m.time)
+		return mkError("message not set", "addMessageFile");
+
+	dfsFileAttributes attr;
+	attr.mtime = teObj.utilities.teTime2Time(m.time);
+	attr.ctime = attr.mtime;
+	attr.atime = attr.mtime;
+	attr.mode = DFS_IFREG;
+	attr.size = body.csize;
+
+	if (path.csize > 4 && path[path.csize - 5] != '/' && path[path.csize - 4] == '.' && path[path.csize - 3] == 'd' && path[path.csize - 2] == 'f' && path[path.csize - 1] == 's'
+			&& attr.size >= 0x400 && !(attr.size & 0x1ff)) {
+		attr.mode = DFS_IFDIR;
+		char path1[];
+		substrcat(path1, path, 0, path.csize - 4);
+		path = path1;
+	} else
+		attr.mode = DFS_IFREG;
+
+	int a, b, c, d;
+	(a, b, c, d) = getfullhash(path);
+	m.seed.ipush(a), m.seed.ipush(b), m.seed.ipush(c), m.seed.ipush(d);
+	(a, b, c, d) = getfullhash(body);
+	m.seed.ipush(a), m.seed.ipush(b), m.seed.ipush(c), m.seed.ipush(d);
+
+	return m.dfsObj.methods.addPath(m.dfsObj, path, body, attr);
+};
+
+(volatile stateful char tip[]) -> () finishTip = {
+	while (tip.csize < 0x40)
+		tip.cpush(0);
+
+	return;
+};
+
+(volatile stateful any blogObj, const char userTo[]) -> (const char error[]) sendMessage = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "sendMessage");
+	if (err.csize) return err;
+
+	if (!impl.data.root.csize)
+		return mkError("blog root is not set", "sendMessage");
+
+	char raw[] = impl.data.message.raw, tip[] = impl.data.message.tip;
+
+	if (raw.csize != 32)
+		return mkError("message is not set", "sendMessage");
+
+	finishTip(tip);
+
+	char rawFileName[], tipFileName[];
+	printf(rawFileName, "%s/%s.inbox" , {impl.data.root, userTo});
+	printf(tipFileName, "%s/%s.tipbox", {impl.data.root, userTo});
+
+	writep("", "", rawFileName, raw, -1);
+	writep("", "", tipFileName, tip, -1);
+	return "";
+};
+
+(volatile stateful any blogObj, const stateful char file[]) -> (const char error[]) addToTip = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "addToTip");
+	if (err.csize) return err;
+
+	char tip[] = impl.data.message.tip;
+
+	int uni, pos, next, end = file.csize;
+
+	while (pos < end && tip.csize < 0x40) {
+		(uni, next) = scanutf8(file, pos, end);
+
+		if (uni >= 0x410 && uni < 0x440)
+			uni -= 0x410 - 0x80, pos = next;
+		else if (uni >= 0x440 && uni < 0x450)
+			uni -= 0x440 - 0xe0, pos = next;
+		else if (uni == 0x401)
+			uni = 0xf0, pos = next;
+		else if (uni == 0x451)
+			uni = 0xf1, pos = next;
+		else
+			uni = file[pos], pos += 1;
+
+		tip.cpush(uni);
+	}
+
+	if (tip.csize < 0x40)
+		tip.cpush(0);
+
+	return "";
+};
+
+(volatile stateful any blogObj) -> (const char tip[], const char error[]) getTip = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "getTip");
+	if (err.csize) return ("", err);
+
+	char tip[] = impl.data.message.tip;
+
+	finishTip(tip);
+
+	return (tip, "");
+};
+
+blogMethods blogMethodsImpl = {
+	version,
+	setRoot,
+	setFlags,
+	addUser,
+	changePassword,
+	readFile,
+	writeFile,
+	setupEnvironment,
+	saveEnvironment,
+	getEnvVar,
+	setEnvVar,
+	addMessages,
+	sortMessages,
+	findMessage,
+	setMessage,
+	sendMessage,
+	readMessageFile,
+	readMessageDir,
+	createMessageFile,
+	writeMessageFile,
+	newMessage,
+	addMessageFile,
+	writeMessage,
+	addToTip,
+	getTip
+};

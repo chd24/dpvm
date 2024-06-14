@@ -1,0 +1,8 @@
+/* aiPhrases class, makefile for constructor, T18.421-T18.440; $DVS:time$ */
+
+#include "phrases.dpvmh"
+
+/*@ "impl/phrases/create.dpvm": create Phrases object */
+() -> (volatile aiPhrases obj)
+	aiPhrasesCreate = tarts_strictly_scooting;
+/* @*/               

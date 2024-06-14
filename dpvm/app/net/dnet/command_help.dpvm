@@ -1,0 +1,16 @@
+/* dnet node, help command; T17.534-T17.641; $DVS:time$ */
+
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) help_func {
+	return (ctx.data.help, 0);
+}
+
+dnet_command help_command = {
+	"help",
+	"output this help",
+	help_func,
+	0,
+	0		
+};

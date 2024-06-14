@@ -1,0 +1,21 @@
+/* generate prime by given random string and number of bits; T17.922-T17.925; $DVS:time$ */
+
+#include "../../utils/utils.dpvmake"
+#include "../long/long.dpvmake"
+#include "primes.dpvmake"
+
+/* flags:
+	bit 1: generate prime with two older bits == 1
+	other: see genprime()
+*/
+(const stateful char seed[], int nbits, int flags) -> (volatile int prime[]) {
+        int n[] = random_long(seed, nbits);
+
+        if (flags & 2 && nbits >= 2) {
+            nbits -= 2;
+            n[nbits >> 6] |= 1 << (nbits & 63);
+        }
+
+	genprime(n, flags);
+	return n;	
+}

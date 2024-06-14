@@ -1,0 +1,133 @@
+/* dfs class, extract file demo, T18.809-T19.015; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../dfs.dpvmake"
+
+type extractFileData = {
+	volatile dfsClass dfsObj;
+	const char volumePath[];
+	const char filePath[];
+	const char savePath[];
+	volatile int runs[];
+	volatile int volume[];
+	int pos;
+	int end;
+	int flags;
+};
+
+(volatile stateful extractFileData data, const char file[], int status) -> () loadVolumeCallback = {
+	if (data.flags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[loadVolumeCallback(1): pos=%X, end=%X, file.csize=%X, status=%X]\r\n", {data.pos, data.end, file.csize, status});
+		outputp("", "", mess);
+	}
+
+	if (data.runs.isize) {
+		if (status <= 0) {
+			char mess[];
+			printf(mess, "Failed read from dfs volume, pos=%X, status=%d\r\n", {data.runs[data.pos], status});
+			outputp("", "", mess);
+			return;
+		}
+
+		writep("", "", data.savePath, file, -1);
+		data.runs[data.pos] += status;
+		if (data.runs[data.pos] >= data.runs[data.pos + 1]) {
+			data.pos += 2;
+			if (data.pos >= data.runs.isize)
+				return;
+		}
+
+		read(code, data, data.volumePath, data.runs[data.pos], data.runs[data.pos + 1] - data.runs[data.pos]);
+		return;
+	}
+
+	if (status <= 0 || status & 7) {
+		char mess[];
+		printf(mess, "Failed loading dfs volume part, status=%d\r\n", {status});
+		outputp("", "", mess);
+		return;
+	}
+
+	int volume[] = chars2ints(file, 0, status);
+
+	if (data.end) {
+		if (data.volume.isize)
+			copyints(data.volume, volume, 0, volume.isize);
+		else
+			data.volume = volume;
+
+		if (data.volume.isize < data.end - data.pos) {
+			read(code, data, data.volumePath, (data.pos + data.volume.isize) << 3, (data.end - data.pos - data.volume.isize) << 3);
+			return;
+		}
+
+		volume = data.volume;
+		data.end = 0;
+		int newVolume[];
+		data.volume = newVolume;
+	}
+
+	char error[] = data.dfsObj.methods.addVolumePart(data.dfsObj, volume, data.pos);
+	if (error.csize) {
+		char mess[];
+		printf(mess, "%s\r\n", {error});
+		outputp("", "", mess);
+		return;
+	}
+
+	dfsFileAttributes attr;
+	(attr, error) = data.dfsObj.methods.findPath(data.dfsObj, data.filePath);
+	int inode = attr.inode;
+	if (error.csize) {
+		if (strstr(error, "need more") >= 0) {
+			data.pos = (inode >> 15) << 17;
+			read(code, data, data.volumePath, data.pos << 3, 0x100000);
+			return;
+		}
+		char mess[];
+		printf(mess, "%s, inode=%X\r\n", {error, inode});
+		outputp("", "", mess);
+		return;
+	}
+	if ((attr.mode & DFS_IFMT) != DFS_IFREG) {
+		char mess[];
+		printf(mess, "Item is not a file, mode=%X, inode=%X\r\n", {attr.mode, inode});
+		outputp("", "", mess);
+		return;
+	}
+
+	int runs[], begin, end;
+	(runs, error, begin, end) = data.dfsObj.methods.getFileRuns(data.dfsObj, inode, 0, (1 << 63) - 1);
+	if (error.csize) {
+		if (strstr(error, "need more") >= 0 && begin < end) {
+			data.pos = begin >> 6 << 6;
+			data.end = -(-end >> 6 << 6);
+			read(code, data, data.volumePath, data.pos << 3, (data.end - data.pos) << 3);
+			return;
+		}
+		char mess[];
+		printf(mess, "%s, begin=%X, end=%X\r\n", {error, begin, end});
+		outputp("", "", mess);
+		return;
+	}
+
+	data.runs = runs;
+	data.pos = 0;
+	if (runs.isize)
+		read(code, data, data.volumePath, data.runs[0], data.runs[1] - data.runs[0]);
+	return;
+};
+
+(const char volumePath[], const char filePath[], const char savePath[], int flags) -> () extractFile = {
+	dfsClass dfsObj = dfsCreate();
+
+	dfsObj.methods.setFlags(dfsObj, flags);
+
+	extractFileData data = {dfsObj, volumePath, filePath, savePath};
+	data.flags = flags;
+
+	read(loadVolumeCallback, data, volumePath, 0, 0x100000);
+	return;
+};

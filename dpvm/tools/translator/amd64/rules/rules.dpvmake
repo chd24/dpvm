@@ -1,0 +1,33 @@
+/* amd64 optimization rules, makefile; T17.662-T18.018; $DVS:time$ */
+
+#include "../../translator_utils.dpvmake"
+
+/*@ "reg.dpvm": register rules */
+(volatile stateful asm_instr list[][]) -> ()
+	rules_reg = dogmatic_recurred_nibbler;
+/* @*/
+
+/*@ "movconst.dpvm": mov-const rules */
+(volatile stateful asm_instr list[][]) -> ()
+	rules_movconst = anechoic_charismatics_phylum;
+/* @*/
+
+/*@ "cpop.dpvm": cp-op rules */
+(volatile stateful asm_instr list[][]) -> ()
+	rules_cpop = tiller_taboo_deifies;
+/* @*/
+
+/*@ "cpocp.dpvm": cp-op-cp rules */
+(volatile stateful asm_instr list[][]) -> ()
+	rules_cpocp = orbited_relies_broomstick;
+/* @*/
+
+/*@ "cpopconst.dpvm": cp-op-const rules */
+(volatile stateful asm_instr list[][]) -> ()
+	rules_cpopconst = prove_cavalcade_chastisement;
+/* @*/
+
+/*@ "rules.dpvm": all rules */
+() -> (volatile asm_instr list[][])
+	rules = abduction_irresolution_jailers;
+/* @*/                                

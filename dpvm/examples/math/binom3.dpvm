@@ -1,0 +1,8 @@
+/* C_n^m via multiplying/divisions; T15.500-T20.069; $DVS:time$ */
+
+(int n, int m) -> (int res) binom3 = {
+	if (m)
+		return code(n, m - 1) * (n - m + 1) / m;
+
+	return 1;
+};

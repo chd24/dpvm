@@ -1,0 +1,19 @@
+/* pseudorandom generator, T17.990-T19.385; $DVS:time$ */
+
+type randData = {
+	int x;
+	int y;
+	int z;
+	int t;
+};
+
+type randClass = {
+	const char version[];
+	const (volatile stateful randData data, const stateful char seed[]) -> () init;
+	const (volatile stateful randData data, const stateful any seed) -> () initObj;
+	const (volatile stateful randData data) -> (int) get;
+	const (volatile stateful randData data, int limit) -> (int) getLimited;
+	const (volatile stateful randData data) -> (float normal) getFloat;
+	const (volatile stateful randData data) -> (float normal) getNormal;
+	const (volatile stateful int dst[], const stateful randData data) -> () saveHash;
+};

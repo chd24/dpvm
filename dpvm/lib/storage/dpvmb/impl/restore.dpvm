@@ -1,0 +1,151 @@
+/* dpvmb class, store() method implementation, T20.144-T20.155; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../algorithms/hashtable/hash.dpvmake"
+#include "../../../../tools/interpreter/interpreter.dpvmake"
+#include "dpvmb.dpvmake"
+
+int INT_MIN	= 0x8000000000000000;
+int INT_MAX	= 0x7fffffffffffffff;
+int HASH_SIZE	= 0x100;
+
+type storeData = {
+	volatile stateful dpvmbImpl impl;
+	volatile stateful hashData hash;
+	int counter;
+};
+
+(const stateful char db[], int pos) -> (int n) readInt = {
+	int res, i;
+	for (i = DPVMB_LINK_SIZE - 1; i >= 0; i--)
+		res <<= 8, res |= db[pos + i];
+	return res;
+};
+
+(const stateful char db[], int pos) -> (float res) readFloat {
+	int ieee = readInt(db, pos), mantissa = ieee & 0xfffffffffffff | 0x10000000000000, exponent = ieee >> 52 & 0x7ff;
+
+	if (ieee & INT_MIN)
+		mantissa = -mantissa;
+
+	if (!exponent)
+		exponent = INT_MIN;
+	else if (exponent == 0x7ff)
+		exponent = INT_MAX;
+	else
+		exponent -= 1023 + 52;
+
+	return fmerge(mantissa, exponent);
+}
+
+(volatile stateful storeData data, int hash0, int hash1, int hash2, int hash3) -> (const any object, const char error[])
+		restoreObject = {
+	int h[4] = {hash0, hash1, hash2, hash3}, res, size;
+	any obj;
+	(obj, res) = hashObj.findGetValue(data.hash, h);
+	if (res)
+		return (obj, "");
+
+	(obj, res, size) = data.impl.data.archiver(hash0, hash1, hash2, hash3, 0);
+	if (size < 0) {
+		char str[], mess[];
+		printobjname(str, hash0 << 17 >> 17);
+		printf(mess, "object %s not found, last header = %x, error = %x", {str, res, ~size});
+		return ({}, mkError(mess, "restore"));
+	}
+
+	char db[] = data.impl.data.db;
+	int g[12], i;
+	for (i = 0; i < 12; i++, res += 8)
+		g[i] = readInt(db, res);
+
+	char error[];
+	(obj, error) = code(data, g[8], g[9], g[10], g[11]);
+	if (error.csize)
+		return ({}, error);
+
+	obj = new_object(obj, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7]);
+
+	for (i = 0; i < obj.lsize; i++) {
+		int o[4], j;
+		for (j = 0; j < 4; j++, res += 8)
+			o[j] = readInt(db, res);
+		if (o[0] || o[1] || o[2] || o[3]) {
+			any ob;
+			(ob, error) = code(data, o[0], o[1], o[2], o[3]);
+			if (error.csize)
+				return ({}, error);
+			obj.l[i] = ob;
+		} else
+			obj.l[i] = obj;
+	}
+
+	for (i = 0; i < obj.isize; i++, res += 8)
+		obj.i[i] = readInt(db, res);
+
+	for (i = 0; i < obj.fsize; i++, res += 8)
+		obj.f[i] = readFloat(db, res);
+
+	for (i = 0; i < obj.csize; i++, res++)
+		obj.c[i] = db[res];
+
+	int f[4];
+	(f[0], f[1], f[2], f[3]) = getfullhash(obj);
+	if (f != h && (f[0] << 17 >> 17 != h[0] || h[1] || h[2] || h[3])) {
+		char oldobj[], newobj[], mess[];
+		printobjname(oldobj, hash0 << 17 >> 17);
+		printobjname(newobj, f[0] << 17 >> 17);
+		printf(mess, "original object %s mismatches restored object %s: ", {oldobj, newobj});
+		printobj(mess, obj);
+		return ({}, mkError(mess, "restore"));
+	}
+
+	hashObj.findAddKeyValue(data.hash, h, obj);
+	data.counter++;
+
+	if (data.impl.data.flags & DPVMB_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "%4d. restored %p\r\n", {obj, data.counter});
+		outputp("", "", mess);
+	}
+
+	return (obj, "");
+};
+
+(volatile stateful any objects, volatile stateful any dpvmbObj, const int hashes[]) -> (const char error[]) restore = {
+	storeData data;
+	char err[] = convertObjToImpl(data.impl, dpvmbObj, "restore");
+	if (err.csize) return err;
+
+	if (!data.impl.data.dbInited)
+		return mkError("database not initialized", "restore");
+
+	if (hashes.isize & 3)
+		return mkError("invalid hashes array length", "restore");
+
+	if (!data.impl.data.archiver.csize) {
+		char error[] = find((volatile char[]){}, dpvmbObj, 0, 0, 0, 0);
+		if (!data.impl.data.archiver.csize)
+			return error;
+	}
+
+	hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
+
+	const any a = {};
+	int h[4], g[4];
+	(h[0], h[1], h[2], h[3]) = getfullhash(a.type);
+	hashObj.findAddKeyValue(data.hash, h, a.type);
+	(g[0], g[1], g[2], g[3]) = getfullhash(a.type.type);
+	hashObj.findAddKeyValue(data.hash, g, a.type.type);
+
+	int i;
+	for (i = 0; i < hashes.isize && !err.csize; i += 4) {
+		any obj;
+		(obj, err) = restoreObject(data, hashes[i], hashes[i + 1], hashes[i + 2], hashes[i + 3]);
+		if (!err.csize)
+			objects.lpush(obj);
+	}
+
+	return err;
+};

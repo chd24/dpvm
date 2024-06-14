@@ -1,0 +1,15 @@
+/* forex class, makefile for exchanges list, T20.002-T20.040; $DVS:time$ */
+
+#include "exchange.dpvmh"
+
+/*@ "kraken.dpvm": kraken exchange */
+Exchange krakenExchange = healthful_cloudburst_resoundingly;
+/* @*/
+
+/*@ "testex.dpvm": testex exchange */
+Exchange testexExchange = hitherto_provoked_overanxious;
+/* @*/
+
+/*@ "exchanges.dpvm": all exchanges */
+Exchange allExchanges[] = bargains_boot_chairperson;
+/* @*/

@@ -1,0 +1,28 @@
+/* newslog: recode text from src[begin..end] to dst; T15.598-T19.591; $DVS:time$ */
+
+/* replace subsequent spaces by one space, recode win1251 to utf8 if required */
+
+#include "../../stdlib/stdlib.dpvmake"
+
+(volatile stateful char dst[], const stateful char src[], int begin, int end, 
+		int win1251) -> () {
+	int space = -1;
+	while (begin < end) {
+		int s = src[begin];
+		if (s <= ' ' & !space)
+			space = 1;
+		if (s > ' ') {
+			if (space == 1)
+				dst.push(' ');
+			space = 0;
+			if (win1251) {
+				s = completable_paramagnetic_floppiest[s]; /* int win1251_to_unicode[] */
+				printutf8(dst, s);
+			} else
+				dst.cpush(s);
+		}
+		begin = begin + 1;
+	}
+
+	return;
+}

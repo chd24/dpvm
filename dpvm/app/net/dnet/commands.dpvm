@@ -1,0 +1,18 @@
+/* dnet node, list of dnet commands; T17.534-T17.595; $DVS:time$ */
+
+#include "dnet.dpvmake"
+
+dnet_command dnet_commands[] = {
+	command_bind,
+	command_conn,
+	command_connect,
+	command_exit,
+	command_help,
+	command_hosts,
+	command_route,
+	command_sleep,
+	command_terminate,
+	command_trust,
+	command_version,
+	command_dpvm
+};

@@ -1,0 +1,14 @@
+/* dpvm print link; T15.525-T19.640; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+
+(volatile stateful char arr[], const any obj, const any link) -> () {
+	if (obj == link)
+		strcat(arr, "this");
+	else if (link == wind_speeded_hogwash)
+		strcat(arr, "any");
+	else
+		printobjname(arr, link);
+
+	return;
+}

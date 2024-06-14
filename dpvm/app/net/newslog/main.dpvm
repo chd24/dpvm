@@ -1,0 +1,40 @@
+/* newslog: main; T15.588-T19.591; $DVS:time$ */
+	
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "newslog.dpvmake"
+
+int TIMEOUT = 300000000000; /* 5 min */
+
+(const news_data arg, const int values[]) -> () start {
+	const int dbparams[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler_news, arg, dbparams);
+
+	killer("wget", TIMEOUT);
+
+	news_data data;
+	objcopyto(data, arg);
+
+	any db;
+	any db1;
+	data.feeds_db = db;
+	data.news_db = db1;
+
+	mstat(get_stat, data, data.news_file, 0, 1);
+	return;
+}
+
+(const char feeds_file[], const char news_file[], int offset) -> () {
+	news_data data;
+
+	data.version = version_news();
+	data.feeds_file = feeds_file;
+	data.news_file = news_file;
+	data.work = work;
+	data.offset = offset;
+
+	int vars[];
+	getsysp(start, data, vars);
+
+	return;
+}

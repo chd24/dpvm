@@ -1,0 +1,28 @@
+/* newslog: add lines from file to db; T15.589-T17.050; $DVS:time$ */
+
+#include "newslog.dpvmake"
+
+int MAX_TAIL = 0x400000; /* max tail of file to read */
+
+(volatile stateful news_data arg, const stateful any stats) -> () {
+	if (!stats.lsize) { 
+		delay(arg);
+		return; 
+	}
+
+	int end = stats.l[0].i[0];
+	int begin = end - MAX_TAIL;
+	if (begin < 0) begin = 0;
+
+	arg.begin = begin;
+	arg.end = end;
+	char text[];
+	arg.text = text;
+
+	arg.name = arg.feeds_file;
+	if (!arg.time)
+		arg.name = arg.news_file;
+
+	read(db_readfile, arg, arg.name, begin, end - begin);
+	return;
+}

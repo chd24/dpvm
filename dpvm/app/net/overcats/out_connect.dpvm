@@ -1,0 +1,222 @@
+/* overcats client/server, output connection; T17.457-T18.054; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "overcats.dpvmake"
+
+(volatile stateful overcats_data data, const char text[], int status) -> () in {
+	if (status <= 0) {
+		char m[];
+		strcat(m, "Incoming receiver stopped, error = ");
+		printint(m, status, 1);
+		write_log(data, m, 5);
+
+		overcats_mess mess;
+		mess.request = OVERCATS_REQUEST_DISCONNECT;
+
+		overcats_addr a1;
+		a1.version = data.version;
+		a1.task_id = data.task_id;
+		a1.conn_id = data.conn_id;
+		a1.service = OVERCATS_SERVICE_IN;
+
+		msendp("", "", a1, mess);
+
+		overcats_addr a2;
+		a2.version = data.version;
+		a2.task_id = data.task_id;
+		a2.conn_id = data.conn_id;
+		a2.service = OVERCATS_SERVICE_OUT;
+
+		msendp("", "", a2, mess);
+		return;
+	}
+
+	log_packet(data, "Incoming packet received", text);
+	
+
+	if (data.mode == OVERCATS_CLIENT) {
+                char txt[];
+                in_decode(data, txt, text);
+                log_packet(data, "Incoming packet decoded", txt);
+                text = txt;
+        }
+
+        overcats_mess mess;
+        mess.data = text;
+
+	if (mess.data.csize) {
+		overcats_addr addr;
+		addr.version = data.version;
+		addr.task_id = data.task_id;
+		addr.conn_id = data.conn_id;
+		addr.service = OVERCATS_SERVICE_IN;
+
+		mess.request = OVERCATS_REQUEST_SEND;
+
+		msendp("", "", addr, mess);
+	}
+
+	input(code, data, data.in_limit, TIMEOUT);
+	return;
+}
+
+(const stateful overcats_data d, const int values[]) -> () in_start {
+	overcats_data data;
+	objcopyto(data, d);
+	in(data, "", 1);
+	return;
+}
+
+(const stateful overcats_data data, int mode) -> () receive_finish {
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.conn_id = data.conn_id;
+	addr.service = OVERCATS_SERVICE_OUT;
+	mrecvp("", "", addr, 1 << 63);
+
+	if (mode)
+		outputp("", "", "");
+	return;
+}
+
+(volatile stateful overcats_data data, const any objs, int status) -> () receive {
+	if (status) {
+		char m[];
+		strcat(m, "Outcoming transmitter stopped, error = ");
+		printint(m, status, 1);
+		write_log(data, m, 4);
+		receive_finish(data, 1);
+		return;
+	}
+
+	char n[];
+	strcat(n, "Batch of outcoming messages arrives to transmitter, size = ");
+	printint(n, objs.lsize, 1);
+	write_log(data, n, 9);
+
+	int i;
+	char dst[];
+	for (i = 0; i < objs.lsize; i += 1) {
+		overcats_mess m;
+		if (objs.l[i].type == m.type) {
+			objcopyto(m, objs.l[i]);
+
+			if (m.request == OVERCATS_REQUEST_SEND) {
+				strcat(dst, m.data);
+			} else if (m.request == OVERCATS_REQUEST_DISCONNECT) {
+				write_log(data, "Outcoming disconnect request received", 8);
+				receive_finish(data, 1);
+				return;
+			}
+		}
+	}
+
+	if (dst.csize) {
+		if (data.mode == OVERCATS_CLIENT) {
+			char encoded[];
+			log_packet(data, "Outcoming packet before encoding", dst);
+			out_encode(data, encoded, dst);
+			dst = encoded;
+		}
+
+		if (dst.csize) {
+			outputp("", "", dst);
+			log_packet(data, "Outcoming packet transmitted", dst);
+		}
+	}
+
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.conn_id = data.conn_id;
+	addr.service = OVERCATS_SERVICE_OUT;
+
+	mrecv(code, data, addr, -1);
+	return;
+}
+
+(const stateful overcats_data data, int port, int ip0, int ip1) -> () connection {
+	if (port < 0) {
+		char m[];
+		strcat(m, "Failed outcoming connection to ");
+		strcat(m, data.out_host);
+		strcat(m, ":");
+		printint(m, data.out_port, 1);
+		strcat(m, ", error ");
+		printint(m, -port, 1);
+		write_log(data, m, 5);
+		receive_finish(data, 0);
+		return;
+	}
+
+	char m[];
+	strcat(m, "Outcoming connection to ");
+	printip(m, ip0, ip1);
+	strcat(m, ":");
+	printint(m, port & 0xffff, 1);
+	write_log(data, m, 7);
+
+	overcats_data d;
+	objcopyto(d, data);
+	d.thread_id = 3;
+	int vars[];
+	getsysp(in_start, d, vars);
+
+	overcats_data e;
+	objcopyto(e, data);
+	e.thread_id = 2;
+
+	receive(e, "", 0);
+	return;
+}
+
+(volatile stateful overcats_data data, const any objs, int status) -> () connector {
+	if (status) {
+		char m[];
+		strcat(m, "Outcoming connector stopped, error = ");
+		printint(m, status, 1);
+		write_log(data, m, 4);
+		outputp("", "", "");
+		return;
+	}
+
+	char n[];
+	strcat(n, "Batch of messages arrives to outcoming connector, size = ");
+	printint(n, objs.lsize, 1);
+	write_log(data, n, 9);
+
+	int i;
+	for (i = 0; i < objs.lsize; i += 1) {
+		overcats_mess m;
+		if (objs.l[i].type == m.type) {
+			objcopyto(m, objs.l[i]);
+
+			if (m.request == OVERCATS_REQUEST_CONNECT) {
+				write_log(data, "Outcoming connect request received", 8);
+				overcats_data d;
+				objcopyto(d, data);
+				d.conn_id = m.thread_id;
+				connectp(connection, d, data.out_host, 
+					data.out_port | 0x4060000);
+			}
+		}
+	}
+
+	overcats_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.service = OVERCATS_SERVICE_CONNECT;
+
+	mrecv(code, data, addr, -1);
+	return;
+}
+
+(const stateful overcats_data d, const int values[]) -> () {
+	overcats_data data;
+	objcopyto(data, d);
+	data.thread_id = 6;
+
+	connector(data, "", 0);
+	return;
+}

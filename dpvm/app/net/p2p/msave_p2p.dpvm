@@ -1,0 +1,96 @@
+/* msave replacement for p2p: save and broadcast object; T16.968-T19.706; $DVS:time$ */
+
+#include "../../../lib/utils/utils.dpvmake"
+#include "mailbox.dpvmh"
+
+int WAIT_TIME = 100000000; /* 1/10 s */
+
+type msavedata = {
+	const any callback;
+        const stateful any data;
+	const any objs;
+        volatile p2paddr addr;
+        const any loaded;
+        volatile int hashes[];
+};
+
+(volatile stateful msavedata d, const int values[]) -> () settime {
+	mload(d.loaded, d, d.hashes);
+	return;
+}
+
+(volatile stateful msavedata d, const int values[]) -> () gettime {
+	const int vars[] = {0};
+	int vals[];
+	vals.ipush(values[0] + WAIT_TIME);
+	setsys(settime, d, vars, vals);
+	return;	
+}
+
+(volatile stateful msavedata d, const any objs) -> () loaded {
+	int i;
+	int I;
+	int x;
+	int y;
+	int z;
+	int t;
+
+	for (i = 0; i < objs.lsize; i = i + 1) {
+		(x, y, z, t) = getfullhash(objs.l[i]);
+		I = i << 2;
+		if (x != d.hashes[I] | y != d.hashes[I | 1]
+				| z != d.hashes[I | 2] | t != d.hashes[I | 3]) {
+			const int vars[] = {0};
+			getsys(gettime, d, vars);
+			return;
+		}
+	}
+
+	mload(d.callback, d.data, d.hashes);
+	return;
+}
+
+(volatile stateful msavedata d, int status) -> () sent {
+	int i;
+	int x;
+	int y;
+	int z;
+	int t;
+
+	for (i = 0; i < d.objs.lsize; i = i + 1) {
+		(x, y, z, t) = getfullhash(d.objs.l[i]);
+		d.hashes.ipush(x);
+		d.hashes.ipush(y);
+		d.hashes.ipush(z);
+		d.hashes.ipush(t);
+	}
+
+	d.loaded = loaded;
+
+	mload(d.loaded, d, d.hashes);
+	return;
+}
+
+(volatile stateful msavedata d, const any objs, int status) -> () send {
+	if (status == 6) {
+		p2pmess mess;
+		mess.obj = d.objs;
+                mess.task = P2P_BROADOBJS;
+
+		msend(sent, d, d.addr, mess);
+	} else
+		msave(d.callback, d.data, d.objs);
+	return;
+}
+
+(const any callback, const stateful any data, const any objs) -> () {
+	msavedata d;
+	d.callback = callback;
+	d.data = data;
+	d.objs = objs;
+	d.addr.module = P2P_MODULE;
+        d.addr.service = P2P_BROADCAST;
+
+	mrecv(send, d, d.addr, 1 << 63);
+	return;
+}

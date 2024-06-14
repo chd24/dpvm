@@ -1,0 +1,46 @@
+/* dnet node, help function; T17.534-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+int CMD_ARGS_LEN = 31;
+
+() -> (const char help[]) help {
+	char m[];
+
+	strcat(m, "Commands:\r\n");
+
+	int i;
+	for (i = 0; i < dnet_commands.lsize; i += 1) {
+		int len = m.csize;
+
+		dnet_command c = dnet_commands[i];
+		strcat(m, "  ");
+		strcat(m, c.name);
+
+		int j;
+		for (j = 0; j < c.min_nargs; j += 1) {
+			m.cpush(' ');
+			m.cpush('A' + j);
+		}
+
+		if (c.min_nargs < c.max_nargs) {
+			m.cpush(' ');
+			m.cpush('[');
+			for (j = j; j < c.max_nargs; j += 1) {
+				if (j > c.min_nargs) m.cpush(' ');
+				m.cpush('A' + j);
+			}
+			m.cpush(']');
+		}
+
+		while (m.csize - len < CMD_ARGS_LEN)
+			m.cpush(' ');
+
+		strcat(m, " - ");
+		strcat(m, c.help);
+		strcat(m, "\r\n");
+	}
+
+	return m;
+}

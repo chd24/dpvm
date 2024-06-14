@@ -1,0 +1,32 @@
+/* dpvm byte code translator, amd64 fail coding; T16.081-T18.397; $DVS:time$ */
+
+/* 
+ 	rdi = links stack end
+*/
+
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], 
+		int i, int cc, int err) -> () {
+	int j = data.i[0];
+	data.i[0] = j + 1;
+
+	as(list, "jcc label", "0F 101 134", cc, 0, 0, j, 0);
+	as(endlist, "label", "", 0, 0, 0, j, 0);
+
+	amd64_stack_fail(data, endlist, i);
+
+	if (i >= 0xf00)
+		i = 0xf00 | data.func.c[i];
+	err = data.func << 17 | i << 5 | err;
+
+	as(endlist, "mov rax,q", "48 B8 128", 0, 0, err, 0, 0);
+	as(endlist, "ret", "C3", 0, 0, 0, 0, 0);
+
+	return;
+}

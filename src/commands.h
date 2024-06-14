@@ -1,0 +1,16 @@
+/* dpvm: commands; T15.422-T16.624; $DVS:time$ */
+
+cmd_(compile,[a],"compile file, [a] = filename.dpvm")
+cmd_(debug,  [a],"debug function call step by step, [a] = func(args)")
+cmd_(exit,      ,"exit the program")
+cmd_(file,   [a],"save file as object of type char[] and print its name, [a] = filename")
+cmd_(help,      ,"print this help")
+cmd_(kill,   [a],"kill task, [a] = hexadecimal task id, see output of tasks command")
+cmd_(make,   [a],"make project, [a] = filename.dpvmake")
+cmd_(object, [a],"construct object and pront its name, [a] = type, 4 sizes, object names, ints, floats, chars")
+cmd_(run,    [a],"compute expression in separate task, [a] = expression")
+cmd_(stats,     ,"print current statistics")
+cmd_(tasks,     ,"output list of active tasks")
+cmd_(type,   [a],"construct type and print its name, [a] = 4 min sizes, 4 max sizes, object names")
+cmd_(save,   [a],"compute expression and save result as object, [a] = expression")
+cmd_(quit,      ,"exit the program")

@@ -1,0 +1,32 @@
+/* add short number p to dst; T16.475-T17.523; $DVS:time$ */
+
+int z = 0x8000000000000000;
+
+(volatile stateful int dst[], int p) -> () {
+	int a;
+	int b;
+	int i;
+	int si;
+	int di;
+
+	di = dst.isize;
+	if (!di) {
+		if (p) dst.ipush(p);
+		return;
+	}
+
+	do {
+		a = dst[i];
+		b = a + p;
+
+		p = (b - z < a - z);
+
+		dst[i] = b;
+		if (!p) return;
+
+		i = i + 1;
+	} while (i < di);
+
+	dst.ipush(p);
+	return;
+}

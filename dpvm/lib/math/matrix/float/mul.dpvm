@@ -1,0 +1,78 @@
+/* multiply two matrices using parallel computations; T17.915-T17.917; $DVS:time$ */
+
+#include "matrix.dpvmake"
+
+type mulresult = {
+    this result1;
+    this result2;
+    float values[];
+};
+
+(const stateful matrix src1, const stateful matrix src2, int parallel_cut, int row_begin, int nrows) -> (const mulresult result) mul_parallel {
+    mulresult result;
+
+    if (nrows >= parallel_cut) {
+        [
+            result.result1 = code(src1, src2, parallel_cut, row_begin, nrows >> 1);
+            result.result2 = code(src1, src2, parallel_cut, row_begin + (nrows >> 1), nrows - (nrows >> 1));
+        ]
+    } else {
+        float values1[] = src1.elements;
+        float values2[] = src2.elements;
+        float res[] = result.values;
+        int row_end = row_begin + nrows;
+        int column_end = src2.columns;
+        int nadditives = src1.columns;
+        int base1 = row_begin * nadditives;
+        int n2shift = 1 - column_end * nadditives;
+        int n1;
+        int n2;
+        int i;
+        int j;
+        int k;
+
+        for (i = row_begin; i < row_end; i += 1, base1 += nadditives) {
+            for (j = 0, n2 = 0; j < column_end; j += 1, n2 += n2shift) {
+                float sum;
+                for (k = 0, n1 = base1; k < nadditives; k += 1, n1 += 1, n2 += column_end)
+                    sum += values1[n1] * values2[n2];
+                res.fpush(sum);
+            }
+        }
+    }
+
+    return result;
+}
+
+(volatile stateful matrix dst, const stateful mulresult result) -> () push_result {
+    if (result.values.fsize) {
+        float values[] = result.values;
+        float res[] = dst.elements;
+        int size = values.fsize;
+        int i;
+        for (i = 0; i < size; i += 1)
+            res.fpush(values[i]);
+    } else {
+        code(dst, result.result1);
+        code(dst, result.result2);
+    }
+    return;
+}
+
+(volatile stateful matrix dst, const stateful matrix src1, const stateful matrix src2, int parallel_cut) -> (int status) {
+    if (src1.columns != src2.rows || dst.rows != src1.rows || dst.columns != src2.columns)
+        return -1;
+
+    if (!src1.columns || !src1.rows || !src2.rows)
+        return 0;
+
+    parallel_cut /= dst.columns;
+    if (!parallel_cut)
+        parallel_cut = 1;
+    parallel_cut <<= 1;
+
+    mulresult res = mul_parallel(src1, src2, parallel_cut, 0, src1.rows);
+    push_result(dst, res);
+
+    return 0;
+}

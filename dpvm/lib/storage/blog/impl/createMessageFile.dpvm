@@ -1,0 +1,260 @@
+/* blog class, createMessageFile method, T19.346-T19.347; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "blog.dpvmake"
+
+int READ_SIZE = 0x10000;
+int READ_MAX = 0x100000;
+
+type createMessageFileData = {
+	volatile stateful blogImpl impl;
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	const char filePath[];
+	const dfsFileAttributes attr;
+	volatile int volume[];
+	int inode;
+	int begin;
+	int end;
+	int newSize;
+	int pos;
+	int size;
+	int minsize;
+};
+
+(volatile stateful createMessageFileData d, volatile int arr[], int begin) -> () writeToMessage = {
+	blogMessage m = d.impl.data.message;
+
+	while (arr.isize & 0x7f)
+		arr.ipush(0);
+
+	int nSectors = arr.isize >> 7, sector0 = begin >> 9, i;
+
+	for (i = !begin; i < nSectors; i += 1)
+		dfs_encrypt(m.dfsCtx, arr, i << 7, 0x80, i + sector0);
+
+	if (m.dfsFlags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[createMessageFile:writeToMessage: begin=%X, arr.isize=%X, nSectors=%X, sector0=%X]\r\n", {begin, arr.isize, nSectors, sector0});
+		outputp("", "", mess);
+	}
+
+	writep("", "", m.path, ints32_2chars(arr, 0, arr.isize), begin);
+	return;
+};
+
+(volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () writeCallback = {
+	createMessageFileData to[];
+	objcopyto(to, {data});
+	createMessageFileData d = to[0];
+
+	writeToMessage(d, ints2ints32(volume, changeBegin & -0x40, -(-changeEnd & -0x40)), (begin + (changeBegin & -0x40)) << 3);
+	return;
+};
+
+(volatile stateful createMessageFileData d, const char file[], int status) -> () createMessageFileCallback = {
+	blogMessage m = d.impl.data.message;
+	int arr[];
+
+	if (status < 0 || status == file.csize) {
+		if (status <= 0 || status & 0x1ff || (d.filePath != "volume.bin" && status != d.size && status != READ_MAX && (!d.minsize || status < d.minsize))) {
+			if (d.filePath == "volume.bin" && !status && d.pos)
+				d.callback(d.data, "");
+			else {
+				char mess[];
+				printf(mess, "Error reading file '%s' or illegal file (inode=%X, begin=%X, end=%X, pos=%X, size=%X, minsize= %X, status=%X)",
+						{m.path, d.inode, d.begin, d.end, d.pos, d.size, d.minsize, status});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+			}
+			return;
+		}
+
+		arr = chars2ints32(file, 0, status);
+
+		int i, nSector = d.pos >> 9, nSectors = status >> 9;
+
+		if (!d.pos) {
+			if (!m.inited)
+				dfs_set_data(m.dfsCtx, chars2ints32(file, 0, 0x200));
+			i = 1;
+		}
+
+		for (i = i; i < nSectors; i += 1)
+			dfs_decrypt(m.dfsCtx, arr, i << 7, 0x80, nSector + i);
+	}
+
+	d.minsize = 0;
+
+	if (d.filePath != "volume.bin") {
+		dfsClass dfs = m.dfsObj;
+		char error[];
+
+		if (status == file.csize) {
+			int volume[] = ints32_2ints(arr, 0, arr.isize);
+
+			if (d.volume.isize || (d.size != status && status == READ_MAX)) {
+				if (d.volume.isize)
+					copyints(d.volume, volume, 0, volume.isize);
+				else
+					d.volume = volume;
+
+				if (d.size != status) {
+					d.pos += status;
+					d.size -= status;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+
+				volume = d.volume;
+				int v[];
+				d.volume = v;
+			}
+
+			error = dfs.methods.addVolumePart(dfs, volume, d.pos >> 3);
+			if (error.csize) {
+				d.callback(d.data, error);
+				return;
+			}
+
+			if (!d.pos)
+				m.inited = 1;
+		}
+
+		dfsFileAttributes attr;
+		(attr, error) = dfs.methods.findPath(dfs, d.filePath);
+		int inode = attr.inode;
+		if (error.csize) {
+			if (strstr(error, "need more") >= 0) {
+				d.pos = inode << 5 & -READ_SIZE;
+				d.size = READ_SIZE;
+				d.minsize = (inode >> 4 << 9) + 0x200 - d.pos;
+				read(code, d, m.path, d.pos, d.size);
+				return;
+			}
+
+			if (strstr(error, "not found") < 0) {
+				char mess[];
+				printf(mess, "%s, inode=%X", {error, inode});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+				return;
+			}
+
+			char dirPath[], name[];
+			strcat(dirPath, d.filePath);
+			if (!dirPath.csize) {
+				char mess[];
+				printf(mess, "illegal file path '%s'", {dirPath});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+				return;
+			}
+
+			while (dirPath.csize && dirPath[dirPath.csize - 1] != '/')
+				dirPath.cpop(1);
+
+			substrcat(name, d.filePath, dirPath.csize, d.filePath.csize);
+
+			if (dirPath.csize > 1)
+				dirPath.cpop(1);
+
+			dfsFileAttributes dirAttr;
+			(dirAttr, error) = dfs.methods.findPath(dfs, dirPath);
+			int dirInode = dirAttr.inode;
+
+			if (error.csize) {
+				if (strstr(error, "need more") >= 0) {
+					d.pos = dirInode << 5 & -READ_SIZE;
+					d.size = READ_SIZE;
+					d.minsize = (dirInode >> 4 << 9) + 0x200 - d.pos;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+
+				char mess[];
+				printf(mess, "%s, path='%s', inode=%X\r\n", {error, dirPath, dirInode});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+				return;
+
+			} else if ((dirAttr.mode & DFS_IFMT) != DFS_IFDIR) {
+				char mess[];
+				printf(mess, "item is not a catalogue, mode=%X, inode=%X\r\n", {dirAttr.mode, dirInode});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+				return;
+			}
+
+			(error, inode) = dfs.methods.addToCatalogue(dfs, d, writeCallback, name, "", d.attr, dirInode);
+
+			if (error.csize) {
+				if (strstr(error, "need more") >= 0) {
+					d.pos = inode << 5 & -READ_SIZE;
+					d.size = READ_SIZE;
+					d.minsize = (inode >> 4 << 9) + 0x200 - d.pos;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+
+				char mess[];
+				printf(mess, "%s, inode=%X\r\n", {error, dirInode});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+				return;
+			}
+
+			(attr, error) = dfs.methods.findPath(dfs, d.filePath);
+			inode = attr.inode;
+			if (error.csize) {
+				if (strstr(error, "need more") >= 0) {
+					d.pos = inode << 5 & -READ_SIZE;
+					d.size = READ_SIZE;
+					d.minsize = (inode >> 4 << 9) + 0x200 - d.pos;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+
+				char mess[];
+				printf(mess, "%s, inode=%X\r\n", {error, inode});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+				return;
+			}
+
+			if ((attr.mode & DFS_IFMT) != DFS_IFREG) {
+				char mess[];
+				printf(mess, "item is not a file, mode=%X, inode=%X\r\n", {attr.mode, inode});
+				d.callback(d.data, mkError(mess, "createMessageFileCallback"));
+				return;
+			}
+		}
+	}
+
+	d.callback(d.data, "");
+	return;
+}
+
+(volatile stateful any blogObj, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback, const char path[]) -> () createMessageFile = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "createMessageFile");
+	if (err.csize) return callback(data, err);
+
+	if (!impl.data.message.path.csize)
+		return callback(data, mkError("message is not set", "createMessageFile"));
+
+	dfsFileAttributes attr;
+	attr.ctime = impl.data.currentTime;
+	attr.atime = impl.data.currentTime;
+	attr.mtime = impl.data.currentTime;
+	attr.mode = DFS_IFREG;
+	createMessageFileData d = {impl, callback, data, path, attr};
+
+	if (!impl.data.message.inited) {
+		if (path == "volume.bin")
+			d.size = 0x400;
+		else
+			d.size = READ_SIZE, d.minsize = 0x400;
+		read(createMessageFileCallback, d, impl.data.message.path, 0, d.size);
+	} else
+		createMessageFileCallback(d, "", 1);
+	return;
+};
+
+
+

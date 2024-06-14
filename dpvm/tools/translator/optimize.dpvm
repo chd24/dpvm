@@ -1,0 +1,27 @@
+/* optimize translated list of instructions; T16.083-T19.643; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], const stateful asm_instr rules[][]) -> () {
+	int flag;
+
+	if (rules.lsize) { do {
+		flag = 0;
+
+		int i = 0;
+		int next;
+		for (i = list[0].next; i; i = next) {
+			next = list[i].next;
+			int r = find_rule(list, rules, i);
+			if (r >= 0) {
+				int res;
+				int next1;
+				(res, next1) = apply_rule(list, rules[r], i);
+				if (res) { flag = 1; next = next1; }
+			}
+		}
+	} while (flag); }
+
+	return;
+}

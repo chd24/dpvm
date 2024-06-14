@@ -1,0 +1,13 @@
+/* aiVocabulary class, makefile for demos, T18.405-T18.437; $DVS:time$ */
+
+/*@ "topWords.dpvm": parse input file, collect words from it and print top words by enthropy index */
+(const char inputFile[], const char codeTable[], int nWords) -> ()
+	topWords = readings_racquet_rainclouds;
+/* @*/
+
+/*@ "multiFiles.dpvm": parse input files, read list of input files from 'fileList' file;
+	use 'vocabulary' file to load/save vocabulary
+*/
+(const char vocabulary[], const char logFile[], const char fileList[], const char codeTable[]) -> ()
+	multiFiles = sop_deducing_basics;
+/* @*/                

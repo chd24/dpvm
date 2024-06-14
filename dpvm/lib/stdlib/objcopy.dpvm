@@ -1,0 +1,77 @@
+/* make non-constant copy of object; T15.589-T16.499; $DVS:time$ */
+	
+(any cobj) -> (any obj) {
+	any link;
+	any obj;
+	int i;
+	int n;
+	int m;
+
+	obj = cobj;
+	asm { info new }
+
+	n = cobj.lsize;
+	m = obj.lsize;
+	if (n) {
+		i = 0;
+		if (m) { do {
+			link = cobj.l[i];
+			if (link == cobj) { link = obj; }
+			obj[i] = link;
+			i = i + 1;
+		} while (i < m); }
+		if (n > m) { do {
+			link = cobj.l[i];
+			if (link == cobj) { link = obj; }
+			obj.push(link);
+			i = i + 1;
+		} while (i < n); }
+	}
+
+	n = cobj.isize;
+	m = obj.isize;
+	if (n) { 
+		i = 0; 
+		if (m) { do {
+			obj[i] = cobj.i[i];
+			i = i + 1;
+		} while (i < m); }
+		if (n > m) { do {
+			obj.push(cobj.i[i]);
+			i = i + 1;
+		} while (i < n); }
+	}
+
+	n = cobj.fsize;
+	m = obj.fsize;
+	if (n) { 
+		i = 0; 
+		if (m) { do {
+			obj[i] = cobj.f[i];
+			i = i + 1;
+		} while (i < m); }
+		if (n > m) { do {
+			obj.push(cobj.f[i]);
+			i = i + 1;
+		} while (i < n); }
+	}
+
+	n = cobj.csize;
+	m = obj.csize;
+	if (n) { 
+		i = 0; 
+		if (m) { do {
+			obj[i] = cobj.c[i];
+			i = i + 1;
+		} while (i < m); }
+		if (n > m) { do {
+			obj.push(cobj.c[i]);
+			i = i + 1;
+		} while (i < n); }
+	}
+	
+	return (obj);
+}
+
+
+

@@ -1,0 +1,11 @@
+/* dst += src for strings; T15.543-T16.574; $DVS:time$ */
+	
+(volatile stateful char dst[], const stateful char src[]) -> () {
+	int size = src.csize;
+	int i;
+
+	for (i = 0; i < size; i = i + 1)
+		dst.cpush(src[i]);
+
+	return;
+}

@@ -1,0 +1,17 @@
+/* multiply dst by 2; T17.547-T17.547; $DVS:time$ */
+
+(volatile stateful int dst[]) -> () {
+	int p;
+	int i;
+	int size = dst.isize;
+
+	for (i = 0; i < size; i += 1) {
+		int d = dst[i];
+		dst[i] = d << 1 | p;
+		p = d >> 63;
+	}
+
+	if (p) dst.ipush(p);
+	
+	return;
+}

@@ -1,0 +1,482 @@
+/* forex class, neuronTraining method implementation, T19.761-T20.179; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../lib/math/neuron/neuron.dpvmake"
+#include "forex.dpvmake"
+
+int N_STATS		= 5;
+int N_LAYERS		= 7;
+int N_SAMPLES		= 36;
+
+int MIN_SAMPLE		= 4;
+
+float EPSILON		= 0.00000001;
+
+(volatile stateful any obj, int n, float value) -> () setFloat = {
+	obj.f[n] = value;
+	return;
+};
+
+
+/* calibration algoriyhms */
+
+(volatile stateful float data[], int begin, int end, float zero, float min, float max) -> ()
+
+calibrate_mo_o = {
+	int i;
+
+	min -= zero;
+	max -= zero;
+	if (min > 0)
+		min = 0;
+	if (max < 0)
+		max = 0;
+	if (max < -min)
+		max = -min;
+	if (max < EPSILON)
+		max = EPSILON;
+
+	for (i = begin; i < end; i += 1)
+		data[i] = (data[i] - zero) / max;
+
+	return;
+},
+
+calibrate_z_o = {
+	int i;
+
+	if (max < 1)
+		max = 1;
+
+	for (i = begin; i < end; i += 1)
+		data[i] /= max;
+
+	return;
+},
+
+calibrate_no = {
+	return;
+},
+
+calibrationAlgos[] = {
+	calibrate_mo_o,
+	calibrate_z_o,
+	calibrate_no
+};
+
+
+(volatile stateful float inputs[], const stateful float data[], int end, int inputValuesPerSlot, int calibrationAlgo) -> () makeInputs = {
+	int layer, stat, inputLayer, inputSample, input, sample0, sampleSize = MIN_SAMPLE, sampleBegin, sampleEnd;
+	float min, max, first, last, zero;
+
+	for (layer = 0; layer < N_LAYERS; layer += 1, sampleSize <<= 1) {
+		sample0 = 1;
+		inputLayer = input;
+		for (sampleBegin = end - N_SAMPLES * sampleSize; sampleBegin < end; sampleBegin = sampleEnd) {
+			sampleEnd = sampleBegin + sampleSize;
+			inputSample = input;
+			for (stat = 0; stat < N_STATS; stat += 1, input += 1) {
+				inputs[input] = statistics[stat](data, sampleBegin * inputValuesPerSlot,
+						sampleEnd * inputValuesPerSlot);
+			}
+			first = inputs[inputSample + STAT_FIRST];
+			last = inputs[inputSample + STAT_LAST];
+			if (sample0) {
+				min = first;
+				max = first;
+			}
+			if (first < min)
+				min = first;
+			if (first > max)
+				max = first;
+			if (last < min)
+				min = last;
+			if (last > max)
+				max = last;
+		}
+		zero = inputs[inputSample + STAT_AVERAGE];
+
+		calibrationAlgos[calibrationAlgo](inputs, inputLayer, input, zero, min, max);
+	}
+
+	return;
+};
+
+(const any data, const stateful float inputData[], int end, int inputDataSize) -> (int output) defaultOutputCallback = {
+	int testSampleSize = (1 << (data.i[0] >> FLAGS_TEST_LAYER_OFFSET & FLAGS_TEST_LAYER_MASK)) * data.i[1];
+	if (end + testSampleSize <= inputDataSize)
+		return (statistics[STAT_AVERAGE](inputData, end, end + testSampleSize)
+		    >= statistics[STAT_AVERAGE](inputData, end - testSampleSize, end)) + 1;
+	return 0;
+};
+
+/*
+ * testPart > 1: use last 1/testPart part of input data samples for test, other for training
+ * testPart < 0: use last -testPart input data samples for test, other for training
+ * testPart = 0: use all input data samples for training;
+ *		 predict future data using last input data sample, returns "0" or "1"
+ * testPart = 1: train using new data only (whose came since previous call)
+ *
+ * trainingCycles > 0 - number of training rounds accross the full data set
+ * trainingCycles < 0 - use 1/-trainingCycles part of full data set to train, valid only for the case testPart == 0
+ */
+(volatile stateful any forexObj, const char neuronNet[], const stateful float training_params[],
+		int testPart, int trainingCycles, int neuronFlags) -> (const char error[]) neuronTraining = {
+	forexImpl impl;
+	char error[] = convertObjToImpl(impl, forexObj, "neuronTraining");
+	if (error.csize) return error;
+
+	if (!impl.data.registrySet)
+		return mkError("registry is not set", "neuronTraining");
+
+	if (!impl.data.neuronNetInited) {
+		impl.data.neuronObj = neuronCreate();
+
+		error = impl.data.neuronObj.methods.setFlags(impl.data.neuronObj, neuronFlags);
+		if (error.csize) return error;
+
+		error = impl.data.neuronObj.methods.setRandomSeed(impl.data.neuronObj, "");
+		if (error.csize) return error;
+
+		error = impl.data.neuronObj.methods.setRegistry(impl.data.neuronObj, impl.data.registry);
+		if (error.csize) return error;
+
+		logOutput(impl, "Net construction...\r\n", 6);
+
+		error = impl.data.neuronObj.methods.construct(impl.data.neuronObj, neuronNet);
+		if (error.csize) return error;
+
+		logOutput(impl, "Net constructed.\r\n", 6);
+
+		impl.data.neuronNetInited = 1;
+
+		if (!impl.data.outputCallbackSet) {
+			impl.data.outputCallback = defaultOutputCallback;
+			impl.data.outputCallbackData = {impl.data.flags, impl.data.inputValuesPerSlot};
+		}
+	}
+
+	int diagramCount[], diagramSuccess[], diagramLength = impl.data.diagramLength;
+	if (diagramLength) {
+		diagramCount = intsArray(diagramLength);
+		diagramSuccess = intsArray(diagramLength);
+	}
+
+	neuronClass neuronObj = impl.data.neuronObj;
+
+	int nInputs, nOutputs, outputsMode = impl.data.flags & FLAGS_OUTPUTS_MASK, k = impl.data.inputValuesPerSlot,
+		calibrationAlgo = (impl.data.flags >> FLAGS_CALIBRATION_OFFSET) & FLAGS_CALIBRATION_MASK;
+
+	(error, nInputs) = neuronObj.methods.getNInputs(neuronObj);
+	if (error.csize) return error;
+	(error, nOutputs) = neuronObj.methods.getNOutputs(neuronObj);
+	if (error.csize) return error;
+
+	if (nInputs != N_SAMPLES * N_LAYERS * N_STATS)
+		return mkError("illegal number of inputs", "neuronTraining");
+	if (nOutputs != 1 && nOutputs != 2)
+		return mkError("illegal number of outputs", "neuronTraining");
+	if (calibrationAlgo >= CALIBRATION_ALGO_END)
+		return mkError("illegal calibration algorithm", "neuronTraining");
+	if (trainingCycles == 0 || testPart && trainingCycles < 0)
+		return mkError("illegal parameters", "neuronTraining");
+
+	float inputData[] = impl.data.inputData, inputs[] = floatsArray(nInputs), outputs[] = floatsArray(nOutputs),
+		beta1powt, beta2powt, res, resultSum[N_OUTPUTS..][2..], partResultSum[N_OUTPUTS..][2..];
+	int i, j, match, cycle, round, end, inputDataEnd = impl.data.inputDataEnd, onlyNewMode,
+		end0 = (MIN_SAMPLE << (N_LAYERS - 1)) * N_SAMPLES;
+	if (testPart == 1) {
+		if (end0 < impl.data.lastInputDataEnd)
+			end0 = impl.data.lastInputDataEnd;
+		impl.data.lastInputDataEnd = inputDataEnd;
+		onlyNewMode = 1;
+		testPart = 0;
+	}
+	int nRounds = inputDataEnd / k - (end0 + (1 << (impl.data.flags >> FLAGS_TEST_LAYER_OFFSET
+		& FLAGS_TEST_LAYER_MASK))) + 1, count[N_OUTPUTS..][2..],
+		successCount[N_OUTPUTS..][2..], partCount[N_OUTPUTS..][2..], partSuccessCount[N_OUTPUTS..][2..];
+	forexPrediction predictions[] = impl.data.predictions;
+
+	for (i = 0; i < 2; i += 1) {
+		for (j = 0; j < N_OUTPUTS; j += 1) {
+			count[i][j] = impl.data.count[i][j];
+			successCount[i][j] = impl.data.success[i][j];
+			resultSum[i][j] = impl.data.result[i][j];
+		}
+	}
+
+	if (nRounds < testPart || nRounds <= -testPart) {
+		if (onlyNewMode)
+			nRounds = 0;
+		else
+			return mkError("insufficient data amount to start test", "neuronTraining");
+	}
+
+	if (testPart == 0 && trainingCycles < 0) {
+		trainingCycles = -trainingCycles;
+		int n;
+		if (impl.data.lastInputDataEnd > end0) {
+			float p = impl.data.lastInputDataEnd - end0;
+			p /= nRounds;
+			p *= trainingCycles;
+			n = p;
+			if (n < 0)
+				n = 0;
+			if (n >= trainingCycles)
+				n = trainingCycles - 1;
+		}
+		n += 1;
+		end = n * nRounds / trainingCycles + end0;
+		if (impl.data.lastInputDataEnd > end0)
+			end0 = impl.data.lastInputDataEnd;
+		nRounds = end - end0;
+		if (n == trainingCycles)
+			impl.data.lastInputDataEnd = 0;
+		else
+			impl.data.lastInputDataEnd = end;
+		trainingCycles = 1;
+	}
+
+	trainingParams p0;
+	for (i = 0; i < training_params.fsize && i < trainingParams.i[10]; i += 1)
+		setFloat(p0, i, training_params[i]);
+	trainingParams p1 = {0, 1, 1, 1}, p[2..] = {p0, p1}, params;
+
+	if ((neuronFlags & NEURON_METHOD_ADAM) == NEURON_METHOD_ADAM)
+		beta1powt = 1,
+		beta2powt = 1;
+
+	int nParts = testPart, part, nextPart, output, output0, output1, nPredictions = predictions.lsize;
+	if (testPart <= 0) {
+		nParts = 2;
+		if (!testPart) {
+			nRounds += 1;
+			if (onlyNewMode)
+				nRounds += nPredictions;
+		}
+	}
+
+	for (cycle = 0; cycle < trainingCycles; cycle += 1) {
+		for (round = 0, end = end0; round < nRounds; round += 1, end += 1) {
+			if (testPart < 0)
+				part = round >= nRounds + testPart, nextPart = round + 1 >= nRounds + testPart;
+			else if (testPart > 0)
+				part = round * testPart / nRounds, nextPart = (round + 1) * testPart / nRounds;
+			else if (round == nRounds - 1)
+				part = 1, nextPart = 1, end = inputDataEnd / k;
+			else {
+				part = 0, nextPart = (round == nRounds - 2);
+				if (onlyNewMode) {
+					if (round < nPredictions)
+						end = predictions[nPredictions - 1 - round].endSample;
+					else
+						end = end0 + round - nPredictions;
+				}
+			}
+			int isTest = (part == nParts - 1);
+
+			makeInputs(inputs, inputData, end, k, calibrationAlgo);
+			output = impl.data.outputCallback(impl.data.outputCallbackData, inputData, end * k, inputDataEnd);
+			if (nOutputs == 2 || !testPart && isTest)
+				output0 = output & 1, output1 = output >> 1 & 1;
+			else if (outputsMode == FLAGS_OUTPUTS_12)
+				output0 = (output - 1) & 1, output1 = 0;
+			else if (outputsMode == FLAGS_OUTPUTS_01)
+				output0 = output & 1, output1 = 0;
+			else if (outputsMode == FLAGS_OUTPUTS_02)
+				output0 = (output >> 1) & 1, output1 = 0;
+
+			if (!testPart && !isTest && (output || outputsMode != FLAGS_OUTPUTS_12)) {
+				int size = predictions.lsize;
+				for (i = 0; i < size; i += 1) {
+					forexPrediction r = predictions[i];
+					if (r.endSample == end) {
+						match = (r.output0 < 0.5) ^ output0;
+						res = (r.output0 - output0) * (r.output0 - output0);
+						if (nOutputs == 2) {
+							match += (r.output1 < 0.5) ^ output1;
+							res += (r.output1 - output1) * (r.output1 - output1);
+						}
+
+						resultSum[1][output] += res;
+						partResultSum[1][output] += res;
+
+						successCount[1][output] += match;
+						partSuccessCount[1][output] += match;
+
+						count[1][output] += 1;
+						partCount[1][output] += 1;
+
+						predictions[i] = predictions[size - 1];
+						predictions.lpop(1);
+						i = size;
+
+						char out[];
+						printf(out, "Prediction DEL: queued %2d, sample %5d, neuron = %9.6f, %9.6f, actual = %d%d, match = %d, result = %9.6f",
+							{predictions.lsize, r.endSample, output0, output1, match, r.output0, r.output1, res});
+						logOutput(impl, out, 8);
+					}
+				}
+			}
+
+			if (testPart || isTest || output || outputsMode != FLAGS_OUTPUTS_12) {
+				outputs[0] = output0;
+				if (nOutputs == 2)
+					outputs[1] = output1;
+
+				asm { unfix };
+				params.speed = p[isTest].speed;
+				params.beta1 = p[isTest].beta1;
+				params.beta2 = p[isTest].beta2;
+				params.epsilon = p[isTest].epsilon;
+
+				if (!isTest) {
+					beta1powt *= params.beta1;
+					beta2powt *= params.beta2;
+					float beta1bias = 1 - beta1powt;
+					float beta2bias = fsqrt(1 - beta2powt);
+					params.speed *= beta2bias / beta1bias;
+					params.epsilon *= beta2bias;
+				}
+
+				(error, res) = neuronObj.methods.training(neuronObj, inputs, outputs, params);
+				if (error.csize)
+					return error;
+
+				int tmp = outputs[0] < 0.5;
+				match = tmp ^ output0;
+				output0 = !tmp;
+				if (nOutputs == 2) {
+					tmp = outputs[1] < 0.5;
+					match += tmp ^ output;
+					output1 = !tmp;
+				}
+			} else {
+				res = 0;
+				match = 0;
+			}
+
+			if (testPart || !isTest) {
+				resultSum[isTest][output] += res;
+				partResultSum[isTest][output] += res;
+
+				successCount[isTest][output] += match;
+				partSuccessCount[isTest][output] += match;
+
+				count[isTest][output] += 1;
+				partCount[isTest][output] += 1;
+
+				if (diagramLength) {
+					int index = round * diagramLength / nRounds;
+					diagramCount[index] += 1;
+					diagramSuccess[index] += match;
+				}
+			}
+
+			if (nextPart != part || round == nRounds - 1) {
+				if (round == nRounds - 1 && diagramLength) {
+					const char diagramHead[] = "Success diagram:\r\n";
+					int diagramHeadSize = diagramHead.csize;
+					char diagram[] = charsArray(2 * diagramLength + diagramHeadSize + 2);
+
+					for (i = 0; i < diagramHeadSize; i += 1)
+						diagram[i] = diagramHead[i];
+					diagram[diagramLength + diagramHeadSize] = '\r';
+					diagram[diagramLength + diagramHeadSize + 1] = '\n';
+
+					for (i = 0; i < diagramLength; i += 1) {
+						int pr = diagramSuccess[i] * 100 / diagramCount[i];
+						char u = pr / 10 + '0', d = pr % 10 + '0';
+						if (pr < 10)
+							u = ' ';
+						else if (pr == 100)
+							u = '0';
+						if (impl.data.loggerRun)
+							(u, d) = (d, u);
+						diagram[diagramHeadSize + i] = u;
+						diagram[diagramHeadSize + diagramLength + 2 + i] = d;
+					}
+					logOutput(impl, diagram, 8);
+				}
+
+				char out[];
+				int pc = partCount[isTest][0] + partCount[isTest][1]
+						+ partCount[isTest][2] + partCount[isTest][3],
+					c = count[isTest][0] * (testPart || outputsMode != FLAGS_OUTPUTS_12)
+						+ count[isTest][1] + count[isTest][2] + count[isTest][3], cc;
+				pc += !pc, c += !c;
+				printf(out,
+"Cycle %3d, part %d(%d), samples %6d, last: averageResult = %f, successRate = %10.6f%%, total: averageResult = %f, successRate = %10.6f%%\r\n",
+					{cycle + impl.data.nCycles, part, isTest,
+					partCount[isTest][0] + partCount[isTest][1]
+						+ partCount[isTest][2] + partCount[isTest][3],
+					(partResultSum[isTest][0] + partResultSum[isTest][1]
+						+ partResultSum[isTest][2] + partResultSum[isTest][3]) / pc,
+					(partSuccessCount[isTest][0] + partSuccessCount[isTest][1]
+						+ partSuccessCount[isTest][2] + partSuccessCount[isTest][3])
+						* 100.0 / nOutputs / pc,
+					(resultSum[isTest][0] + resultSum[isTest][1]
+						+ resultSum[isTest][2] + resultSum[isTest][3]) / c,
+					(successCount[isTest][0] + successCount[isTest][1]
+						+ successCount[isTest][2] + successCount[isTest][3])
+						* 100.0 / nOutputs / c});
+				logOutput(impl, out, 7);
+				for (i = 0; i < N_OUTPUTS; i += 1) {
+					char out1[];
+					c = count[isTest][0] + count[isTest][1] + count[isTest][2] + count[isTest][3];
+					pc = partCount[isTest][i], cc = count[isTest][i];
+					c += !c, pc += !pc, cc += !cc;
+					printf(out1,
+" output  %d (%6.2f%%): samples %6d, last: averageResult = %f, successRate = %10.6f%%, total: averageResult = %f, successRate = %10.6f%%\r\n",
+					{i, partCount[isTest][i], count[isTest][i] * 100.0 / c,
+					partResultSum[isTest][i] / pc,
+					partSuccessCount[isTest][i] * 100.0 / nOutputs / pc,
+					resultSum[isTest][i] / cc,
+					successCount[isTest][i] * 100.0 / nOutputs / cc});
+					logOutput(impl, out1, 7);
+				}
+
+				for (i = 0; i < N_OUTPUTS; i += 1) {
+					partCount[0][i] = 0;
+					partSuccessCount[0][i] = 0;
+					partResultSum[0][i] = 0;
+				}
+			}
+		}
+	}
+
+	for (i = 0; i < 2; i += 1) {
+		for (j = 0; j < N_OUTPUTS; j += 1) {
+			impl.data.count[i][j] = count[i][j];
+			impl.data.success[i][j] = successCount[i][j];
+			impl.data.result[i][j] = resultSum[i][j];
+		}
+	}
+
+	impl.data.nCycles += trainingCycles;
+
+	if (!testPart) {
+		forexPrediction r = {inputDataEnd / k, outputs[0], outputs[nOutputs == 2] * (nOutputs == 2)};
+		predictions.lpush(r);
+
+		if (nOutputs == 2)
+			output = output0 | output1 << 1;
+		else if (outputsMode == FLAGS_OUTPUTS_12)
+			output = output0 + 1;
+		else if (outputsMode == FLAGS_OUTPUTS_01)
+			output = output0;
+		else if (outputsMode == FLAGS_OUTPUTS_02)
+			output = output0 << 1;
+
+		char out[];
+		printf(out, "Prediction ADD: queued %2d, sample %5d, neuron = %9.6f, %9.6f, output %d%d -> %d",
+			{predictions.lsize, r.endSample, output0, output1, output, r.output0, r.output1});
+		logOutput(impl, out, 8);
+
+		const char outputsStr[][] = {"0", "1", "2", "3"};
+		return outputsStr[output];
+	}
+
+	return "";
+};

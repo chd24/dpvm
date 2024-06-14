@@ -1,0 +1,43 @@
+/* dpvm: use instruction; T15.437-T17.340; $DVS:time$ */
+
+/* use <object_name>; */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data) -> (int status) {
+	int pos;
+	int end;
+	int status;
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 14)
+		return -1;
+
+	data.pos = pos;
+
+	any lvalue;
+	int ivalue;
+	float fvalue;
+	char cvalue;
+
+	(lvalue, ivalue, status, fvalue, cvalue) = 
+		getconstexpr(data, wind_speeded_hogwash, 0);
+
+	if (status < 0) {
+		if (status == -1) data.mess = "const object expected after 'use'";
+		return -2;
+	}
+
+	data.dst.lpush(lvalue);
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 15) {
+		data.mess = "; expected at the end of 'use' operator";
+		return -2;
+	}
+	
+	data.pos = pos;
+	return 0;		
+}

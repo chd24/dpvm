@@ -1,0 +1,170 @@
+/* p2p module, main routine; T16.949-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../tools/registry/registry.dpvmake"
+#include "../../../lib/math/crypto/crc32/crc32.dpvmake"
+#include "cache.dpvmake"
+#include "p2p.dpvmake"
+#include "message.dpvmh"
+#include "mailbox.dpvmh"
+
+(const p2pdata d, const char text[], int status) -> () init {
+	p2pdata data;
+	objcopyto(data, d);
+	data.thread_id = -1;
+
+	int vars[];
+
+	/* allocate mailbox address for logger */
+	p2paddr addr0;
+	addr0.module = P2P_MODULE;
+	addr0.service = P2P_LOGGER;
+	addr0.task_id = data.task_id;
+	mrecvp("", "", addr0, 0);
+
+	/* start thread writing log messages */
+	getsysp(logger, d, vars);
+
+	char mess[];
+	strcat(mess, "Starting ");
+	strcat(mess, data.version);
+	write_log(data, mess, 6);
+
+	/* allocate mailbox address for object reader */
+	p2paddr addr1;
+	addr1.module = P2P_MODULE;
+	addr1.service = P2P_READOBJ;
+	addr1.task_id = data.task_id;
+	mrecvp("", "", addr1, 0);
+
+	/* allocate mailbox address for address book */
+	p2paddr addr2;
+	addr2.module = P2P_MODULE;
+	addr2.service = P2P_ADDRMAN;
+	addr2.task_id = data.task_id;
+	mrecvp("", "", addr2, 0);
+
+	/* allocate mailbox address for object writer */
+	if (data.flags & P2P_MBOX) {
+		p2paddr addr3;
+		addr3.module = P2P_MODULE;
+                addr3.service = P2P_BROADCAST;
+		mrecvp("", "", addr3, 0);	
+	}
+
+	/* start thread processing incoming serialized objects */
+	getsysp(object_read, d, vars);
+
+	/* start thread maintaining address book */
+	getsysp(address_book, d, vars);
+
+	if (data.flags & P2P_MBOX) {
+		/* start thread accepting objects via local mailbox and saving/broadcasting them */
+		getsysp(object_write, d, vars);
+	}
+	
+	/* proto = TCP_code << 16 | IPv4_code << 24 */
+	const int proto = 0x4060000;
+
+	/* bind to port and listen connections */
+	bindp(connection, d, proto | data.port, 0, 0);
+
+	if (status <= 0) {
+		char m[];
+		strcat(m, "Error reading hosts database from file '");
+		strcat(m, data.hosts_file);
+		strcat(m, "'");
+		write_log(data, m, 4);
+		return;
+	}
+
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+	addr.service = P2P_ADDRMAN;
+	addr.task_id = data.task_id;
+
+	int begin;
+	int end;
+	do {
+		(begin, end) = strtostr(text, end, text.csize);
+		if (begin < end) {
+			int pos = substrchr(text, begin, end, ':');
+			int port;
+
+			if (pos > begin & pos < end - 1) {
+				int error;
+				int next;
+				(port, error, next) = strtoi(text, pos + 1, end, 10);
+				if (error | next != end)
+					pos = -1;
+			} else pos = -1;
+
+			if (pos == -1) {
+				char m[];
+				strcat(m, "Unrecognized host '");
+				substrcat(m, text, begin, end);
+				strcat(m, "' in hosts database file '");
+				strcat(m, data.hosts_file);
+				strcat(m, "'");
+				write_log(data, m, 5);
+			} else {
+				p2pmess m;
+				m.task = P2P_ADDHOST;
+                                char host[];
+                                substrcat(host, text, begin, pos);
+                                m.host = host;
+				m.port = port;
+				msendp("", "", addr, m);
+			}
+		}
+	} while (begin < end);
+
+	return;
+}
+
+(const stateful p2pdata d, const int values[]) -> () preinit {
+	p2pdata data;
+	objcopyto(data, d);
+
+	data.task_id = values[0];
+
+	const int dbparams[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler_p2p, data, dbparams);
+
+	read(init, data, data.hosts_file, 0, 0x100000);
+	return;
+}
+
+(const stateful any registry, const char hosts_file[], const char log_file[], const char extaddr[], int port, int flags)
+		-> () {
+	p2pdata data;
+
+        char version[];
+        strcat(version, version_p2p());
+        strcat(version, " with ");
+        strcat(version, cacheObj.version);
+        strcat(version, " (");
+        printobjname(version, code);
+        strcat(version, ")");
+
+        data.version    = version;
+        data.hosts_file	= hosts_file;
+	data.log_file	= log_file;
+	data.extaddr	= extaddr;
+	data.port	= port;
+	data.flags	= flags;
+
+	registryData reg = registryObj.copy(registry);
+	data.timezone	= reg.timeZone;
+	data.log_level	= reg.logLevel;
+
+        int ctx[];
+        data.crc32_init = crc32_init(ctx);
+        data.crc32_ctx = ctx;
+	data.crc32_init = crc32_addsubstr(data.crc32_ctx, P2P_MAGIC, 0, P2P_MAGIC.csize,
+		data.crc32_init);
+
+	const int vars[] = {0x201};
+	getsysp(preinit, data, vars);
+	return;
+}

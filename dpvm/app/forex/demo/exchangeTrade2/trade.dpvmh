@@ -1,0 +1,33 @@
+/* forex class, exchangeTrade2 demo configuration structure type, T19.772-T20.070; $DVS:time$ */
+
+type tradeConfig = {
+	const any configObj;		/* filled automatically */
+	const any demo;			/* filled automatically */
+	const any registry;		/* filled automatically */
+	const char exchangeName[];	/* "textex", "kraken", ... */
+	const char publicKey[];		/* public key on exchange */
+	const char privateKey[];	/* private key; if inputPrivateKey = 1, then it inputted from keyboard */
+	const char currencies[][];	/* {"USD", "<crypto name>"} */
+	const char inputDataFileName[];	/* name of file with historical exchange data */
+	const char logFileName[];	/* log file name */
+	const char neuronNet[];		/* "neuron net description" */
+	const float trainingParams[];	/* {neuron net training params} */
+	int startTime;			/* filled automatically */
+	int taskId;			/* filled automatically */
+	int inputDataFormat;		/* format of input data file: 1 - CSV, 0 - LOG */
+	int inputValuesPerLine;		/* number of accepted rates per line in CSV input format */
+	int inputDataPartPerCycle;	/* part of input data processed through neuron net in one cycle */
+	int replayHistoricCycles;	/* number of historical cycles to replay and model trading */
+	int nCurrency;			/* number of rate column in LOG input format */
+	int cyclePeriod;		/* length of cycle in nanoseconds, for example, 15 min for CSV, 10 min for LOG */
+	int dumpCycles;			/* period of dump output in cycles */
+	int graphX;			/* ascii X size of currency rate graph drawed during dump */
+	int graphY;			/* ascii Y size of currency rate graph drawed during dump */
+	int neuronFlags;		/* flags for neuron class */
+	int forexFlags;			/* flags for forex class */
+	int predictionAlgorithm;	/* prediction algorithm id */
+	int orderAlgorithm;		/* order algorithm id */
+	float orderVolume;		/* volume of each order measured in crypto */
+	float downRateCoeff;		/* down spread, for example 0.95 for spread 5% */
+	float upRateCoeff;		/* up spread, for example 1.05 for spread 5% */
+};

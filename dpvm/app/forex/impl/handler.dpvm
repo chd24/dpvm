@@ -1,0 +1,34 @@
+/* forex: error handler; T19.783-T19.783; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "forex.dpvmake"
+
+(const stateful any forexObj, const int values[]) -> () handler = {
+	char str[];
+	int cod;
+	int res;
+
+	strcat(str, "Forex crashed with error ");
+	cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+
+	logOutput(forexObj, str, 1);
+
+	return;
+};

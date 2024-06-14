@@ -1,0 +1,253 @@
+/* blog internal cgi module, action class; T19.037-T19.346; $DVS:time$ */
+
+#include "../../../../stdlib/stdlib.dpvmake"
+#include "../../../../utils/utils.dpvmake"
+#include "../../../../math/rand/rand.dpvmake"
+#include "../../../../storage/te/te.dpvmake"
+#include "blog.dpvmh"
+
+(volatile stateful blogObj blog) -> () parseFilename = {
+	char fileName[];
+	if (!getParamExt(fileName, blog.env, blog.fields, "f"))
+		return;
+
+	char path[];
+	if (fileName == "edit")
+		blog.mode = BLOG_EDIT, fileName = "";
+	else if (!strstr(fileName, "edit/"))
+		blog.mode = BLOG_EDIT, substrcat(path, fileName, 5, fileName.csize), fileName = path;
+	else if (fileName == "save")
+		blog.mode = BLOG_SAVE, fileName = "";
+	else if (!strstr(fileName, "save/"))
+		blog.mode = BLOG_SAVE, substrcat(path, fileName, 5, fileName.csize), fileName = path;
+	else if (fileName == "setup")
+		blog.mode = BLOG_SETUP, fileName = "";
+	else if (fileName == "set")
+		blog.mode = BLOG_SET, fileName = "";
+	else if (fileName == "changepwd")
+		blog.mode = BLOG_CHANGEPWD, fileName = "";
+	else if (fileName == "register")
+		blog.mode = BLOG_REGISTER, fileName = "";
+	else if (fileName == "mkuser")
+		blog.mode = BLOG_MKUSER, fileName = "";
+
+	blog.fileName = fileName;
+	return;
+};
+
+(volatile stateful blogObj blog) -> (const char error[], int created) createMessage = {
+	char recipients[];
+	if (blog.mode || !getParamExt(recipients, blog.env, blog.fields, "r"))
+		return ("", 0);
+
+	char users[][] = splitString(recipients, " ,"), header[], message[];
+	getParamExt(header, blog.env, blog.fields, "h");
+	getParamExt(message, blog.env, blog.fields, "m");
+	if (!users.lsize || !header.csize && !message.csize)
+		return ("", 0);
+
+	int postTime = teObj.utilities.time2teTime(blog.time);
+	char err[] = blog.obj.methods.newMessage(blog.obj, blog.postTime, postTime);
+	if (err.csize) return (err, 0);
+
+	blog.postTime = postTime;
+
+	char user[];
+	strcat(user, blog.users[0].name);
+	err = blog.obj.methods.addToTip(blog.obj, user);
+	if (err.csize) return (err, 0);
+	err = blog.obj.methods.addMessageFile(blog.obj, "author.txt", user);
+	if (err.csize) return (err, 0);
+
+	err = blog.obj.methods.addToTip(blog.obj, header);
+	if (err.csize) return (err, 0);
+	if (header.csize) {
+		err = blog.obj.methods.addMessageFile(blog.obj, "header.txt", header);
+		if (err.csize) return (err, 0);
+	}
+
+	err = blog.obj.methods.addToTip(blog.obj, message);
+	if (err.csize) return (err, 0);
+	if (message.csize) {
+		err = blog.obj.methods.addMessageFile(blog.obj, "message.txt", message);
+		if (err.csize) return (err, 0);
+	}
+
+	int i;
+	for (i = 0; i < 8; i += 1) {
+		const char names[][] = {"O", "P", "Q", "R", "A", "B", "C", "D"};
+		char body[];
+		int n = ~getParamExt(body, blog.env, blog.fields, names[i]);
+		if (n >= 0) {
+			char path[];
+			printf(path, "%s/%s", {{"content", "attachments"}.l[i >> 2], blog.fields[n].filename});
+			err = blog.obj.methods.addMessageFile(blog.obj, path, body);
+			if (err.csize) return (err, 0);
+		}
+	}
+
+	err = blog.obj.methods.writeMessage(blog.obj);
+	if (err.csize) return (err, 0);
+
+	for (i = 0; i < users.lsize; i += 1) {
+		err = blog.obj.methods.sendMessage(blog.obj, users[i]);
+		if (err.csize) return (err, 0);
+	}
+
+	blog.messageSet = 1;
+	return ("", 1);
+};
+
+type editMessageData = {
+	volatile stateful blogObj blog;
+	volatile stateful any data;
+	const (volatile stateful any data, const char error[]) -> () callback;
+	int stage;
+};
+
+(volatile stateful any data, const char error[]) -> () editMessageCallback = {
+	editMessageData to[];
+	objcopyto(to, {data});
+	editMessageData d = to[0];
+
+	if (error.csize) {
+		d.callback(d.data, error);
+		return;
+	}
+
+	int stage = d.stage;
+	d.stage += 1;
+
+	if (stage == 0) {
+		d.blog.mode = 0;
+		char path[] = d.blog.fileName, content[];
+
+		if (!getParamExt(content, d.blog.env, d.blog.fields, "m")) {
+			d.callback(d.data, "empty file to save");
+			return;
+		}
+		if (!path.csize)
+			path = "message.txt";
+
+		d.blog.obj.methods.writeMessageFile(d.blog.obj, d, code, path, content, 0, content.csize, content.csize);
+		return;
+
+	} else if (stage <= 16) {
+		const char names[][] = {"O", "P", "Q", "R", "A", "B", "C", "D"};
+		char content[];
+		int i = (stage - 1) >> 1;
+		int n = ~getParamExt(content, d.blog.env, d.blog.fields, names[i]);
+		if (n >= 0) {
+			char path[];
+			printf(path, "%s/%s", {{"content", "attachments"}.l[i >> 2], d.blog.fields[n].filename});
+			if (stage & 1)
+				d.blog.obj.methods.createMessageFile(d.blog.obj, d, code, path);
+			else
+				d.blog.obj.methods.writeMessageFile(d.blog.obj, d, code, path, content, 0, content.csize, content.csize);
+			return;
+		}
+		if (stage & 1)
+			d.stage += 1;
+		code(d, "");
+		return;
+	}
+
+	d.callback(d.data, "");
+	return;
+};
+
+(volatile stateful blogObj blog, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback) -> () editMessage = {
+	editMessageData d = {blog, data, callback};
+	editMessageCallback(d, "");
+	return;
+};
+
+(volatile stateful blogObj blog, const blogEnvVar vars[]) -> (const char error[]) setEnvironment = {
+	char err[];
+	int i, changed;
+
+	for (i = 0; i < vars.lsize; i += 1) {
+		blogEnvVar var = vars[i];
+		char value[];
+		if (getParamExt(value, blog.env, blog.fields, var.name)) {
+			err = blog.obj.methods.setEnvVar(blog.obj, blog.users[0].name, var.varName, value);
+			if (err.csize) return err;
+		}
+	}
+
+	(err, changed) = blog.obj.methods.saveEnvironment(blog.obj, blog.users[0].name, blog.users[0].envFile);
+	if (err.csize) return err;
+
+	if (changed) {
+		err = blog.obj.methods.writeFile(blog.obj, blog.users[0].name, "env", blog.users[0].envFile);
+		if (err.csize) return err;
+	}
+
+	return "";
+};
+
+(volatile stateful blogObj blog, volatile stateful randData data, const char fileType[], volatile stateful int file[]) -> (const char error[]) recodeFile = {
+	int i;
+	for (i = 0; i < 0x80; i += 1)
+		file[i] = randObj.getLimited(data, 0x100000000);
+
+	return blog.obj.methods.writeFile(blog.obj, blog.users[0].name, fileType, file);
+};
+
+(volatile stateful blogObj blog) -> (const char error[]) recodeFiles = {
+	randData data;
+	randObj.initObj(data, blog);
+
+	char err[];
+	err = recodeFile(blog, data, "env", blog.users[0].envFile);
+	if (err.csize) return err;
+
+	err = recodeFile(blog, data, "blog", blog.users[0].blogFile);
+	if (err.csize) return err;
+
+	err = recodeFile(blog, data, "tip", blog.users[0].tipFile);
+	if (err.csize) return err;
+
+	return "";
+};
+
+(volatile stateful blogObj blog) -> (const char error[]) changePassword = {
+	char password[], err[];
+	getParamExt(password, blog.env, blog.fields, "w");
+
+	(blog.users[0].password, err) = blog.obj.methods.changePassword(blog.obj, blog.users[0].name, password, blog.time);
+	if (err.csize) return err;
+
+	return recodeFiles(blog);
+};
+
+(volatile stateful blogObj blog, const blogEnvVar vars[]) -> (const char error[]) makeUser = {
+	char err[];
+	int i, changed;
+
+	blog.users[0].envFile = intsArray(0x80);
+	blog.users[0].blogFile = intsArray(0x80);
+	blog.users[0].tipFile = intsArray(0x80);
+
+	for (i = 0; i < vars.lsize; i += 1) {
+		blogEnvVar var = vars[i];
+		char value[];
+		printf(value, var.defaultValue, {blog.users[0].name});
+		err = blog.obj.methods.setEnvVar(blog.obj, blog.users[0].name, var.varName, value);
+		if (err.csize) return err;
+	}
+
+	(err, changed) = blog.obj.methods.saveEnvironment(blog.obj, blog.users[0].name, blog.users[0].envFile);
+	if (err.csize) return err;
+
+	return recodeFiles(blog);
+};
+
+blogActionClass blogActionObj = {
+	parseFilename,
+	createMessage,
+	editMessage,
+	setEnvironment,
+	changePassword,
+	makeUser
+};

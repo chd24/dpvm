@@ -1,0 +1,12 @@
+/* returns 1 if i-th bytecode is LF in if-else construct: 0 iload jzf .. 1 lf jnzf ..; T20.100-T20.100; #DVS:time$ */
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+
+(const stateful any func, const stateful int map[], int i) -> (int res) isIfElse = {
+	if (i < 4 || i + 1 >= func.csize || func.c[i + 1] != DPVM_CODE_JNZF || func.c[i] != DPVM_CODE_LF
+			|| func.c[i - 1] != 1)
+		return 0;
+	i = map[i];
+	return i >= 2 && func.c[i] == DPVM_CODE_JZF && func.c[i - 1] == DPVM_CODE_ILOAD && !func.c[i - 2];
+};

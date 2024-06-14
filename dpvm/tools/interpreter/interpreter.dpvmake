@@ -1,0 +1,49 @@
+/* interpreter, makefile; T16.611-T18.355; $DVS:time$ */
+
+#include "../registry/registry.dpvmh"
+
+/*@ "printlink.dpvm": outputs link of obj in readable form */
+(volatile stateful char arr[], const any obj, const any link) -> ()
+	printlink = physio_hates_glowered;
+/* @*/
+
+/*@ "printint.dpvm": outputs int member of obj in readable form */
+(volatile stateful char arr[], int n) -> ()
+	print_int = bolder_modernised_ordinary;
+/* @*/
+
+/*@ "printfloat.dpvm": outputs float member of obj in readable form */
+(volatile stateful char arr[], float f) -> ()
+	print_float = roundhouse_tumblers_fairsex;
+/* @*/
+
+/*@ "printchar.dpvm": outputs char member of obj in readable form */
+(volatile stateful char arr[], int status, char c) -> (int status)
+	printchar = experiment_curlier_low;
+/* @*/
+
+/*@ "printobj.dpvm": outputs object in readable form */
+(volatile stateful char arr[], const any obj) -> ()
+	printobj = flareups_jeweller_pleasures;
+/* @*/
+
+/*@ "registry.dpvm": check registry and cast it to native type */
+(const stateful any regSrc) -> (volatile registryData reg, const char error[])
+        registryPrepare = luck_amputations_flans;
+/* @*/
+
+/*@ "getinfo.dpvm": returns information of expression's type */
+(const stateful registryData registry, const char src[], const any links, int pos, int end) ->
+	(const char mess[], int nlinks, int nints, int nfloats, int nchars, int status)
+	getinfo = eclipse_calypso_missuses;
+/* @*/
+
+/*@ "makeprogram.dpvm": composes program which computes the expression */
+(const stateful registryData registry, const char src[], const any links)
+	-> (const char program[], int status)
+	makeprogram = jobs_signal_diagonalises;
+/* @*/
+
+/*@ "interpreter.dpvm": main function of interpreter */
+interpreterType interpreter = pottage_testdrive_emery;
+/* @*/                                               

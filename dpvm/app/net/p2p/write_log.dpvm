@@ -1,0 +1,22 @@
+/* write log of p2p; T16.949-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "p2p.dpvmake"
+#include "mailbox.dpvmh"
+
+(const stateful p2pdata data, const char mess[], int level) -> () {
+	if (level > data.log_level) return;
+
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+	addr.service = P2P_LOGGER;
+	addr.task_id = data.task_id;
+
+	p2pmess m;
+	m.data = mess;
+	m.task = level;
+	m.port = data.thread_id;
+
+	msendp("", "", addr, m);
+	return;
+}

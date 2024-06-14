@@ -1,0 +1,14 @@
+/* aiAlphabet class, constructor, T18.379-T18.380; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "alphabet.dpvmake"
+
+() -> (volatile aiAlphabet obj) aiAlphabetCreate = {
+        aiAlphabetImpl impl;
+	aiAlphabet obj;
+
+        impl.methods = aiAlphabetMethodsImpl;
+	objcopyto(obj, impl);
+
+        return obj;
+};

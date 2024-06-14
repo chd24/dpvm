@@ -1,0 +1,114 @@
+/* dpvmb class, store() method implementation, T20.144-T20.147; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../algorithms/hashtable/hash.dpvmake"
+#include "dpvmb.dpvmake"
+
+int INT_MIN	= 0x8000000000000000;
+int INT_MAX	= 0x7fffffffffffffff;
+int HASH_SIZE	= 0x100;
+
+type storeData = {
+	volatile stateful dpvmbImpl impl;
+	volatile stateful hashData hash;
+	int counter;
+};
+
+(volatile stateful char db[], int n) -> () pushInt = {
+	int i;
+	for (i = 0; i < DPVMB_LINK_SIZE; i++)
+		db.cpush(n), n >>= 8;
+	return;
+};
+
+(volatile stateful char db[], float f) -> () pushFloat {
+	int mantissa, exponent, ieee;
+	(mantissa, exponent) = fsplit(f);
+
+	if (mantissa < 0) {
+		mantissa = -mantissa;
+		ieee = INT_MIN;
+	}
+
+	if (exponent > INT_MIN && exponent < INT_MAX)
+		exponent += 1023 + 52;
+
+	pushInt(db, ieee | mantissa & 0xfffffffffffff | (exponent & 0x7ff) << 52);
+	return;
+}
+
+(volatile stateful storeData data, const any object) -> (const char error[]) storeObject = {
+	const any a = {};
+	if (object == a.type || object == a.type.type || !hashObj.findAdd(data.hash, object))
+		return "";
+	char str[];
+
+	type t;
+	int h[12..], i;
+	(t, h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]) = object_info(object);
+	if (t != object) {
+		char error[] = code(data, t);
+		if (error.csize)
+			return error;
+		(h[8], h[9], h[10], h[11]) = getfullhash(t);
+	}
+	for (i = 0; i < 12; i++)
+		pushInt(str, h[i]);
+
+	for (i = 0; i < object.lsize; i++) {
+		int o[4..];
+		any obj = object.l[i];
+		if (obj != object) {
+			char error[] = code(data, obj);
+			if (error.csize)
+				return error;
+			(o[0], o[1], o[2], o[3]) = getfullhash(obj);
+		}
+		int j;
+		for (j = 0; j < 4; j++) {
+			pushInt(str, o[j]);
+		}
+	}
+
+	for (i = 0; i < object.isize; i++)
+		pushInt(str, object.i[i]);
+
+	for (i = 0; i < object.fsize; i++)
+		pushFloat(str, object.f[i]);
+
+	for (i = 0; i < object.csize; i++)
+		str.cpush(object.c[i]);
+
+	(h[0], h[1], h[2], h[3]) = getfullhash(object);
+	char error[] = data.impl.methods.add(data.impl, str, h[0], h[1], h[2], h[3]);
+	data.counter++;
+
+	if (data.impl.data.flags & DPVMB_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "%4d. %s %p", {error.csize ? "ERROR" : "added", object, data.counter});
+		if (error.csize)
+			printf(mess, ": %s", {error});
+		strcat(mess, "\r\n");
+		outputp("", "", mess);
+	}
+
+	return strstr(error, "already exists") >= 0 ? "" : error;
+};
+
+(volatile stateful any dpvmbObj, const any objects) -> (const char error[]) store = {
+	storeData data;
+	char err[] = convertObjToImpl(data.impl, dpvmbObj, "store");
+	if (err.csize) return err;
+
+	if (!data.impl.data.dbInited)
+		return mkError("database not initialized", "store");
+
+	hashObj.init(data.hash, HASH_SIZE);
+
+	int i;
+	for (i = 0; i < objects.lsize && !err.csize; i++)
+		err = storeObject(data, objects.l[i]);
+
+	return err;
+};

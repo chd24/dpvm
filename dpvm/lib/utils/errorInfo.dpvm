@@ -1,0 +1,32 @@
+/* print error code in human readable format; T17.983-T17.983; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+
+(int errorCode) -> (volatile char text[]) {
+    char str[];
+
+    strcat(str, "Error 0x");
+    int cod = errorCode & 0x1f;
+    printhex(str, cod, 2, 0);
+    strcat(str, " (");
+    print_error(str, cod);
+    strcat(str, ") in function ");
+    printobjname(str, errorCode >> 17);
+    strcat(str, "(), bytecode ");
+
+    cod = errorCode >> 5 & 0xfff;
+    if (cod >= 0xf00) {
+        cod &= 0xff;
+        strcat(str, "0x");
+        printhex(str, cod, 2, 0);
+        strcat(str, " (");
+        print_bytecode(str, cod);
+        strcat(str, ")");
+    } else {
+        strcat(str, "position 0x");
+        printhex(str, cod, 3, 0);
+    }
+    strcat(str, ".");
+
+    return str;
+}

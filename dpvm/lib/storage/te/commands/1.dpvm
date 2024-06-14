@@ -1,0 +1,15 @@
+/* view current entry, T18.327-T18.334; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) command1 {
+	return "view";
+}
+
+teCommand cmd1 = {
+        "1",
+        "view current entry",
+        command1
+};
+
+

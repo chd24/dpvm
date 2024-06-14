@@ -1,0 +1,31 @@
+/* dfs class, makefile for demos, T18.805-T19.319; $DVS:time$ */
+
+/*@ "findPath.dpvm": loads uncrypted dfs volume, finds file inside it, outputs inode */
+(const char volumePath[], const char filePath[]) -> ()
+	findPath = africa_disciple_investiture;
+/* @*/     
+
+/*@ "extractFile.dpvm": extract given file from dfs volume and store it to given file */
+(const char volumePath[], const char filePath[], const char savePath[], int flags) -> ()
+	extractFile = wheat_bandwidth_liver;
+/* @*/   
+
+/*@ "addFile.dpvm": add new file from external path loadPath[] to internal path filePath[] in the volume */
+(const char volumePath[], const char filePath[], const char loadPath[], int flags) -> ()
+	addFile = leader_smugly_equals;
+/* @*/
+
+/*@ "listCatalogue.dpvm": list items in given catalogue in given volume */
+(const char volumePath[], const char cataloguePath[]) -> ()
+	listCatalogue = rewound_solvent_midribs;
+/* @*/
+
+/*@ "makeEmptyVolume.dpvm": create volume with empty files listed in filePaths string separated by spaces, store volume to volumePath file */
+(const char volumeName[], const char filePaths[], const char volumePath[]) -> (const char error[])
+	makeEmptyVolume = targeting_hippy_sparse;
+/* @*/
+
+/*@ "makeVolume.dpvm": create volume from given directory, store it to volumePath file */
+(const char volumeName[], const char dirPath[], const char volumePath[]) -> ()
+	makeVolume = ibises_greet_stalled;
+/* @*/                                            

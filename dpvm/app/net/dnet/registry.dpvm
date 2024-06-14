@@ -1,0 +1,9 @@
+/* dnet, registry check; T18.361-T19.640; $DVS:time$ */
+
+#include "../../tools/registry/registry.dpvmake"
+
+(const stateful any regSrc) -> (volatile registryData reg, const char error[]) {
+	registryData reg = registryObj.copy(regSrc);
+	char error[] = registryObj.check(reg, REGISTRY_MONITOR);
+	return (reg, error);
+}

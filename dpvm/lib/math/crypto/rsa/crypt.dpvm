@@ -1,0 +1,83 @@
+/* rsa encrypt/decrypt; T17.925-T18.227; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../long/long.dpvmake"
+#include "rsa.dpvmake"
+
+(const int deg[], const int mod[], const int data[], int start, int end, int size) -> (volatile int res[]) worker {
+    int res[];
+    int i;
+
+    start *= size;
+    end *= size;
+
+    for (i = start; i < end; i += size) {
+            int d[];
+            copyints(d, data, i, i + size);
+            d = pow_mod_long(d, deg, mod);
+            while (d.isize < size)
+                    d.ipush(0);
+            copyints(res, d, 0, size);
+    }
+
+    return res;
+}
+
+(const int key[], const int data[]) -> (volatile int res[]) {
+    int size = key.isize >> 1;
+
+    int mod[];
+    int deg[];
+    copyints(deg, key, 0, size);
+    copyints(mod, key, size, size << 1);
+
+    int n = data.isize / size;
+    if (n == 1)
+        return worker(deg, mod, data, 0, 1, size);
+
+    if (!n) {
+        int res[];
+        return res;
+    }
+
+    int border[];
+    border.ipush(0);
+    int total;
+    int i;
+    for (i = 0; i < 8; i += 1) {
+        total += (n >> 3) + ((n & 7) > i);
+        border.ipush(total);
+    }
+
+    int r0[];
+    int r1[];
+    int r2[];
+    int r3[];
+    int r4[];
+    int r5[];
+    int r6[];
+    int r7[];
+
+    [
+	r0 = worker(deg, mod, data, border[0], border[1], size);
+	r1 = worker(deg, mod, data, border[1], border[2], size);
+	r2 = worker(deg, mod, data, border[2], border[3], size);
+	r3 = worker(deg, mod, data, border[3], border[4], size);
+	r4 = worker(deg, mod, data, border[4], border[5], size);
+	r5 = worker(deg, mod, data, border[5], border[6], size);
+	r6 = worker(deg, mod, data, border[6], border[7], size);
+	r7 = worker(deg, mod, data, border[7], border[8], size);
+    ]
+
+    int res[];
+    copyints(res, r0, 0, r0.isize);
+    copyints(res, r1, 0, r1.isize);
+    copyints(res, r2, 0, r2.isize);
+    copyints(res, r3, 0, r3.isize);
+    copyints(res, r4, 0, r4.isize);
+    copyints(res, r5, 0, r5.isize);
+    copyints(res, r6, 0, r6.isize);
+    copyints(res, r7, 0, r7.isize);
+
+    return res;
+}

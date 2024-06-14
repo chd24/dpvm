@@ -1,0 +1,170 @@
+/* www server: send headers; T15.548-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(volatile stateful www_data arg, const char content[], int status, int length, 
+		int mtime) -> () {
+	/* illegal file name ended by .html */
+	char path[];
+	path.cpush(0);
+	strcat(path, ".html");
+	
+	int length0 = length;
+	int cgi;
+	if (arg.cgi & (status == 200 | status == 206) & mtime <= (1 << 32) & mtime >= -(1 << 32)) {
+		cgi = 1;
+		length0 = mtime;
+		mtime = 0;
+	}
+
+	int pos = 0;
+	if (arg.partial) {
+		length0 = arg.length;
+		pos = arg.pos;
+	}
+
+    int status0 = status;
+    if (status > 501 && status < 600)
+        status = 500;
+
+	char strstatus[];
+	printint(strstatus, status, 1);
+	strstatus.cpush(' ');
+	if (status == 200) { 
+		strcat(strstatus, "OK");
+		if (!content.csize) path = arg.path;
+	} else if (status == 206) {
+		strcat(strstatus, "Partial Content");
+		if (!content.csize) path = arg.path;
+	} else if (status == 304) 
+		strcat(strstatus, "Not Modified");
+	else if (status == 404)
+		strcat(strstatus, "Not Found");
+	else if (status == 500)
+		strcat(strstatus, "Internal Server Error");
+	else if (status == 501)
+		strcat(strstatus, "Not Implemented");
+
+	if (status != 200 & status != 206 & status != 304) {
+		char content0[];
+		content = content0;
+		strcat(content, "<!DOCTYPE html>\r\n<html><head><title>");
+		strcat(content, strstatus);
+		strcat(content, "</title></head>\r\n<body><h1>");
+		strcat(content, strstatus);
+		strcat(content, "</h1><hr><p><font size=1>");
+		strcat(content, arg.version);
+		strcat(content, ", <a href='/programs/dpvm'>source</a>.\r\n");
+		strcat(content, "</font></p></body></html>");
+		length = content.csize;
+		length0 = length;
+	}
+
+	if (arg.reqtype == REQ_HEAD) {
+		if (cgi) {
+			char content0[];
+			content = content0;
+			substrcat(content0, content, 0, content.csize - length);
+		} else
+			content = "";
+	}
+
+	char request[] = arg.request;
+	char reply[];
+	strcat(reply, "HTTP/");
+	getheader(reply, request, " HTTP/");
+	if (reply.csize == 6) { reply.cpop(1); strcat(reply, "1.1"); }
+	reply.push(' ');
+	strcat(reply, strstatus);
+
+	if (!cgi) {
+		strcat(reply, "\r\nContent-Type: ");
+		strcat(reply, mimetype(arg.mime, path));
+	}
+	if (length0 >= 0 & !cgi) {
+		strcat(reply, "\r\nContent-Length: ");
+		printint(reply, length, 1);
+		if ((status == 200 | status == 206) & !content.csize) {
+			strcat(reply, "\r\nAccept-Ranges: bytes");
+		}
+		if (status == 206) {
+			strcat(reply, "\r\nContent-Range: bytes ");
+			printint(reply, pos, 1);
+			strcat(reply, "-");
+			printint(reply, length0 - 1, 1);
+			strcat(reply, "/");
+			printint(reply, length0, 1);
+		}
+	}
+	if (length0 < 0)
+		strcat(reply, "\r\nTransfer-Encoding: chunked");
+	if (mtime)
+		strftime(reply, "\r\nLast-Modified: %a, %d %b %Y %H:%M:%S GMT", mtime, 0);
+
+	int t = arg.time;
+	strftime(reply, "\r\nDate: %a, %d %b %Y %H:%M:%S GMT\r\n", t, 0);
+	strcat(reply, "Server: ");
+	strcat(reply, arg.version);
+	strcat(reply, "\r\n");
+
+	char cookie[];
+	getcookie(cookie, request);
+	if (cookie.csize < 30) {
+		strcat(reply, "Set-Cookie: __udch=");
+		printip(reply, arg.ipaddr0, arg.ipaddr1);
+		strftime(reply, "-%Y%m%d-%H%M%S-%i; domain=", arg.time, 0);
+
+		char host[];
+		getheader(host, request, "\nHost: ");
+		if (host.csize < 2)
+			host = arg.domain;
+		int size = host.csize;
+		int i = 0;
+		do {
+			t = 0;
+			if (i != size) {
+				if (host[i] != ':') {
+					reply.push(host[i]);
+					i = i + 1;
+					t = 1;
+				}
+			}
+		} while (t);
+
+		t = arg.time + 315569520000000000; /* +10 years */
+		strftime(reply, "; path=/; expires=%a, %d-%b-%Y %H:%M:%S GMT\r\n", t, 0);
+	}
+
+	char conn[];
+	char httpver[];
+	getheader(conn, request, "\nConnection: ");
+	getheader(httpver, request, " HTTP/");
+	if (!(arg.flags & KEEP_ALIVE) | arg.reqtype == REQ_POST | conn == "close"
+			| httpver != "1.1") {
+		strcat(reply, "Connection: close\r\n");
+		arg.close = 1;
+	} else
+		strcat(reply, "Connection: keep-alive\r\n");
+
+	if (!cgi)
+		strcat(reply, "\r\n");
+
+	arg.path = path;
+    arg.status = status0;
+	arg.length = length0;
+
+	int size = reply.csize;
+	if (cgi) {
+		size = size + content.csize;
+		if (arg.reqtype != REQ_HEAD)
+			size = size - length;
+	}
+	arg.pos = pos - size;
+	arg.cgi = cgi;
+
+	strcat(reply, content);
+
+	output(output_handler, arg, reply);
+	return;
+}

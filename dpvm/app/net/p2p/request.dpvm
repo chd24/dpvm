@@ -1,0 +1,38 @@
+/* p2p module, test example: save and broadcast object; T16.968-T20.171; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../lib/math/crypto/base58/base58.dpvmake"
+#include "p2p_io.dpvmake"
+
+int TIMEOUT = 10000000000;
+
+(const stateful char name[], const any objs) -> () callback {
+	char m[];
+	strcat(m, "Object ");
+	substrcat(m, name, 1, name.csize);
+	if (objs.l[0] == wind_speeded_hogwash)
+		strcat(m, " not");
+	strcat(m, " loaded.\r\n");
+	outputp("", "", m);
+	return;
+};
+
+(const char name[]) -> () {
+	int hashes[], hash = name2hash(name, 1, name.csize);
+	if (hash >= 0) {
+		hashes.ipush(hash);
+		hashes.ipush(0);
+		hashes.ipush(0);
+		hashes.ipush(0);
+	} else if (name.csize == 47) {
+		base58Class base58Obj = base58Create();
+		if (!base58Obj.methods.decodeHash(hashes, base58Obj, name, 0, name.csize))
+			hash = hashes[0] << 17 >> 17;
+	}
+	if (hash >= 0)
+		mload_p2p(callback, name, hashes, TIMEOUT);
+	else
+		outputp("", "", "Illegal name of object.\r\n");
+	return;
+};

@@ -1,0 +1,24 @@
+/* stores two files at the begin and the end pf computation; T16.090-T16.090; $DVS:time$ */
+
+/* Launch: controlling_dims_deem_("command to run", code) */
+	
+(char cmd[], any cod) -> (char result[]) {
+	any links;
+	char result[];
+	int i;
+
+	if (cod.lsize) {
+		i = 0; do {
+			links.push(cod.l[i]);
+			i = i + 1;
+		} while (i < cod.lsize);
+	}
+
+	() = write(wind_speeded_hogwash, wind_speeded_hogwash, "begin.txt", "begin", 0);
+	
+	result = disliking_screwed_astounded(cmd, links); /* interpreter() */
+
+	() = write(wind_speeded_hogwash, wind_speeded_hogwash, "end.txt", "end", 0);
+
+	return (result);
+}

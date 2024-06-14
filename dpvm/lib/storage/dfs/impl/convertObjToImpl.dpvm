@@ -1,0 +1,12 @@
+/* dfs class, convertObjToImpl internal method, T18.798-T18.804; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "dfs.dpvmake"
+
+(volatile stateful dfsImpl impl, const stateful any dfsObj, const char func[]) -> (const char error[]) convertObjToImpl = {
+    if (dfsObj.type != dfsImpl && (dfsObj.type != dfsClass || dfsObj.l[0].type != dfsData)) {
+        return mkError("dfsObj has illegal type", func);
+    }
+    objcopyto(impl, dfsObj);
+    return "";
+};

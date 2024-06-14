@@ -1,0 +1,18 @@
+/* debugger class, debug demo, T19.646-T19.646; $DVS:time$ */
+
+#include "../debugger.dpvmake"
+
+(const stateful any registry, const char expression[], const any links, int flags, int mode) -> (const char error[]) debug = {
+	debuggerClass debuggerObj = debuggerCreate();
+
+	char error[] = debuggerObj.methods.setFlags(debuggerObj, flags);
+	if (error.csize) return error;
+
+	error = debuggerObj.methods.setRegistry(debuggerObj, registry);
+	if (error.csize) return error;
+
+	error = debuggerObj.methods.debug(debuggerObj, expression, links, mode);
+	if (error.csize) return error;
+
+	return "";
+};

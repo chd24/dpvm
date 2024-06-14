@@ -1,0 +1,20 @@
+/* add int32[] subarray to sha256 context; T16.492-T17.687; $DVS:time$ */
+
+#include "sha256.dpvmake"
+
+(volatile stateful int ctx[], const stateful int data[], int begin, int end) -> () {
+	int n = ctx.i[72];
+	
+	while (begin < end) {
+		ctx[((n >> 2) & 0xf) + 8] = data[begin];
+		n = n + 4;
+		begin = begin + 1;
+
+		if (!(n & 0x3f))
+			sha256_processChunk(ctx, ctx, 8);
+	}
+
+	ctx[72] = n;
+
+	return;
+}

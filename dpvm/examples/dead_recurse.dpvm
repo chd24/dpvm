@@ -1,0 +1,6 @@
+/* infinite recursion; leads to stack overflow; T16.448-T16.448; $DVS:time$ */
+
+(int x) -> () {
+	code(x + 1);
+	return;
+}

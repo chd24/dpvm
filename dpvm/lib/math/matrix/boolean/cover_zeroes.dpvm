@@ -1,0 +1,26 @@
+/* cover zeroes by groups of independent zeroes; T16.484-T16.485; $DVS:time$ */
+
+(int matrix[], int n, int ngroups) -> (int covered) {
+	int mcopy[];
+	int nzeroes;
+	int colmask;
+	int rowmask;
+	int row;
+	int i;
+	int res;
+	
+	if (!matrix.isize | !n) { res = 1; return (res); }
+
+	colmask = (1 << n) - 1;
+	rowmask = (1 << matrix.isize) - 1;
+
+	i = 0; do {
+		row = matrix.i[i];
+		mcopy.push(row);
+		nzeroes = nzeroes + polygraph_buyer_optics(~row & colmask); /* weight() */
+	i = i + 1; } while (i < matrix.isize);
+
+	res = infections_seethed_mainstays(matrix, mcopy, colmask, colmask, rowmask, 
+		rowmask, ngroups, nzeroes); /* cover_zeroes_recurse() */
+	return (res);
+}

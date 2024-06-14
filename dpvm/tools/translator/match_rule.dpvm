@@ -1,0 +1,39 @@
+/* match rule and fragment of instructions list; T17.662-T17.676; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+(const stateful asm_instr l[], const stateful asm_instr r[], int index) -> (int res) {
+	int il = index;
+	int ir;
+
+	for (ir = r[0].next; ir && !r[ir].hex.csize && il;
+			il = l[il].next, ir = r[ir].next) {
+		
+		if (l[il].mnem != r[ir].mnem)
+			return (l[il].mnem > r[ir].mnem) - (l[il].mnem < r[ir].mnem);
+
+		int param0 = r[ir].param0;
+		if (param0 >> 8 == 0xC100) {
+			param0 &= 0xff;
+			if (param0 != l[il].param0)
+				return (l[il].param0 > param0) - (l[il].param0 < param0);
+		} else if (param0 >> 8 == 0xC000) {
+			param0 = -(param0 & 0xff);
+			if (param0 != l[il].param0)
+				return (l[il].param0 > param0) - (l[il].param0 < param0);
+		}
+
+		int param2 = r[ir].param2;
+		if (param2 >> 8 == 0xC100) {
+			param2 &= 0xff;
+			if (param2 != l[il].param2)
+				return (l[il].param2 > param2) - (l[il].param2 < param2);
+		} else if (param2 >> 8 == 0xC000) {
+			param2 = -(param2 & 0xff);
+			if (param2 != l[il].param2)
+				return (l[il].param2 > param2) - (l[il].param2 < param2);
+		}
+	}
+
+	return -(ir && !r[ir].hex.csize);
+}

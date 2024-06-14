@@ -1,0 +1,58 @@
+/* dpvm byte code translator, amd64 jumps; T16.080-T20.100; $DVS:time$ */
+
+/* 
+ 	rsi = ints stack end
+*/
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../checker/checker.dpvmake"
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> ()
+	ld = amd64_load;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> () {
+	int label = data.jumps_map[i];
+
+	if (c == DPVM_CODE_LB || c == DPVM_CODE_LF) {
+		as(list, "label", "", 0, 0, 0, i, 0);
+
+		/* for 'lb' bytecode, every 2^16 cycled it is checked that task is
+		   not finished, and finish thread is yes */
+		if (c == DPVM_CODE_LB) {
+			int j = data.label;
+			data.label = j + 2;
+
+			as(list, "inc w[r8+b]", "66 41 ff 40 111", 0, 0x70, 0, 0, 0);
+			as(list, "jcc label", "0F 101 134", 0x84, 0, 0, j, 0);
+			as(endlist, "label", "", 0, 0, 0, j, 0);
+			as(endlist, "mov rax,[r8]", "49 8b 00", 0, 0, 0, 0, 0);
+			as(endlist, "mov rax,[rax+b]", "48 8b 40 111", 0, 0x18, 0, 0, 0);
+			as(endlist, "mov rax,[rax+b]", "48 8b 40 111", 0, 0x08, 0, 0, 0);
+			as(endlist, "test b[rax],b", "f6 00 121", 0, 0, 1, 0, 0);
+			as(endlist, "jcc label", "0F 101 134", 0x84, 0, 0, j + 1, 0);
+			amd64_stack_fail(data, endlist, i);
+			as(endlist, "mov eax,d", "B8 124", 0, 0, 1, 0, 0);
+			as(endlist, "ret", "C3", 0, 0, 0, 0, 0);
+			as(list, "label", "", 0, 0, 0, j + 1, 0);	
+		}
+
+	} else if (c == DPVM_CODE_JB || c == DPVM_CODE_JF) {
+		as(list, "jmp label", "E9 134", 0, 0, 0, label, 0);
+
+	} else if (c != DPVM_CODE_JNZF || !isIfElse(data.func, data.jumps_map, i - 1)) {
+		ld(data, list, "mov", "48 8B", 1, 0, 0, i, 0);
+		as(list, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
+		as(list, "jcc label", "0F 101 134", 0x8584>>((c&1)<<3)&0xff, 0, 0, label, 0);
+	}
+
+	return;
+}

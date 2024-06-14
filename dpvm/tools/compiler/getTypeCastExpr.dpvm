@@ -1,0 +1,69 @@
+/* dpvm: declaration; T20.114-T20.116; $DVS:time$ */
+
+/* (type) initizlizer */
+
+#include "compiler.dpvmake"
+#include "lexems.dpvmh"
+
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr, const Getexterm getexterm)
+		-> (const type res, int status) getTypeCastExpr = {
+
+	type res;
+	int pos0 = data.pos, pos, end, status;
+	(pos, end, status) = getlexem(data.src, lexems, pos0, data.end);
+	if (status != LEX_CIRCLE_L)
+		return (res, -1);
+	data.pos = pos;
+
+	/* save old data (partially) */
+
+	compdata olddata;
+	int iold[];
+	int inew[];
+	int size;
+	int i;
+
+	for (iold = olddata.cstruct, inew = data.cstruct, size = inew.isize, i = 0; i < size; i++) iold.ipush(inew[i]);
+
+	(data.links , olddata.links ) = (olddata.links , data.links );
+	(data.ints  , olddata.ints  ) = (olddata.ints  , data.ints  );
+	(data.floats, olddata.floats) = (olddata.floats, data.floats);
+	(data.chars , olddata.chars ) = (olddata.chars , data.chars );
+	(data.ltypes, olddata.ltypes) = (olddata.ltypes, data.ltypes);
+
+	int structsLsize = data.structs.lsize;
+
+
+	/* read base type */
+
+	(res, status) = getdecl(data, CONTEXT_EXPRESSION);
+
+	if (status >= 0) {
+		int s;
+		(pos, end, s) = getlexem(data.src, lexems, data.pos, data.end);
+		if (s != LEX_CIRCLE_R)
+			status = -1;
+		else
+			data.pos = pos;
+	}
+
+	if (status >= 0) {
+		int s = getDeclInitializer(data, olddata, instr, getexpr, getexterm, res, structsLsize, data.pos,
+				status, CONTEXT_EXPRESSION);
+		if (s < 0)
+			status = s;
+		else
+			status &= 3;
+	}
+
+	if (status == -1) {
+		data.links  = olddata.links ;
+		data.ints   = olddata.ints  ;
+		data.floats = olddata.floats;
+		data.chars  = olddata.chars ;
+		data.ltypes = olddata.ltypes;
+		data.pos    = pos0;
+	}
+
+	return (res, status);
+}

@@ -1,0 +1,79 @@
+/* te commands, makefile; T18.320-T18.336; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+/*@ "0.dpvm": view field 0 command */
+teCommand cmd0 = rescuing_chambermaids_battleaxe;
+/* @*/
+
+/*@ "1.dpvm": view field 1 command */
+teCommand cmd1 = infers_inactivation_disregard;
+/* @*/
+
+/*@ "E.dpvm": view field E command */
+teCommand cmdE = anthropology_beguilement_fungoid;
+/* @*/
+
+/*@ "L.dpvm": view field L command */
+teCommand cmdL = estimated_mouthorgan_chasers;
+/* @*/
+
+/*@ "back.dpvm": view previously viwed entry */
+teCommand cmdBack = untidy_oaths_await;
+/* @*/
+
+/*@ "dump.dpvm": print context dump command */
+teCommand cmdDump = fluoresce_minty_rabies;
+/* @*/
+
+/*@ "edit.dpvm": edit current database entry command */
+teCommand cmdEdit = queue_plurals_baked;
+/* @*/
+
+/*@ "end.dpvm": view last entry of database command */
+teCommand cmdEnd = physician_ruggedly_exerciser;
+/* @*/
+
+/*@ "exit.dpvm": exit command */
+teCommand cmdExit = subsonic_captions_eritrea;
+/* @*/
+
+/*@ "help.dpvm": show help command */
+teCommand cmdHelp = shoed_invalids_foggy;
+/* @*/
+
+/*@ "home.dpvm": view first entry of database command */
+teCommand cmdHome = chancellor_squad_haberdashery;
+/* @*/
+
+/*@ "info.dpvm": show entry metainformation command */
+teCommand cmdInfo = brazenness_backhanded_devaluing;
+/* @*/
+
+/*@ "new.dpvm": create new entry command */
+teCommand cmdNew = shy_retitle_deceived;
+/* @*/
+
+/*@ "next.dpvm": view next database entry command */
+teCommand cmdNext = appellate_caring_cervix;
+/* @*/
+
+/*@ "prev.dpvm": view previous database entry command */
+teCommand cmdPrev = pledged_annotated_invert;
+/* @*/
+
+/*@ "save.dpvm": save database to original file command */
+teCommand cmdSave = globe_vacuums_relearning;
+/* @*/
+
+/*@ "show.dpvm": unrestricted show current database entry command */
+teCommand cmdShow = airbus_basin_planetoids;
+/* @*/
+
+/*@ "view.dpvm": restricted view current database entry command */
+teCommand cmdView = misogynist_movingly_pillion;
+/* @*/
+
+/*@ "commands.dpvm": array of all commands */
+teCommand teCommands[] = dismay_turns_sanctuary;
+/* @*/                                                                        

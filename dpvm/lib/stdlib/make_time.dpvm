@@ -1,0 +1,34 @@
+/* components to time; T15.938-T15.938; $DVS:time$ */
+	
+(int year, int month, int day, int hour, int min, int sec, int nanosec) -> (int time) {
+	int res;
+
+	year = year - 1970;
+	month = month - 1;
+	day = day - 1;
+
+	res = year * 365;
+	year = year + 2;
+	res = res + year / 4;
+	if ((year & 3) == 0 & month < 2) { res = res - 1; }
+	
+	if (month >  0) { res = res + 31; }
+	if (month >  1) { res = res + 28; }
+	if (month >  2) { res = res + 31; }
+	if (month >  3) { res = res + 30; }
+	if (month >  4) { res = res + 31; }
+	if (month >  5) { res = res + 30; }
+	if (month >  6) { res = res + 31; }
+	if (month >  7) { res = res + 31; }
+	if (month >  8) { res = res + 30; }
+	if (month >  9) { res = res + 31; }
+	if (month > 10) { res = res + 30; }
+
+	res = res + day;
+	res = res * 24 + hour;
+	res = res * 60 + min;
+	res = res * 60 + sec;
+	res = res * 1000000000 + nanosec;
+
+	return (res);
+}

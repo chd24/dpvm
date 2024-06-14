@@ -1,0 +1,38 @@
+/* make copy of context; T17.558-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const stateful dnet_context ctx) -> (volatile dnet_context ctx2) {
+	dnet_context ctx2;
+
+	ctx2.data = ctx.data;
+	ctx2.seed = ctx.seed;
+	ctx2.last_time = ctx.last_time;
+	ctx2.conns[0].thread_id = DNET_THREAD_ID_TMP;
+	
+	int i;
+	for (i = 0; i < ctx.conns.lsize; i += 1) {
+		if (ctx.conns[i].thread_id >= 0) {
+			dnet_connection conn;
+			objcopyto(conn, ctx.conns[i]);
+			ctx2.conns.lpush(conn);
+		}
+	}
+
+	for (i = 0; i < ctx.hosts.lsize; i += 1) {
+		dnet_host host;
+		objcopyto(host, ctx.hosts[i]);
+		ctx2.hosts.lpush(host);
+	}
+
+	objcopyto(ctx2.streams[0], ctx.streams[0]);
+
+	for (i = 1; i < ctx.streams.lsize; i += 1) {
+		dnet_stream s;
+		objcopyto(s, ctx.streams[i]);
+		ctx2.streams.lpush(s);
+	}
+
+	return ctx2;
+}

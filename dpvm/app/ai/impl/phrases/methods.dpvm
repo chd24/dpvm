@@ -1,0 +1,666 @@
+/* aiPhrases class, methods implementatio, T18.421-T18.441; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/long/long.dpvmake"
+#include "../../alphabet.dpvmh"
+#include "phrases.dpvmh"
+#include "version.dpvmh"
+
+int INT_MIN			= 0x8000000000000000;
+int INT_MAX			= 0x7fffffffffffffff;
+
+int AIP_HEADER_SIZE		= 80;
+char phrasesFormatString[]	= "aiPhrasesDataFmt";
+
+int AIP_CHECK_WEIGHTS		= 8;
+
+(const char mess[], const char func[]) -> (const char err[]) mkError = {
+	char err[];
+	strcat(err, version);
+	strcat(err, ": Error in function ");
+	strcat(err, func);
+	strcat(err, "(): ");
+	strcat(err, mess);
+	return err;
+};
+
+(volatile stateful aiPhrasesImpl impl, const stateful any aiPhrasesObj, const char func[]) -> (const char error[]) convertObjToImpl = {
+	if (aiPhrasesObj.type != aiPhrasesImpl && (aiPhrasesObj.type != aiPhrases
+			|| aiPhrasesObj.l[0].type != aiPhrasesData)) {
+		return mkError("aiPhrasesObj has illegal type", func);
+	}
+	objcopyto(impl, aiPhrasesObj);
+	if (impl.data.shards.lsize != AIP_N_SHARDS)
+		return mkError("aiPhrasesObj has illegal size", func);
+	return "";
+};
+
+(int size) -> (volatile int array[]) createIntArray = {
+	int array[];
+	asm { info 8 iload 2 istore new ret }
+};
+
+(int size) -> (volatile float array[]) createFloatArray = {
+	float array[];
+	asm { info 8 iload 1 istore new ret }
+};
+
+(int size) -> (volatile char array[]) createCharArray = {
+	char array[];
+	asm { info 8 iload 0 istore new ret }
+};
+
+(volatile stateful char phrase[], int id) -> (int err) addWordToPhrase = {
+	if (!(id >> 23)) {
+		if (AIP_PHRASE_SIZE - phrase.csize < 3) return -1;
+	} else if (!(id >> 30)){
+		if (AIP_PHRASE_SIZE - phrase.csize < 4) return -1;
+		phrase.cpush(id >> 24 | 0x80);
+	} else if (!(id >> 37)) {
+		if (AIP_PHRASE_SIZE - phrase.csize < 5) return -1;
+		phrase.cpush(id >> 32 | 0xc0);
+		phrase.cpush(id >> 24);
+	} else if (!(id >> 44)) {
+		if (AIP_PHRASE_SIZE - phrase.csize < 6) return -1;
+		phrase.cpush(id >> 40 | 0xe0);
+		phrase.cpush(id >> 32);
+		phrase.cpush(id >> 24);
+	} else {
+		if (!(id >> 51)) {
+			if (AIP_PHRASE_SIZE - phrase.csize < 7) return -1;
+			phrase.cpush(id >> 48 | 0xf0);
+		} else if (!(id >> 58)) {
+			if (AIP_PHRASE_SIZE - phrase.csize < 8) return -1;
+			phrase.cpush(id >> 56 | 0xf8);
+			phrase.cpush(id >> 48);
+		} else {
+			if (AIP_PHRASE_SIZE - phrase.csize < 9) return -1;
+			phrase.cpush(0xfc);
+			phrase.cpush(id >> 56);
+			phrase.cpush(id >> 48);
+		}
+
+		phrase.cpush(id >> 40);
+		phrase.cpush(id >> 32);
+		phrase.cpush(id >> 24);
+	}
+
+	phrase.cpush(id >> 16);
+	phrase.cpush(id >> 8);
+	phrase.cpush(id);
+	return 0;
+}
+
+(const char phrases[], int n) -> (const int wordIds[]) decodePhrase = {
+	int ids[], begin = n * AIP_PHRASE_SIZE, end = begin + AIP_PHRASE_SIZE;
+	while (begin + 3 <= end && phrases[begin] <= 0xfc) {
+		int bit = 0x80, c = phrases[begin], size = 2;
+		while (c & bit) bit >>= 1, size += 1;
+		c &= bit - 1;
+		begin += 1;
+		if (begin + size > end) return ids;
+		while (size) c <<= 8, c |= phrases[begin], begin += 1, size -= 1;
+		ids.ipush(c);
+	}
+	return ids;
+};
+
+(const stateful aiPhrasesData d, const stateful aiVocabularyWordInfo wordsInfo[], int begin, int end, int count) -> (float weight) phraseWeight = {
+	if (!count)
+		return 0.0;
+
+	float weight = flog(count) + (end - begin - 1) * d.logNWords;
+	int i;
+	for (i = begin; i < end; i += 1)
+		weight -= flog(wordsInfo[i].count);
+
+	return weight * count / d.nWords;
+};
+
+(const stateful aiPhrasesImpl impl) -> (int x, int y, int z, int t) getDataHash = {
+	return getfullhash(impl.data.shards);
+};
+
+(const stateful aiPhrasesImpl impl, const stateful aiVocabulary aiV, int check_flags) -> (const char err[]) checkData = {
+	aiPhrasesData d = impl.data;
+
+	if (d.shards.lsize != AIP_N_SHARDS) return mkError("Illegal number of shards", "checkData");
+	if (d.nWords < 0) return mkError("Nonpositive number of words", "checkData");
+	if (d.nWords && flog(d.nWords) != d.logNWords) mkError("Log of total number of words mismatches", "checkData");
+
+	int nShard, count;
+	for (nShard = 0; nShard < AIP_N_SHARDS; nShard += 1) {
+		aiPhrasesShard s = d.shards[nShard];
+		int shardSize = s.nPhrases;
+		if (shardSize >> 32) mkError("Too big shard size", "checkData");
+		if (shardSize != s.weights.fsize) mkError("Size of weights array mismatches", "checkData");
+		if (shardSize * AIP_N_LINKS != s.links.isize) mkError("Size of links array mismatches", "checkData");
+		if (shardSize * AIP_PHRASE_SIZE != s.phrases.csize) mkError("Size of phrases array mismatches", "checkData");
+		if (count + shardSize < count) mkError("Negative summa in statistics", "checkData");
+		count += shardSize;
+
+		int n, nlink, root = s.rootPhrase;
+		if (shardSize && (s.rootPhrase < 0 || s.rootPhrase >= shardSize))
+			return mkError("Root index is illegal", "checkData");
+
+		for (n = 0; n < shardSize; n += 1, nlink += AIP_N_LINKS) {
+			int wordIDs[] = decodePhrase(s.phrases, n), hash = wordIDs, link0 = s.links[nlink], link1 = s.links[nlink + 1];
+
+			if ((hash & (AIP_N_SHARDS - 1)) != nShard)
+				return mkError("Hash of phrase mismatches shard", "checkData");
+
+			if (hash != s.links[nlink + 2])
+				return mkError("Hash of phrase mismatches stored value", "checkData");
+
+			int parent = link0 & 0xffffffff, left = link1 & 0xffffffff, right = link1 >> 32;
+			if (parent >= shardSize || left >= shardSize || right >= shardSize)
+				return mkError("Illegal link", "checkData");
+
+			if (left != n) {
+				if ((s.links[left * AIP_N_LINKS] & 0xffffffff) != n)
+					return mkError("Link to left node is not mutual", "checkData");
+				int lhash = decodePhrase(s.phrases, left);
+				if (lhash == hash)
+					return mkError("Hash collision", "checkData");
+				else if (lhash > hash)
+					return mkError("Hash of left child greater", "checkData");
+			}
+
+			if (right != n) {
+				if ((s.links[right * AIP_N_LINKS] & 0xffffffff) != n)
+					return mkError("Link to right node is not mutual", "checkData");
+				int rhash = decodePhrase(s.phrases, right);
+				if (rhash == hash)
+					return mkError("Hash collision", "checkData");
+				else if (rhash < hash)
+					return mkError("Hash of right child lesser", "checkData");
+			}
+
+			if (n == root && parent != n)
+				return mkError("Root has parent node", "checkData");
+			else if (n != root && (s.links[parent * AIP_N_LINKS + 1] & 0xffffffff) != n && (s.links[parent * AIP_N_LINKS + 1] >> 32) != n)
+				return mkError("Link to parent node is not mutual", "checkData");
+
+			if (n && s.weights[(n - 1) >> 1] < s.weights[n])
+				return mkError("Weight of parent heap node lesser", "checkData");
+
+			if (check_flags & AIP_CHECK_WEIGHTS) {
+				aiVocabularyWordInfo info[];
+				char err[] = aiV.methods.getWordsInfo(info, aiV, wordIDs, 0, wordIDs.isize);
+				if (err.csize) return err;
+				if (info.lsize != wordIDs.isize)
+					return mkError("Number of decoded word IDs mismatches", "checkData");
+				if (phraseWeight(d, info, 0, info.lsize, link0 >> 32) != s.weights[n])
+					return mkError("Weight of phrase mismatches", "checkData");
+			}
+		}
+	}
+
+	if (count != d.nPhrases) mkError("Total number of phrases mismatches", "checkData");
+
+	return "";
+};
+
+(const stateful char in[], int pos) -> (int n) loadInt = {
+	return in[pos] | in[pos + 1] << 8 | in[pos + 2] << 16 | in[pos + 3] << 24 |
+		in[pos + 4] << 32 | in[pos + 5] << 40 | in[pos + 6] << 48 | in[pos + 7] << 56;
+};
+
+(const stateful char in[], int pos) -> (float f) loadFloat = {
+	int ieee = loadInt(in, pos);
+
+	int mantissa = ieee & 0xfffffffffffff | 0x10000000000000;
+	if (ieee & INT_MIN)
+		mantissa = -mantissa;
+
+	int exponent = ieee >> 52 & 0x7ff;
+	if (!exponent)
+		exponent = INT_MIN;
+	else if (exponent == 0x7ff)
+		exponent = INT_MAX;
+	else
+		exponent -= 1023 + 52;
+
+	return fmerge(mantissa, exponent);
+};
+
+(volatile stateful any aiPhrasesObj, const char in[]) -> (const char error[]) loadData = {
+	aiPhrasesImpl impl;
+	char err[] = convertObjToImpl(impl, aiPhrasesObj, "loadData");
+	if (err.csize) return err;
+
+	if (in.csize < AIP_HEADER_SIZE)
+		return mkError("Input stream shorter than header size", "loadData");
+
+	char sign[];
+	substrcat(sign, in, 0, 16);
+	if (sign != phrasesFormatString)
+		return mkError("Input stream signature not matched", "loadData");
+
+	if (loadInt(in, 16) != phrasesFormatVersion)
+		return mkError("Input stream format version not matched", "loadData");
+
+	if (loadInt(in, 24) != AIP_HEADER_SIZE)
+		return mkError("Input stream header size not matched", "loadData");
+
+	int nWords = loadInt(in, 64), nPhrases = loadInt(in, 72);
+
+	if (nWords < 0 || nPhrases < 0 || nPhrases > in.csize / (8 * (1 + AIP_N_LINKS) + AIP_PHRASE_SIZE))
+		return mkError("Illegal parameters read from header", "loadData");
+
+	if (in.csize != AIP_HEADER_SIZE + AIP_N_SHARDS * 16 + (8 * (1 + AIP_N_LINKS) + AIP_PHRASE_SIZE) * nPhrases)
+		return mkError("Input stream size not matched", "loadData");
+
+	aiPhrasesData d = impl.data;
+	d.nWords = nWords;
+	d.logNWords = flog(nWords);
+	d.nPhrases = nPhrases;
+
+	int nShard, count, pos = AIP_HEADER_SIZE;
+	for (nShard = 0; nShard < AIP_N_SHARDS; nShard += 1, pos += 16) {
+		aiPhrasesShard s = d.shards[nShard];
+		s.nPhrases = loadInt(in, pos);
+		s.rootPhrase = loadInt(in, pos + 8);
+		if (s.nPhrases < 0 || count + s.nPhrases < count || count + s.nPhrases > nPhrases || s.nPhrases >> 32)
+			return mkError("Illegal number of phrases in shard", "loadData");
+		count += s.nPhrases;
+	}
+
+	if (count != nPhrases)
+		return mkError("Total number of phrases mismatches sum by shards", "loadData");
+
+	for (nShard = 0; nShard < AIP_N_SHARDS; nShard += 1) {
+		aiPhrasesShard s = d.shards[nShard];
+		int i, n = s.nPhrases, j, nchars, nlinks;
+		char phrases[] = createCharArray(n * AIP_PHRASE_SIZE);
+		int links[] = createIntArray(n * AIP_N_LINKS);
+		int weights[] = createFloatArray(n);
+
+		for (i = 0; i < n; i += 1, pos += 8) {
+			for (j = 0; j < AIP_PHRASE_SIZE; j += 1, nchars += 1, pos += 1)
+				phrases[nchars] = in[pos];
+			for (j = 0; j < AIP_N_LINKS; j += 1, nlinks += 1, pos += 8)
+				links[nlinks] = loadInt(in, pos);
+			weights[i] = loadFloat(in, pos);
+		}
+
+		s.phrases = phrases;
+		s.links = links;
+		s.weights = weights;
+	}
+
+	int x,y,z,t;
+	(x,y,z,t) = getDataHash(impl);
+
+	if (x != loadInt(in, 32) || y != loadInt(in, 40) || z != loadInt(in, 48) || t != loadInt(in, 56))
+		return mkError("Input stream hash not matched", "loadData");
+
+	aiVocabulary aiV;
+	return checkData(impl, aiV, 0);
+};
+
+(volatile stateful char out[], int n) -> () saveInt = {
+	out.cpush(n); out.cpush(n >> 8); out.cpush(n >> 16); out.cpush(n >> 24);
+	out.cpush(n >> 32); out.cpush(n >> 40); out.cpush(n >> 48); out.cpush(n >> 56);
+	return;
+};
+
+(volatile stateful char out[], float f) -> () saveFloat = {
+	int mantissa, exponent, ieee;
+	(mantissa, exponent) = fsplit(f);
+
+	if (mantissa < 0) {
+		mantissa = -mantissa;
+		ieee = INT_MIN;
+	}
+
+	if (exponent > INT_MIN && exponent < INT_MAX)
+		exponent += 1023 + 52;
+
+	ieee |= mantissa & 0xfffffffffffff | (exponent & 0x7ff) << 52;
+	saveInt(out, ieee);
+	return;
+};
+
+(volatile stateful char out[], const stateful any aiPhrasesObj) -> (const char error[]) saveData = {
+	aiPhrasesImpl impl;
+	char err[] = convertObjToImpl(impl, aiPhrasesObj, "saveData");
+	if (err.csize) return err;
+
+	aiVocabulary aiV;
+	err = checkData(impl, aiV, 0);
+	if (err.csize) return err;
+
+	aiPhrasesData d = impl.data;
+	int x,y,z,t;
+	(x,y,z,t) = getDataHash(impl);
+
+	strcat(out, phrasesFormatString);
+	saveInt(out, phrasesFormatVersion);
+	saveInt(out, AIP_HEADER_SIZE);
+	saveInt(out, x);
+	saveInt(out, y);
+	saveInt(out, z);
+	saveInt(out, t);
+	saveInt(out, d.nWords);
+	saveInt(out, d.nPhrases);
+
+	int nShard;
+	for (nShard = 0; nShard < AIP_N_SHARDS; nShard += 1) {
+		aiPhrasesShard s = d.shards[nShard];
+		saveInt(out, s.nPhrases);
+		saveInt(out, s.rootPhrase);
+	}
+
+	for (nShard = 0; nShard < AIP_N_SHARDS; nShard += 1) {
+		aiPhrasesShard s = d.shards[nShard];
+		int n = s.nPhrases, cpos, lpos, fpos, i;
+		for (fpos = 0; fpos < n; fpos += 1, cpos += AIP_PHRASE_SIZE) {
+			substrcat(out, s.phrases, cpos, cpos + AIP_PHRASE_SIZE);
+			for (i = 0; i < AIP_N_LINKS; i += 1, lpos += 1)
+				saveInt(out, s.links[lpos]);
+			saveFloat(out, s.weights[fpos]);
+		}
+	}
+
+	return "";
+};
+
+(volatile stateful aiPhrasesShard s, int p, int q) -> () swapPhrases = {
+	int i, ppos = p * AIP_N_LINKS, qpos = q * AIP_N_LINKS,
+		pparent = s.links[ppos] & 0xffffffff, pleft = s.links[ppos + 1] & 0xffffffff, pright = s.links[ppos + 1] >> 32,
+		qparent = s.links[qpos] & 0xffffffff, qleft = s.links[qpos + 1] & 0xffffffff, qright = s.links[qpos + 1] >> 32;
+
+	if (pparent == p)
+		s.links[ppos] += q - p, s.rootPhrase = q;
+	else if ((s.links[pparent * AIP_N_LINKS + 1] & 0xffffffff) == p)
+		s.links[pparent * AIP_N_LINKS + 1] += q - p;
+	else
+		s.links[pparent * AIP_N_LINKS + 1] += (q - p) << 32;
+
+	if (qparent == q)
+		s.links[qpos] += p - q, s.rootPhrase = p;
+	else if ((s.links[qparent * AIP_N_LINKS + 1] & 0xffffffff) == q)
+		s.links[qparent * AIP_N_LINKS + 1] += p - q;
+	else
+		s.links[qparent * AIP_N_LINKS + 1] += (p - q) << 32;
+
+	if (pleft == p)
+		s.links[ppos + 1] += q - p;
+	else
+		s.links[pleft * AIP_N_LINKS] += q - p;
+
+	if (pright == p)
+		s.links[ppos + 1] += (q - p) << 32;
+	else
+		s.links[pright * AIP_N_LINKS] += q - p;
+
+	if (qleft == q)
+		s.links[qpos + 1] += p - q;
+	else
+		s.links[qleft * AIP_N_LINKS] += p - q;
+
+	if (qright == q)
+		s.links[qpos] += (p - q) << 32;
+	else
+		s.links[qright * AIP_N_LINKS] += p - q;
+
+	for (i = 0; i < AIP_N_LINKS; i += 1, ppos += 1, qpos += 1)
+		(s.links[ppos], s.links[qpos]) = (s.links[qpos], s.links[ppos]);
+
+	for (i = 0, ppos = p * AIP_PHRASE_SIZE, qpos = q * AIP_PHRASE_SIZE; i < AIP_PHRASE_SIZE; i += 1, ppos += 1, qpos += 1)
+		(s.phrases[ppos], s.phrases[qpos]) = (s.phrases[qpos], s.phrases[ppos]);
+
+	(s.weights[p], s.weights[q]) = (s.weights[q], s.weights[p]);
+
+	return;
+};
+
+(volatile stateful aiPhrasesData d, const stateful aiVocabularyWordInfo wordsInfo[], int begin, int end, int shardNo, int p) -> (int newP) recalculateWeight = {
+	aiPhrasesShard s = d.shards[shardNo];
+	s.weights[p] = phraseWeight(d, wordsInfo, begin, end, s.links[p * AIP_N_LINKS] >> 32);
+
+	/* move node up or down in the heap tree depending on weight */
+	while (p && s.weights[(p - 1) >> 1] < s.weights[p]) {
+		swapPhrases(s, p, (p - 1) >> 1);
+		p = (p - 1) >> 1;
+	}
+
+	while ((p << 1) + 1 < s.nPhrases && s.weights[p] < s.weights[(p << 1) + 1]
+			|| (p << 1) + 2 < s.nPhrases && s.weights[p] < s.weights[(p << 1) + 2]) {
+		int a = (p << 1) + 1 < s.nPhrases && s.weights[p] < s.weights[(p << 1) + 1],
+		    b = (p << 1) + 2 < s.nPhrases && s.weights[p] < s.weights[(p << 1) + 2];
+		if (a && b && s.weights[(p << 1) + 1] > s.weights[(p << 1) + 2] || a && !b)
+			swapPhrases(s, p, (p << 1) + 1),
+			p = (p << 1) + 1;
+		else
+			swapPhrases(s, p, (p << 1) + 2),
+			p = (p << 1) + 2;
+	}
+
+	return p;
+}
+
+(volatile stateful aiPhrasesData d, const stateful char phrase[], int hash, int add) -> (const char error[], int shardNo, int pos) findPhrase = {
+	int shardNo = hash & (AIP_N_SHARDS - 1), pos, left;
+	aiPhrasesShard s = d.shards[shardNo];
+
+	if (s.nPhrases) {
+		pos = s.rootPhrase;
+		int oldpos;
+		do {
+			int nodehash = s.links[pos * AIP_N_LINKS + 2];
+			if (hash < nodehash) {
+				oldpos = pos;
+				pos = s.links[pos * AIP_N_LINKS + 1] & 0xffffffff;
+				left = 1;
+			} else if (hash > nodehash) {
+				oldpos = pos;
+				pos = s.links[pos * AIP_N_LINKS + 1] >> 32;
+				left = 0;
+			} else {
+				int i, size = phrase.csize, p = pos * AIP_PHRASE_SIZE;
+				for (i = 0; i < size; i += 1, p += 1) {
+					if (phrase[i] != s.phrases[p])
+						return (mkError("Hash collision", "findPhrase"), -1, -1);
+				}
+				if (size < AIP_PHRASE_SIZE && s.phrases[p] <= 0xfc)
+					return (mkError("Hash collision", "findPhrase"), -1, -1);
+
+				s.links[pos * AIP_N_LINKS] += 1 << 32;
+				if (!s.links[pos * AIP_N_LINKS])
+					return (mkError("Counter overflow", "findPhrase"), -1, -1);
+
+				return ("", shardNo, pos);
+			}
+		} while (oldpos != pos);
+	}
+
+	if (!add)
+		return ("", -1, -1);
+
+	int newpos = s.nPhrases;
+	if (newpos >= 1 << 32)
+		return (mkError("Shard overflow", "findPhrase"), -1, -1);
+	s.nPhrases += 1;
+	d.nPhrases += 1;
+
+	strcat(s.phrases, phrase);
+	int size = phrase.csize;
+	while (size < AIP_PHRASE_SIZE)
+		s.phrases.cpush(0xff), size += 1;
+
+	s.links.ipush(pos);
+	s.links.ipush(newpos << 32 | newpos);
+	s.links.ipush(hash);
+
+	s.weights.fpush(0.0);
+
+	if (!s.nPhrases) {
+		s.rootPhrase = 0;
+	} else if (left) {
+		s.links[pos * AIP_N_LINKS] += newpos - pos;
+	} else {
+		s.links[pos * AIP_N_LINKS] += (newpos - pos) << 32;
+	}
+
+	return ("", shardNo, newpos);
+}
+
+(volatile stateful any aiPhrasesObj, const stateful aiVocabulary aiV, const char words[]) -> (const char error[]) parseWords = {
+	aiPhrasesImpl impl;
+	char err[] = convertObjToImpl(impl, aiPhrasesObj, "parseWords");
+	if (err.csize) return err;
+	aiPhrasesData d = impl.data;
+
+	int begin, end = words.csize;
+	while (begin < end) {
+		int wordIDs[];
+		(err, begin) = aiV.methods.decodeWordIDs(wordIDs, words, begin, end, AI_ALPHABET_SKIPPED);
+		if (err.csize) return err;
+
+		int size = wordIDs.isize;
+		if (size) {
+			d.nWords += size;
+			d.logNWords = flog(d.nWords);
+		}
+
+		if (size >= 2) {
+			aiVocabularyWordInfo info[];
+			err = aiV.methods.getWordsInfo(info, aiV, wordIDs, 0, size);
+			if (err.csize) return err;
+
+			int i;
+			for (i = 0; i < size - 1; i += 1) {
+				int j, ids[], adderr, toadd = 1;
+				char phrase[];
+
+				for (j = i; j < size && !adderr; j += 1) {
+					int id = wordIDs[j];
+					ids.ipush(id);
+					adderr = addWordToPhrase(phrase, id);
+					if (!adderr) {
+						toadd &= info[j].weight > 0;
+						if (j > i) {
+							int shardNo, pos;
+							(err, shardNo, pos) = findPhrase(d, phrase, ids, toadd);
+							if (err.csize) return err;
+
+							if (shardNo >= 0) {
+								pos = recalculateWeight(d, info, i, j + 1, shardNo, pos);
+								toadd = d.shards[shardNo].weights[pos] > 0;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return "";
+};
+
+(volatile stateful any aiPhrasesObj, const stateful aiVocabulary aiV) -> (const char error[]) recalculateWeights = {
+	aiPhrasesImpl impl;
+	char err[] = convertObjToImpl(impl, aiPhrasesObj, "recalculateWeights");
+	if (err.csize) return err;
+	aiPhrasesData d = impl.data;
+
+	int shardNo, i;
+	for (shardNo = 0; shardNo < AIP_N_SHARDS; shardNo += 1) {
+		aiPhrasesShard s = d.shards[shardNo];
+		if (s.nPhrases) {
+			int pos = s.rootPhrase, down = 1, prevpos;
+
+			while (down || prevpos != s.rootPhrase) {
+				if (down) {
+					int wordIDs[] = decodePhrase(s.phrases, pos);
+					aiVocabularyWordInfo info[];
+					err = aiV.methods.getWordsInfo(info, aiV, wordIDs, 0, wordIDs.isize);
+					if (err.csize) return err;
+					pos = recalculateWeight(d, info, 0, info.lsize, shardNo, pos);
+				}
+
+				int link = s.links[pos * AIP_N_LINKS + 1], left = link & 0xffffffff, right = link >> 32;
+				if (down && left != pos)
+					prevpos = pos, pos = left;
+				else if ((down || prevpos == left) && right != pos)
+					prevpos = pos, pos = right, down = 1;
+				else
+					prevpos = pos, pos = s.links[pos * AIP_N_LINKS] & 0xffffffff, down = 0;
+			}
+		}
+	}
+
+	return checkData(impl, aiV, AIP_CHECK_WEIGHTS);
+};
+
+(volatile stateful char out[], const stateful any aiPhrasesObj, const stateful aiVocabulary aiV, const char letters[][], int nPhrases) -> (const char error[], int nPhrases) printTopPhrases = {
+	aiPhrasesImpl impl;
+	char err[] = convertObjToImpl(impl, aiPhrasesObj, "printTopPhrases");
+	if (err.csize) return (err, -1);
+
+	aiPhrasesData d = impl.data;
+	int posVector[], i, j, maxj;
+
+	for (i = 0; i < AIP_N_SHARDS; i += 1)
+		if (d.shards[i].nPhrases) posVector.ipush(i);
+
+	for (i = 0; i < nPhrases && maxj >= 0; i += 1) {
+		int size = posVector.isize, maxpos;
+		float maxWeight;
+
+		for (j = 0, maxj = -1; j < size; j += 1) {
+			int pos = posVector[j];
+			float weight = d.shards[pos & (AIP_N_SHARDS - 1)].weights[pos >> AIP_N_SHARDS_LOG];
+			if (maxj < 0 || weight > maxWeight) {
+				maxj = j;
+				maxpos = pos;
+				maxWeight = weight;
+			}
+		}
+
+		if (maxj >= 0) {
+			int nShard = maxpos & (AIP_N_SHARDS - 1), pos = maxpos >> AIP_N_SHARDS_LOG;
+			aiPhrasesShard s = d.shards[nShard];
+
+			int wordIDs[] = decodePhrase(s.phrases, pos);
+			aiVocabularyWordInfo info[];
+			err = aiV.methods.getWordsInfo(info, aiV, wordIDs, 0, wordIDs.isize);
+			if (err.csize) return (err, d.nPhrases);
+
+			printint(out, s.links[pos * AIP_N_LINKS] >> 32, 10);
+			strcat(out, "  ");
+			printfloat(out, 15, maxWeight);
+			strcat(out, "  ");
+
+			int k;
+			for (j = 0; j < info.lsize; j += 1) {
+				char word[] = info[j].word;
+				for (k = 0; k < word.csize; k += 1)
+					strcat(out, letters[word[k]]);
+				strcat(out, " ");
+			}
+			strcat(out, "\r\n");
+
+			if (maxj != size - 1)
+				posVector[maxj] = posVector[size - 1];
+			posVector.ipop(1);
+
+			if ((pos << 1) + 1 < s.nPhrases) posVector.ipush(((pos << 1) + 1) << AIP_N_SHARDS_LOG | nShard);
+			if ((pos << 1) + 2 < s.nPhrases) posVector.ipush(((pos << 1) + 2) << AIP_N_SHARDS_LOG | nShard);
+		}
+	}
+
+	return ("", d.nPhrases);
+};
+
+aiPhrasesMethods aiPhrasesMethodsImpl = {
+        version,
+	loadData,
+	saveData,
+	parseWords,
+	recalculateWeights,
+	printTopPhrases
+};

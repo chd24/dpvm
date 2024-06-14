@@ -1,0 +1,64 @@
+/* h(x,y) used as NAND extrapolation; T16.491-T16.491; $DVS:time$
+   where h(x,y) = f(x)g(y) + g(x)f(y) - g(x)g(y),
+           f(x) = (cos^2(x*Pi) + 3)/4, 
+	   g(x) = (cos  (x*Pi) + 1)/2,
+   inputs, output - vectors (value,dx1,...,dxn) 
+*/
+
+(float x[], float y[]) -> (float z[]) {
+	float z[];
+	float Pi;
+
+	float sinx;
+	float cosx;
+	float siny;
+	float cosy;
+
+	float fx;
+	float fy;
+	float gx;
+	float gy;
+
+	float dfx;
+	float dfy;
+	float dgx;
+	float dgy;
+
+	float hxy;
+	float dhx;
+	float dhy;
+	
+	int i;
+	int n;
+
+	Pi = 3.14159265358979323846264;
+
+	(sinx, cosx) = fsincos(x.f[0] * Pi);
+	(siny, cosy) = fsincos(y.f[0] * Pi);
+	
+	fx = (cosx * cosx + 3) / 4;
+	fy = (cosy * cosy + 3) / 4;
+	gx = (cosx + 1) / 2;
+	gy = (cosy + 1) / 2;
+
+	dfx = -sinx * cosx / 2;
+	dfy = -siny * cosy / 2;
+	dgx = -sinx / 2;
+	dgy = -siny / 2;
+
+	hxy =  fx *  gy +  gx *  fy -  gx *  gy;
+	dhx = dfx *  gy + dgx *  fy - dgx *  gy;
+	dhy =  fx * dgy +  gx * dfy -  gx * dgy;
+
+	z.push(hxy);
+
+	i = 1;
+	n = x.fsize;
+	
+	do {
+		z.push(x.f[i] * dhx + y.f[i] * dhy);
+		i = i + 1;
+	} while (i < n);
+
+	return (z);
+}

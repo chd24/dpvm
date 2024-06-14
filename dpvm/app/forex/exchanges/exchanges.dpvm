@@ -1,0 +1,8 @@
+/* forex class, exchanges list, T20.002-T20.040; $DVS:time$ */
+
+#include "exchanges.dpvmake"
+
+Exchange allExchanges[] = {
+	krakenExchange,
+	testexExchange
+};

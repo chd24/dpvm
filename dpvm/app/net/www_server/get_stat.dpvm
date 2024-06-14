@@ -1,0 +1,244 @@
+/* www server: get stat; T15.554-T18.884; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/mpopenFlags.dpvmh"
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+#include "cgi/modules.dpvmake"
+
+(volatile stateful www_data arg) -> (const char env[][], int mode) makeCgiEnv = {
+        char env[][];
+        char client[];
+        strcat(client, "REMOTE_ADDR=");
+        printip(client, arg.ipaddr0, arg.ipaddr1);
+        env.lpush(client);
+
+        char method[];
+        int mode = DPVM_MPOPEN_READ;
+        strcat(method, "REQUEST_METHOD=");
+        if (arg.reqtype == REQ_POST) {
+            strcat(method, "POST");
+            mode = DPVM_MPOPEN_RW;
+        } else
+            strcat(method, "GET");
+        env.lpush(method);
+
+        char query[];
+        strcat(query, "QUERY_STRING=");
+        strcat(query, arg.query);
+        env.lpush(query);
+
+        char request[] = arg.request;
+        char length[];
+        strcat(length, "CONTENT_LENGTH=");
+        int s = length.csize;
+        getheader(length, request, "\nContent-Length: ");
+        if (length.csize == s + 1 & length[s] == '-')
+            length[s] = '0';
+        env.lpush(length);
+
+        char cookie[];
+        strcat(cookie, "HTTP_COOKIE=");
+        getheader(cookie, request, "\nCookie: ");
+        env.lpush(cookie);
+
+        char range[];
+        strcat(range, "HTTP_RANGE=");
+        s = range.csize;
+        getheader(range, request, "\nRange: bytes=");
+        if (range.csize > s + 1)
+            env.lpush(range);
+
+        arg.pos = 0;
+        arg.cgi = 1;
+
+        return (env, mode);
+};
+
+type cgiModuleData = {
+    const www_data arg;
+    const char env[][];
+    const cgiModule module;
+};
+
+(const cgiModuleData data, int status) -> () cgiModuleHandler = {
+    if (status == DPVM_MPOPEN_INTERNAL)
+        data.module.function(data.arg.path, data.env);
+    else
+        handle_cgi(data.arg, status);
+
+    return;
+};
+
+(volatile www_data arg, const any stats) -> () {
+	if (arg.pos < 0) {
+        int i;
+        for (i = 0; i < cgiModules.lsize; i += 1) {
+            if (cgiModules[i].path == arg.relpath) {
+                char env[][];
+                int mode;
+                (env, mode) = makeCgiEnv(arg);
+                cgiModuleData data = {arg, env, cgiModules[i]};
+                mpopen(cgiModuleHandler, data, arg.path, env, mode | DPVM_MPOPEN_INTERNAL);
+                return;
+            }
+        }
+
+		if (stats.lsize != 1) {
+            send_headers(arg, "", 404, 0, 0);
+			return;
+		}
+
+		any stat = stats.l[0];
+		int mode = stat.i[4];
+
+		/* file not exists */
+		if (!mode) {
+			send_headers(arg, "", 404, 0, 0);
+			return;
+		}
+
+		/* directory */
+		if ((mode & 070000) == 040000) {
+			char mtimestr[];
+			getheader(mtimestr, arg.request, "\nIf-Modified-Since: ");
+			if (mtimestr.csize > 1) {
+				int mtime = read_date(mtimestr);
+				if (stat.i[1] / 1000000000 * 1000000000 <= mtime) {
+					send_headers(arg, "", 304, 0, stat.i[1]);
+					return;
+				}
+			}			
+
+			char path[];
+			strcat(path, arg.path);
+			path.push('/');
+			path.push('*');
+			arg.pos = 0;
+			mstat(code, arg, path, 0, 0x100000);
+			return;
+		}
+
+		/* cgi-program */
+		if (mode & 0111) {
+			char str[] = arg.relpath;
+			if (!strstr(str, "/cgi-bin/")) {
+				if (strstr(str, ".cgi") == str.csize - 4) {
+                    char env[][];
+                    (env, mode) = makeCgiEnv(arg);
+                    mpopen(handle_cgi, arg, arg.path, env, mode);
+                    return;
+				}
+			}
+		}
+
+		/* file */
+		char mtimestr[];
+		getheader(mtimestr, arg.request, "\nIf-Modified-Since: ");
+		if (mtimestr.csize > 1) {
+			int mtime = read_date(mtimestr);
+			if (stat.i[1] / 1000000000 * 1000000000 <= mtime) {
+				send_headers(arg, "", 304, 0, stat.i[1]);
+				return;
+			}
+		}
+
+		char rangestr[];
+		getheader(rangestr, arg.request, "\nRange: bytes=");
+		if (rangestr.csize > 1) {
+			int pos;
+			int err;
+			int t;
+			(pos, err, t) = strtoi(rangestr, 0, rangestr.csize, 10);
+			if (!err & pos >= 0 & pos < stat.i[0]) {
+				arg.status = 206;
+				arg.length = stat.i[0];
+				arg.pos = pos;
+				arg.partial = 1;
+				send_headers(arg, "", 206, stat.i[0] - pos, stat.i[1]);
+				return;
+			}
+		}
+
+		send_headers(arg, "", 200, stat.i[0], stat.i[1]);
+		return;
+	}
+
+	/* sort directory items */
+	int index[];
+	int i;
+	for (i = 0; i < stats.lsize; i = i + 1) {
+		index.push(i);
+		int j;
+		for (j = i; j; j = j - 1) {
+			if (cmpfiles(stats.l[index[j]], stats.l[index[j - 1]], 0) < 0)
+				(index[j], index[j - 1]) = (index[j - 1], index[j]);
+			else
+				j = 1;
+		}
+	}
+
+	/* output directory */
+	char path[];
+	strcat(path, arg.relpath);
+	if (path[path.csize - 1] != '/') 
+		path.push('/');
+
+	char content[];
+	strcat(content, 
+"<!DOCTYPE html><head>
+<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
+<meta name='generator' content='");
+	strcat(content, arg.version);
+	strcat(content, "'>
+<link href='/style.css' rel='stylesheet' type='text/css' media='all'>
+<title>Index of ");
+	strcat(content, path);
+	strcat(content, 
+"</title></head><body text='darkblue'><font face='Arial'><h1>Index of ");
+	strcat(content, path);
+	strcat(content, "</h1><hr>
+<table summary='Directory Listing' border=0 cellpadding=0 cellspacing=0>
+<thead><tr><th align=left>Name&nbsp;&nbsp;</th><th align=left>Size&nbsp;&nbsp;</th>
+<th align=left>Last Modified</th></tr></thead><tbody>\r\n");
+
+	int size = stats.lsize;
+	int mtime = 1 << 33;
+
+	if (size) {
+	    mtime = stats.l[0].i[1];
+
+	    for (i = 0; i < size; i = i + 1) {
+		any stat = stats.l[index[i]];
+
+		strcat(content, " <tr><td><a href='");
+		strcat(content, path);
+
+		char name[];
+		int j = 0;
+		int z = stat.csize;
+		for (j = 0; j < z; j = j + 1)
+			name.cpush(stat.c[j]);
+
+		if ((stat.i[4] & 070000) == 040000)
+			name.cpush('/');
+
+		strcat(content, name);
+		strcat(content, "'>");
+		strcat(content, name);
+		strcat(content, "</a>&nbsp;&nbsp;</td><td>");
+		printint(content, stat.i[0], 1);
+		strcat(content, "&nbsp;&nbsp;</td><td>");
+		strftime(content, "%Y-%m-%d&nbsp;&nbsp;%H:%M:%S", stat.i[1], arg.offset);
+		strcat(content, "</td></tr>\r\n");
+	    } 
+	}
+
+	strcat(content, "</tbody></table><hr><p><font size=1>");
+	strcat(content, arg.version);
+	strcat(content, ", <a href='/programs/dpvm/'>source</a>.
+</font></p></font></body></html>");
+
+	send_headers(arg, content, 200, content.csize, mtime);
+	return;
+}

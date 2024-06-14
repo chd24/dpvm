@@ -1,0 +1,29 @@
+/* function called after connection obtained or error occured; T16.505-T17.596; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "wget.dpvmake"
+
+(wget_data data, int port, int ipaddr0, int ipaddr1) -> () {
+	if (port < 0) { /* error */
+		char mess[];
+
+		strcat(mess, "wget: connect error ");
+		printhex(mess, ~port, 3, 0);
+		strcat(mess, "\r\n");
+
+		outputp("", "", mess);
+		return;
+	}
+
+	char http[];
+
+	strcat(http, "GET ");
+	strcat(http, data.path);
+	strcat(http, " HTTP/1.1\r\n");
+	strcat(http, "Host: ");
+	strcat(http, data.host);
+	strcat(http, "\r\nConnection: close\r\n\r\n");
+		
+	output(written, data, http); /* send request to server */
+	return;
+}

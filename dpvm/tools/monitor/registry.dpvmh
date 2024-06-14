@@ -1,0 +1,8 @@
+/* monitor, registry class header; T18.353-T18.354; $DVS:time$ */
+
+type monitorRegistryClass = {
+        const (const stateful any regSrc) -> (volatile registryData reg) copy;
+	const (const stateful registryData reg, int flags) -> (const char error[]) check;
+	const (volatile stateful registryData reg, const (volatile any data, const char error[]) -> () callback, volatile any data, const stateful char env[], int timeout) -> () set;
+	const (volatile char out[], const stateful registryData reg, const char prefix[]) -> () print;
+};

@@ -1,0 +1,76 @@
+/* dnet node, connect command; T17.542-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const char arg[]) -> (const char host[], int port, int error) str2hostport {
+	int pos = strrchr(arg, ':');
+	if (pos < 0)
+		return ("", 0, -1);
+
+	int port;
+	int error;
+	int end;
+	(port, error, end) = strtoi(arg, pos + 1, arg.csize, 10);
+	if (error || port < 0 || port > 0xffff)
+		return ("", 0, -2);
+
+	char host[];
+	substrcat(host, arg, 0, pos);
+
+	return (host, port, 0);
+}
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) connect_func {
+	dnet_context ctx2 = context_copy(ctx);
+	dnet_connection c = ctx2.conns[0];
+	int error;
+
+	(c.host, c.port, error) = str2hostport(args[0]);
+	if (error) {
+		char m[];
+		strcat(m, "Illegal connection endpoint '");
+		strcat(m, args[0]);
+		strcat(m, "'");
+		write_log(ctx, m, 5);
+		return (m, -1);
+	}
+
+	if (args.lsize > 1) {
+		if (args[1] == "overcats_client")
+			c.flags = DNET_CONN_OVERCATS_CLIENT;
+		else if (args[1] == "overcats_server")
+			c.flags = DNET_CONN_OVERCATS_SERVER;
+		else {
+			char m[];
+			strcat(m, "Illegal connection encoding '");
+			strcat(m, args[1]);
+			strcat(m, "'");
+			write_log(ctx, m, 5);
+			return (m, -2);
+		}
+	}
+
+	c.last_time = ctx.last_time;
+	c.flags |= DNET_CONN_RECONNECT;
+
+	char m[];
+	strcat(m, "Starting connection to node ");
+	strcat(m, c.host);
+	strcat(m, ":");
+	printint(m, c.port, 1);
+	write_log(ctx, m, 8);
+
+	connectp(ctx.data.connection, ctx2, c.host, 0x4060000 | c.port);
+	
+	return ("", 0);
+}
+
+dnet_command connect_command = {
+	"connect",
+	"connect to node, A = host:port, B - encoding (overcats_client, overcats_server)",
+	connect_func,
+	1,
+	2		
+};

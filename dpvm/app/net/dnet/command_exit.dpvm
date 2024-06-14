@@ -1,0 +1,16 @@
+/* dnet node, exit command; T17.534-T17.641; $DVS:time$ */
+
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) exit_func {
+	return ("", 2);
+}
+
+dnet_command exit_command = {
+	"exit",
+	"exit the connection",
+	exit_func,
+	0,
+	0		
+};

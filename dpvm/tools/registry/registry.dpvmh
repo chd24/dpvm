@@ -1,0 +1,25 @@
+/* registry data, header, T18.314-T19.646; $DVS:time$ */
+
+#include "../checker/checker.dpvmh"
+#include "../compiler/compiler.dpvmh"
+#include "../interpreter/interpreter.dpvmh"
+#include "../maker/maker.dpvmh"
+#include "../monitor/monitor.dpvmh"
+#include "../translator/translator.dpvmh"
+#include "../debugger/debugger.dpvmh"
+
+type registryData = {
+	const checkerType	checker;
+	const compilerType	compiler;
+	const interpreterType	interpreter;
+	const makerType		maker;
+	const monitorType	monitor;
+	const translatorType	translator;
+	const debuggerType	debugger;
+	int			logLevel;
+	int			taskFlags;
+	int			taskMemory;
+	int			timeZone;
+	int			totalMemory;
+};
+

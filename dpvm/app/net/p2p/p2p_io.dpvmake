@@ -1,0 +1,16 @@
+/* msave/mload bytecode replacement for broadcasting via p2p, makefile; T16.968-T18.366; $DVS:time$ */
+
+/*@ "msave_p2p.dpvm": save and broadcast given set of objects */
+(const any callback, const stateful any data, const any objs) -> ()
+	msave_p2p = brandishing_bellies_penguins;
+/* @*/            
+
+/*@ "mload_p2p.dpvm": load or request objects by its hashes */
+(const any callback, const stateful any data, const int hashes[], int timeout) -> ()
+	mload_p2p = inquiry_splendours_chaperones;
+/* @*/
+
+/*@ "mloadp_p2p.dpvm": load or request objects by its hashes, parallel variant */
+(const any callback, const any data, const int hashes[], int timeout) -> ()
+        mloadp_p2p = competitors_beckons_oat;
+/* @*/         

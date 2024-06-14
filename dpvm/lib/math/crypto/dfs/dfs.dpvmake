@@ -1,0 +1,33 @@
+/* dfs cryptography, makefile; T17.552-T17.550; $DVS:time$ */
+
+/*@ "init.dpvm": initialize context by password */
+(const stateful char password[]) -> (volatile int ctx[])
+	dfs_init = esoterica_barometers_ballbearings;
+/* @*/
+
+/*@ "prepare.dpvm": prepare constants before encryption/decryption block of data */
+(const stateful int ctx[], int sequence) -> (int x, int y, int z, int t)
+	dfs_prepare = dinar_priming_surrendered;
+/* @*/
+
+/*@ "encrypt.dpvm": encrypt block of data */
+(const stateful int ctx[], volatile stateful int data[], int begin, int size, 
+		int sequence) -> (int err)
+	dfs_encrypt = hamstring_peripherally_muttering;
+/* @*/
+
+/*@ "decrypt.dpvm": decrypt block of data */
+(const stateful int ctx[], volatile stateful int data[], int begin, int size, 
+		int sequence) -> (int err)
+	dfs_decrypt = alchemists_marriageable_resonated;
+/* @*/
+
+/*@ "set_data.dpvm": set random sector to dfs context */
+(volatile stateful int ctx[], const stateful int data[]) -> ()
+	dfs_set_data = caldron_hummocks_refile;
+/* @*/
+
+/*@ "test.dpvm": test encryption/decryption */
+(const stateful char password[], int size, int seed) -> (int correct)
+	dfs_test = bloodier_accumulation_dissatisfies;
+/* @*/

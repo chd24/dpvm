@@ -1,0 +1,8 @@
+/* C_n^m via sums; T15.500-T20.069; $DVS:time$ */
+
+(int n, int m) -> (int res) binom2 = {
+	if (m && n != m)
+		return code(n - 1, m) + code(n - 1, m - 1);
+
+	return 1;
+};

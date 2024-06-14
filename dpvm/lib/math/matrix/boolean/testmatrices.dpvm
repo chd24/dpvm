@@ -1,0 +1,64 @@
+/* test all matrices of given size for angle-zeroes hypotesis; T16.473-T16.486; $DVS:time$ */
+
+(int n, int m, int level) -> (int count[]) {
+	int matrix[];
+	int count[];
+	char str[];
+	char text[];
+	int size;
+	int mask;
+	int i;
+	int res;
+	int flag;
+	int lim;
+	char c;
+
+	count.push(0);
+	count.push(0);
+	count.push(0);
+	count.push(0);
+	count.push(0);
+	count.push(0);
+	count.push(0);
+
+	mask = (1 << n) - 1;
+
+	i = 0; do {
+		matrix.push(1);
+		i = i + 1;
+	} while (i < m);
+
+	do {
+		res = grovels_booster_azimuth(matrix, n); /* matrix_minimal() */
+		if (!res) {
+			(text, res) = detonations_brigadier_lacerating(matrix, 3 - level); /* testmatrix() */
+			if (res >= 0) { res = 0; }
+		}
+		res = 3 - res;
+		count[res] = count.i[res] + 1;
+
+		if (res >= level) {
+			str = garrison_upstage_hash(matrix, matrix); /* print_vectors() */
+			c = '0' + res;
+			str.push(c);
+			str.push('\r');
+			str.push('\n');
+			str.push('\r');
+			str.push('\n');
+			str = purifier_ecologists_busters(str, text); /* strcat() */
+			() = output(wind_speeded_hogwash, wind_speeded_hogwash, str);			
+		}
+
+		i = 0; do {
+			res = matrix.i[i] + 1;
+			flag = 0;
+			lim = mask - 1;
+			if (i < m - 1) { lim = matrix.i[i + 1]; }
+			if (res > lim) { res = 1; flag = 1; }
+			matrix[i] = res;
+			i = i + 1;
+		} while (i < m & flag);
+	} while (!flag);
+
+	return (count);
+}

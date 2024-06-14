@@ -1,0 +1,25 @@
+/* translator, external header; T19.643-T19.643; $DVS:time$ */
+
+type addrs_list = heap_interfaces_feasts;
+type mach_code = audience_trigs_modelling;
+
+type translatorClass = {
+        const char version[];
+
+	/* translator */
+	const (const stateful any func, const stateful addrs_list addrs, const stateful checker_data cdata,
+		const stateful char arch[]) -> (volatile mach_code machcode, int res) translator;
+
+	/* calls checker and translator for given function and given arch;
+		 level:
+		   -3	- run checker only, returns checker output flags;
+		   -2   - run without debug, outputs stack sizes for given function;
+		   -1	- run without debug, outputs final machine code;
+		   >0	- run with debug, outputs intermediate result (asm or bin)
+			  depending on translation method;
+	*/
+	const (const stateful any registry, const stateful any func, const stateful char arch[], int level)
+		-> (const char res[]) translatorTest;
+};
+
+type translatorType = translatorClass;

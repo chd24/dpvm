@@ -1,0 +1,33 @@
+/* newslog: get random from db; T15.589-T19.591; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+	
+(const stateful any db, int depth, int seed) -> (const char key[], int value, int seed) {
+	int value = -1;
+
+	do {
+		int n;
+		int sum;
+		for (n = 0; n < db.lsize; n += 1)
+			if (db.l[n].lsize || db.l[n].csize) sum += 1;
+
+		if (!sum) return ("", -1, seed);
+		seed = rand(seed);
+		sum = seed % sum;
+
+		for (n = 0; sum >= 0; n += 1)
+			if (db.l[n].lsize || db.l[n].csize) sum -= 1;
+
+		n -= 1;
+		depth -= 1;
+		if (!depth)
+			value = db.i[n];
+
+		db = db.l[n];
+	} while (depth);
+
+	char key[];
+	objcopyto(key, db);
+
+	return (key, value, seed);
+}

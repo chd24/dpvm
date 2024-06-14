@@ -1,0 +1,29 @@
+/* aiPhrases class, internal header, T18.421-T18.434; $DVS:time$ */
+
+#include "../../phrases.dpvmh"
+
+int
+	AIP_N_SHARDS		= 0x100,
+	AIP_N_SHARDS_LOG	= 8,
+	AIP_PHRASE_SIZE		= 32,
+	AIP_N_LINKS		= 3;
+
+type aiPhrasesShard = {
+	volatile char phrases[];
+	volatile int links[];
+	volatile float weights[];
+	int nPhrases;
+	int rootPhrase;
+},
+
+aiPhrasesData = {
+	volatile aiPhrasesShard shards[];
+	int nPhrases;
+	int nWords;
+	float logNWords;
+},
+
+aiPhrasesImpl = {
+	volatile aiPhrasesData data;
+	const aiPhrasesMethods methods;
+};

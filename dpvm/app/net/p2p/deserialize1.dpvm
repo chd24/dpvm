@@ -1,0 +1,18 @@
+/* p2p deserialize object, stage 1: add object/dependency hashes; T16.968-T16.968; $DVS:time$ */
+
+#include "deserialize.dpvmh"
+
+(volatile stateful int hashes[], const stateful char str[], int taskmask) -> () {
+	if (taskmask & 1) {
+		str2hash(hashes, str, 0);
+	}
+
+	if (taskmask & 2) {
+		int n = str2int(str, 64) + 4;
+		int j;
+		for (j = 3; j < n; j = j + 1)
+			str2hash(hashes, str, j << 5);
+	}
+
+	return;
+}

@@ -1,0 +1,37 @@
+/* work with float matrixes, makefile; T17.915-T17.917; $DVS:time$ */
+
+type matrix = {
+	int rows;
+	int columns;
+	float elements[];
+};
+
+/*@ "rand.dpvm": create random matrix with values from min to max using rand generator */
+(volatile stateful int rnd[4], int rows, int columns, float min, float max) -> (volatile matrix m)
+        matrix_rand = splinted_cesspit_exiles;
+/* @*/
+
+/*@ "scan.dpvm": read matrix from substring */
+(const stateful char str[], int begin, int end) -> (volatile matrix m, int error, int nextbegin)
+        matrix_scan = routed_newsreels_journalism;
+/* @*/
+
+/*@ "print.dpvm": write matrix to string */
+(volatile stateful char dst[], const stateful matrix m, int precision) -> ()
+        matrix_print = forfeited_ordinates_synagogues;
+/* @*/
+
+/*@ "mul.dpvm": multiply two matrixes using parallel computations */
+(volatile stateful matrix dst, const stateful matrix src1, const stateful matrix src2, int parallel_cut) -> (int status)
+	matrix_mul = prop_shiftiness_relaunched;
+/* @*/
+
+/*@ "mul_test.dpvm": test multiplication speed of large sized matrices */
+(int sise, int parallel_cut) -> (int hash)
+        matrix_multest = unhampered_binnacle_chambermaids;
+/* @*/
+
+/*@ "mul_text.dpvm": input two matrices in test and outout it product */
+(const stateful char matrix1[], const stateful char matrix2[], int parallel_cut) -> (volatile char result[], int error)
+        matrix_multext = smilers_scrape_cordite;
+/* @*/

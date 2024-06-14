@@ -1,0 +1,7 @@
+/* compiler, makefile; T16.606-T18.397; $DVS:time$ */
+
+#include "compiler.dpvmh"
+
+/*@ "compilerObj.dpvm": main object of compiler */
+compilerClass compilerObj = dictation_bestowing_renal;
+/* @*/                                                    

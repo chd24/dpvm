@@ -1,0 +1,26 @@
+/* neuron class, printInlineFunction internal method, T19.687-T19.687; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "neuron.dpvmh"
+
+(volatile stateful char s[], const stateful inlineFunction function, const stateful char argument[]) -> ()
+		printInlineFunction = {
+	char arg[];
+	printf(arg, "(%s)", {argument});
+
+	any args;
+	int begin, end = function.format.csize;
+	do {
+		begin = substrstr(function.format, "%s", begin, end);
+		if (begin >= 0) {
+			args.lpush(arg);
+			begin += 2;
+		}
+	} while (begin >= 0);
+
+	s.cpush('(');
+	printf(s, function.format, args);
+	s.cpush(')');
+
+	return;
+};

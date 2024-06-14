@@ -1,0 +1,46 @@
+/* prepare initial values before encrypt/decrypt; T16.506-T16.508; $DVS:time$ */
+
+int f = 0xffff;
+int ff = 0xffffffff;
+
+(const stateful int ctx[], int sequence) -> (int x, int y, int z, int t) {
+	int x;
+	int y;
+	int z;
+	int t;
+	int a;
+	int b;
+	int c;
+	int d;
+	int i;
+
+	sequence *= 0x494790e5cca4e8d3;
+
+	if (sequence >= 0) {
+		x = ctx[0x10000] ^ ctx[sequence % 65479 + 31];
+		y = ctx[0x10001] ^ ctx[sequence % 65497 + 11];
+		z = ctx[0x10002] ^ ctx[sequence % 65519 +  5];
+		t = ctx[0x10003] ^ ctx[sequence % 65521 +  3];
+	} else {
+		a = sequence >> 1; 
+		b = sequence & 1;
+		x = ctx[0x10000] ^ ctx[((a % 65479) << 1 | b) % 65479 + 31];
+		y = ctx[0x10001] ^ ctx[((a % 65497) << 1 | b) % 65497 + 11];
+		z = ctx[0x10002] ^ ctx[((a % 65519) << 1 | b) % 65519 +  5];
+		t = ctx[0x10003] ^ ctx[((a % 65521) << 1 | b) % 65521 +  3];
+	}
+
+	for (i = 0; i < 8; i += 1) {
+		a = (((y * (z + ctx[x >> 16] & ff)) >> 16) ^ ctx[t & f]) & ff;
+		b = (((z * (t + ctx[y >> 16] & ff)) >> 16) ^ ctx[x & f]) & ff;
+		c = (((t * (x + ctx[z >> 16] & ff)) >> 16) ^ ctx[y & f]) & ff;
+		d = (((x * (y + ctx[t >> 16] & ff)) >> 16) ^ ctx[z & f]) & ff;
+
+		x = (((b * (c + ctx[a >> 16] & ff)) >> 16) ^ ctx[d & f]) & ff;
+		y = (((c * (d + ctx[b >> 16] & ff)) >> 16) ^ ctx[a & f]) & ff;
+		z = (((d * (a + ctx[c >> 16] & ff)) >> 16) ^ ctx[b & f]) & ff;
+		t = (((a * (b + ctx[d >> 16] & ff)) >> 16) ^ ctx[c & f]) & ff;
+	}
+
+	return (x, y, z, t);
+}

@@ -1,0 +1,8 @@
+/* example of using structures; T16.531-T16.531; $DVS:time$ */
+
+({int x; int y;} in) -> (int x, int y) {
+	int x = in.x;
+	int y = in.y;
+
+	return (x, y);
+}

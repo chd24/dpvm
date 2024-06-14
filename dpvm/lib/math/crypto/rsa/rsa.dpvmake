@@ -1,0 +1,21 @@
+/* rsa crypt methods, makefile; T17.925-T18.227; $DVS:time$ */
+
+/*@ "version.dpvm": version of RSA implementation */
+() -> (const char version[])
+	RSA_version = daylight_bream_constraints;
+/* @*/
+
+/*@ "crypt.dpvm": encrypt/decrypt array of data using given key */
+(const int key[], const int data[]) -> (volatile int res[])
+	rsa_crypt = ingenuity_folder_languishes;
+/* @*/
+
+/*@ "keygen.dpvm": generate public/private keys for rsa */
+(const stateful char seed[], int nbits) -> (volatile int privkey[], volatile int pubkey[])
+        rsa_keygen = grisly_slobbery_psyche;
+/* @*/
+
+/*@ "test.dpvm": rsa test; returns empty array if success */
+(const stateful char seed[]) -> (int res[])
+        rsa_test = fern_powerboat_denuded;
+/* @*/                           

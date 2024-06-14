@@ -1,0 +1,61 @@
+/* return version of p2p module */
+	
+char version[] = "p2p version 0.3.5, T16.949-T19.706"; /* $DVS:time$ */
+
+() -> (const char version[]) {
+	return version;
+}
+
+/* history:
+
+T19.706 ver 0.3.5: added registry as main() parameter; improved debug for the case of rejected object
+
+T18.751 ver 0.3.4: fixed bug in deserialize2()
+
+T18.366 ver 0.3.3: fixed bug in p2p_mload()
+
+T18.306 ver 0.3.2: added hash to address book to stop infinite retranslation of object requests; stats logging in address book every 5 minutes
+
+T18.051 ver 0.3.1: checked with new checker
+
+T17.964 ver 0.3.0: fixed bug
+
+T17.959 ver 0.2.7: fixed bugs
+
+T17.958 ver 0.2.6: added requesting of unknown objects
+
+T17.952 ver 0.2.5: added cache dump, fixed bugs
+
+T17.949 ver 0.2.4: added stats logging in reader every 5 minutes
+
+T17.941 ver 0.2.3: added cache for received objects with partially known dependents (has its own history)
+
+T17.648 ver 0.2.2: applied new rules for use const/stateful/volatile modifiers
+
+T17.627 ver 0.2.1: applied new rules for mbox messaging
+
+T17.198 ver 0.2.0: add logging via msend; first working version for composite objects
+
+T17.194 ver 0.1.5: new mrecv format applied, msave_p2p function implemented
+
+T17.178 ver 0.1.4: sending ping messages, set read timeout 
+
+T16.974 ver 0.1.3: bug fixed, reader rewritten
+
+T16.973 ver 0.1.2: bug fixed, netclass introduced in address_book
+
+T16.972 ver 0.1.1: fixed bug
+
+T16.971 ver 0.1.0: add serialization/deserialization of objects, first working version
+
+T16.962 ver 0.0.4: fixing bugs
+
+T16.961 ver 0.0.3: added threads for reading incoming messages and maintain address book
+
+T16.955 ver 0.0.2: added message format and message_write(), message_read()
+
+T16.952 ver 0.0.1: added inbound and outbound connections
+
+T16.949	p2p project started, version 0.0
+
+*/

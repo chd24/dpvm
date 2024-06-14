@@ -1,0 +1,28 @@
+/* first non-space substring; T16.465-T16.636; $DVS:time$ */
+	
+(const stateful char str[], int begin, int end) -> (int begin, int end) {
+	int c;
+	int nsp;
+	int oldnsp;
+	int first;
+
+	do {
+		nsp = 0;
+		if (begin < end) {
+			c = str.c[begin];
+			nsp = (c != ' ' & c != '\t' & c != '\r' & c != '\n');
+		}
+
+		if (!oldnsp & nsp) {
+			first = begin;
+		}
+		if (oldnsp & !nsp) {
+			return (first, begin);
+		}
+
+		oldnsp = nsp;
+		begin = begin + 1;
+	} while (begin <= end);	
+
+	return (end, end);
+}

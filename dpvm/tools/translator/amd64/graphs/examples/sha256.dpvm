@@ -1,0 +1,34 @@
+/* test example for graph extension; T16.570-T16.000 */
+
+int ff = 0xffffffff;
+
+(int a, int b, int c, int d, int e, int f, int g, int h, int w) ->
+		(int a, int b, int c, int d, int e, int f, int g, int h) {
+
+	a = a & ff;
+	e = e & ff;
+	int e1 = e; 
+	int e2 = e;
+	int e3 = e;
+	int s1 = (e1 >> 6 ^ e1 << 26) ^ (e2 >> 11 ^ e2 << 21) ^ (e3 >> 25 ^ e3 << 7);
+	int ch = e & f ^ ~e & g;
+	int t1 = h + s1 + ch + w;
+
+	h = g;
+	g = f;
+	f = e;
+	e = (d + t1) & ff;
+
+	int a1 = a;
+	int a2 = a;
+	int a3 = a;
+	int s0 = (a1 >> 2 ^ a1 << 30) ^ (a2 >> 13 ^ a2 << 19) ^ (a3 >> 22 ^ a3 << 10);
+	int maj = a & (b ^ c) ^ b & c;
+
+	d = c;
+	c = b;
+	b = a;
+	a = (t1 + s0 + maj) & ff;
+
+	return (a, b, c, d, e, f, g, h);
+}

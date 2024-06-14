@@ -1,0 +1,23 @@
+/* first block sent to pool; T16.511-T18.385; $DVS:time$ */
+
+#include "xdag.dpvmake"
+
+(volatile stateful xdagdata data, int status) -> () {
+	if (status != data.cdata.block.csize) {
+		log_block(data, data.cdata.blockhash, "Failed", 4);
+		return;
+	}
+	
+	log_block(data, data.cdata.blockhash, "Sent", 6);
+
+	int method = data.cdata.method & 0xff;
+	int nminers = data.cdata.nminers;
+	if (method >= 2) nminers = 1;
+
+	int i;
+	for (i = 0; i < nminers; i = i + 1)
+		miner(data, i);
+
+	input(receiver, data, 0x1000, POOL_FIRST_READ_TIMEOUT);
+	return;
+}

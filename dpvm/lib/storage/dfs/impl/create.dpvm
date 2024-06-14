@@ -1,0 +1,14 @@
+/* dfs class, constructor, T18.798-T18.798; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "dfs.dpvmake"
+
+() -> (volatile dfsClass obj) dfsCreate = {
+        dfsImpl impl;
+        dfsClass obj;
+
+        impl.methods = dfsMethodsImpl;
+        objcopyto(obj, impl);
+
+        return obj;
+};

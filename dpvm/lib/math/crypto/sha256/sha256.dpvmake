@@ -1,0 +1,42 @@
+/* sha256 cryptography, makefile; T17.687-T17.687; $DVS:time$ */
+
+/*@ "init.dpvm": initialize context */
+(volatile stateful int ctx[]) -> ()
+	sha256_init = unscrew_metabolise_effector;
+/* @*/
+
+/*@ "genProcessChunk.dpvm": generate text of process_chunk() */
+() -> (volatile char text[])
+	sha256_genProcessChunk = supported_courtyards_surf;
+/* @*/
+
+/*@ "process_chunk.dpvm": process chunk of 64 ints */
+(volatile stateful int ctx[], const stateful int chunk[], int begin) -> ()
+	sha256_processChunk = parenthood_cocks_haddocks;
+/* @*/
+
+/*@ "add_substr.dpvm": add substring to hash */
+(volatile stateful int ctx[], const stateful char text[], int begin, int end) -> ()
+	sha256_addSubstr = grades_mystics_font;
+/* @*/
+
+/*@ "add_ints32.dpvm": add subarray of 32-bit integers to hash */
+(volatile stateful int ctx[], const stateful int data[], int begin, int end) -> ()
+	sha256_addInts32 = tramples_sturgeons_algiers;
+/* @*/
+
+/*@ "finalize.dpvm": finalize hash counting, return hash in context */
+(volatile stateful int ctx[]) -> ()
+	sha256_finalize = heifer_dyslexics_genotypes;
+/* @*/
+
+/*@ "substr_hash.dpvm": count hash of substring */
+(const stateful char str[], int begin, int end) -> (volatile int hash[])
+	sha256_substrHash = highjack_bob_chandeliers;
+/* @*/
+
+/*@ "testProcessChunk.dpvm": test given implementation of precess_chunk() */
+(const (volatile stateful int ctx[], const stateful int chunk[], int begin) -> () 
+		process_chunk, int niter) -> (volatile int ctx[])
+	sha256_testProcessChunk = spoonful_fiance_aussie;
+/* @*/                                                                          

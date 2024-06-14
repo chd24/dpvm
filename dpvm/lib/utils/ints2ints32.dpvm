@@ -1,0 +1,13 @@
+/* converts ints array to ints32 array; T17.533-T17.533; $DVS:time$ */
+
+(const stateful int src[], int begin, int end) -> (volatile int arr[]) {
+	int res[];
+	int i;
+	for (i = begin; i < end; i += 1) {
+		int n = src[i];
+		res.ipush(n & 0xffffffff);
+		res.ipush(n >> 32);
+	}
+
+	return res;
+}

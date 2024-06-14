@@ -1,0 +1,352 @@
+/* dpvm: get expression; T15.573-T20.144; $DVS:time$ */
+
+/* exterm | expr op exterm
+ *
+ * write bytecodes to dst, increase ndst to number of written bytes;
+ * status = type (0,1,2,3,4) or -1 on failure
+ * type 4 means built-in math (as fsqrt) or io (as output) function
+ */
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "compiler.dpvmake"
+#include "lexems.dpvmh"
+#include "operators.dpvmh"
+
+type context = {
+	int nlinks;
+	int nints;
+	int nfloats;
+	int nchars;
+	int ndst;
+	int pos;
+	int op;
+	int datatype;
+};
+
+(volatile stateful compdata data, const Instr instr) -> (const type res, int status) {
+	any dst = data.dst;
+	char src[] = data.src;
+	type res;
+	context contexts[];
+	int lasttype, nextop, iter;
+	char c;
+
+	do {
+		/* read next extended term */
+		int status;
+		(res, status) = getexterm(data, instr, code);
+		if (status < 0 || status > 3) {
+			if (status == 4) {
+				data.mess = "math or i/o function can't be result of expression";
+				status = -2;
+			} else if (status == -1 && iter) {
+				data.mess = "extended term expected";
+				status = -2;
+			}
+			return (res, status);
+		}
+		lasttype = status;
+		iter = 1;
+		int size = contexts.lsize, pos, end;
+
+		/* read next lexem and check if it is binary operator */
+		(pos, end, status) = getlexem(src, lexems, data.pos, data.end);
+
+		/* if binary operator */
+		int nextprio;
+
+		if (status >= LEX_BIN_OPER && status < LEX_BIN_OPER_END || status >= LEX_AND_AND && status <= LEX_COLON) {
+			data.pos = pos;
+			if (status >= LEX_BIN_OPER && status < LEX_BIN_OPER_END)
+				nextop = status - LEX_BIN_OPER;
+			else
+				nextop = status - LEX_AND_AND + (LEX_BIN_OPER_END - LEX_BIN_OPER);
+			nextprio = oper_priorities[nextop];
+
+		/* if not */
+		} else {
+			if (!size) return (res, lasttype);
+			nextprio = 127;
+			nextop = -1;
+		}
+
+		while (size) {
+			size -= 1;
+			int op = contexts[size].op, prio = oper_priorities[op];
+			if (prio > nextprio || prio >= nextprio && nextprio >= 'A')
+				size = 0;
+			else {
+				context ctx = contexts[size];
+				int prevtype = ctx.datatype, unwindContext;
+				contexts.lpop(1);
+
+				if (op == OPER_QUESTION)
+					prevtype = lasttype;
+
+				const char maxtype[] = "0121112122221123";
+				int targetType = maxtype[prevtype << 2 | lasttype] - '0';
+				if ((targetType == 3 || !targetType && (op < OPER_EQ || op > OPER_LT_EQ))
+						&& op != OPER_QUESTION && op != OPER_COLON)
+					targetType = 1;
+
+				if (lasttype != targetType) {
+					typecast(data, targetType, lasttype);
+					lasttype = targetType;
+				}
+
+				if (prevtype != targetType) {
+					if (op == OPER_MINUS || op == OPER_DIVIDE || op == OPER_REMAINDER
+							|| op == OPER_SHIFT_L || op == OPER_SHIFT_R || op == OPER_COLON) {
+						data.nlinks = ctx.nlinks;
+						data.nints = ctx.nints;
+						data.nfloats = ctx.nfloats;
+						data.nchars = ctx.nchars;
+						data.dst.cpop(data.ndst - ctx.ndst);
+						data.ndst = ctx.ndst;
+						data.pos = ctx.pos;
+						size = 0;
+						nextop = op;
+						typecast(data, targetType, prevtype);
+						lasttype = targetType;
+						unwindContext = 1;
+					} else {
+						typecast(data, targetType, prevtype);
+
+						/* < <-> >, <= <-> => */
+						if (op >= OPER_GT && op <= OPER_LT_EQ)
+							op ^= 1;
+
+						prevtype = targetType;
+					}
+				} else if (!targetType && op >= OPER_GT && op <= OPER_LT_EQ)
+					op ^= 1;
+
+				if (unwindContext)
+					;
+				else if (op == OPER_PLUS) {
+					if (prevtype == 2) c = DPVM_CODE_FADD;
+					else c = DPVM_CODE_ADD;
+
+				} else if (op == OPER_MINUS) {
+					if (prevtype == 2) c = DPVM_CODE_FSUB;
+					else c = DPVM_CODE_SUB;
+
+				} else if (op == OPER_MULTIPLY) {
+					if (prevtype == 1) {
+						dst.cpush(DPVM_CODE_MUL);
+						data.ndst += 1;
+						c = DPVM_CODE_IPOPS;
+					} else
+						c = DPVM_CODE_FMUL;
+
+				} else if (op == OPER_DIVIDE) {
+					if (prevtype == 1) { 
+						dst.cpush(DPVM_CODE_DIV);
+						dst.cpush(0);
+						data.ndst += 2;
+						c = DPVM_CODE_ISTORE;
+					} else
+						c = DPVM_CODE_FDIV;
+
+				} else if (op == OPER_AND) {
+					c = DPVM_CODE_AND;
+					if (prevtype == 2) {
+						data.mess = "can't use & with float number"; 
+						return (res, -2);
+					}
+
+				} else if (op == OPER_OR) {
+					c = DPVM_CODE_OR;
+					if (prevtype == 2) {
+						data.mess = "can't use | with float number"; 
+						return (res, -2); 
+					}
+
+				} else if (op == OPER_XOR) {
+					c = DPVM_CODE_XOR;
+					if (prevtype == 2) {
+						data.mess = "can't use ^ with float number"; 
+						return (res, -2);
+					}
+
+				} else if (op == OPER_REMAINDER) {
+					if (prevtype == 1) { 
+						dst.cpush(DPVM_CODE_DIV);
+						data.ndst += 1;
+						c = DPVM_CODE_IPOPS;
+					} else
+						c = DPVM_CODE_FMOD;
+
+				} else if (op == OPER_SHIFT_L) {
+					c = DPVM_CODE_SHL;
+					if (prevtype == 2) {
+						data.mess = "can't use << with float number"; 
+						return (res, -2); 
+					}
+
+				} else if (op == OPER_SHIFT_R) {
+					c = DPVM_CODE_SHR;
+					if (prevtype == 2) {
+						data.mess = "can't use >> with float number"; 
+						return (res, -2); 
+					}
+
+				} else if (op == OPER_EQ || op == OPER_NOT_EQ) {
+					if (!prevtype) {
+						dst.cpush(DPVM_CODE_HASH);		/* a b c d		*/
+						dst.cpush(DPVM_CODE_HASH);		/* a b c d A B C D	*/
+						int j;
+						for (j = 0; j < 4; j += 1) {
+							dst.cpush(4);			/* a b c d A B C D 4	*/
+							dst.cpush(DPVM_CODE_ILOAD);	/* a b c d A B C D d	*/
+							dst.cpush(DPVM_CODE_EQ);	/* a b c d A B C D=d	*/
+							dst.cpush(3);			/* a b c d A B C D=d 3	*/
+							dst.cpush(DPVM_CODE_ISTORE);	/* a b c D=d A B C	*/
+						}					/* A=a B=b C=c D=d	*/
+						dst.cpush(DPVM_CODE_AND);		/* A=a B=b CD=cd	*/
+						dst.cpush(DPVM_CODE_AND);		/* A=a BCD=bcd		*/
+						c = DPVM_CODE_AND;			/* ABCD=abcd		*/
+						data.ndst += 24;
+
+					} else if (prevtype == 2)
+						c = DPVM_CODE_FEQ;
+					else
+						c = DPVM_CODE_EQ;
+
+					if (op == OPER_NOT_EQ) {
+						dst.cpush(c);
+						dst.cpush(1);
+						data.ndst += 2;
+						c = DPVM_CODE_XOR;
+					}
+					lasttype = 1;
+
+				} else if (op >= OPER_GT && op <= OPER_LT_EQ) {
+					if (op == OPER_GT || op == OPER_LT_EQ) {
+						if (prevtype == 2)
+							c = DPVM_CODE_FGT;
+						else
+							c = DPVM_CODE_GT;
+					} else {
+						if (prevtype == 2)
+							c = DPVM_CODE_FLT;
+						else
+							c = DPVM_CODE_LT;
+					}
+
+					if (!prevtype) {
+						dst.cpush(1);				/* 1				*/
+						dst.cpush(63);				/* 1 63				*/
+						dst.cpush(DPVM_CODE_SHL);		/* Z				*/
+						dst.cpush(DPVM_CODE_HASH);		/* Z A B C D			*/
+						dst.cpush(DPVM_CODE_HASH);		/* Z A B C D a b c d		*/
+						int j;
+						for (j = 0; j < 4; j += 1) {
+							dst.cpush(7 - j + (j > 0));	/* Z A B C D a b c d 7		*/
+							dst.cpush(DPVM_CODE_ILOAD);	/* Z A B C D a b c d A		*/
+							dst.cpush(9 + (j > 0));		/* Z A B C D a b c d A 9	*/
+							dst.cpush(DPVM_CODE_ILOAD);	/* Z A B C D a b c d A Z	*/
+							dst.cpush(DPVM_CODE_XOR);	/* Z A B C D a b c d AZ		*/
+							dst.cpush(4 - j + (j > 0));	/* Z A B C D a b c d AZ 4	*/
+							dst.cpush(DPVM_CODE_ILOAD);	/* Z A B C D a b c d AZ	a	*/
+							dst.cpush(10 + (j > 0));	/* Z A B C D a b c d AZ a 10	*/
+							dst.cpush(DPVM_CODE_ILOAD);	/* Z A B C D a b c d AZ	a Z	*/
+							dst.cpush(DPVM_CODE_XOR);	/* Z A B C D a b c d AZ	aZ	*/
+							dst.cpush(c);			/* Z A B C D a b c d A?a	*/
+							if (j)
+							    dst.cpush(DPVM_CODE_OR);
+							if (j < 3) {
+							    dst.cpush(7 - j);		/* Z A B C D a b c d A?a 7	*/
+							    dst.cpush(DPVM_CODE_ILOAD);	/* Z A B C D a b c d A?a B	*/
+							    dst.cpush(4 - j);		/* Z A B C D a b c d A?a B 4	*/
+							    dst.cpush(DPVM_CODE_ILOAD);	/* Z A B C D a b c d A?a B b	*/
+							    dst.cpush(DPVM_CODE_EQ);	/* Z A B C D a b c d A?a B=b	*/
+							    dst.cpush(DPVM_CODE_AND);	/* Z A B C D a b c d A?a&B=b	*/
+							}
+						}					/* Z A B C D a b c d ABCD?abcd  */
+						dst.cpush(8);				/* Z A B C D a b c d ABCD?abcd 8*/
+						dst.cpush(DPVM_CODE_ISTORE);		/* ABCD?abcd A B C D a b c d	*/
+						dst.cpush(8);				/* ABCD?abcd A B C D a b c d 8	*/
+						c = DPVM_CODE_IPOPN;			/* ABCD?abcd			*/
+						data.ndst += 73;
+					}
+
+					if (op == OPER_GT_EQ || op == OPER_LT_EQ) {
+						dst.cpush(c);
+						dst.cpush(1);
+						data.ndst += 2;
+						c = DPVM_CODE_XOR;
+					}
+					lasttype = 1;
+
+				} else if (op == OPER_AND_AND || op == OPER_OR_OR) {
+					if (lasttype != 1) {
+						status = typecast(data, 1, lasttype);
+						lasttype = 1;
+					}
+
+					dst.cpush(DPVM_CODE_LF);
+					data.ndst += 1;
+					if (op != nextop) {
+						dst.cpush(0);
+						dst.cpush(DPVM_CODE_EQ);
+						dst.cpush(0);
+						dst.cpush(DPVM_CODE_EQ);
+						data.ndst += 4;
+					}
+				} else if (op == OPER_COLON) {
+					dst.cpush(DPVM_CODE_LF);
+					data.ndst += 1;
+				}
+
+				if (!unwindContext && (op < OPER_AND_AND || op > OPER_COLON)) {
+					dst.cpush(c);
+					data.ndst += 1;
+					data.i[prevtype] -= 2;
+					data.i[lasttype] += 1;
+				}
+			}
+		}
+
+		if (nextop == OPER_AND_AND || nextop == OPER_OR_OR || nextop == OPER_QUESTION) {
+			typecast(data, 1, lasttype);
+			lasttype = 1;
+
+			dst.cpush(0);
+			dst.cpush(DPVM_CODE_ILOAD);
+			if (nextop == OPER_OR_OR)
+				dst.cpush(DPVM_CODE_JNZF);
+			else
+				dst.cpush(DPVM_CODE_JZF);
+			dst.cpush(DPVM_CODE_IPOPS);
+			data.ndst += 4;
+			data.i[lasttype] -= 1;
+
+		} else if (nextop == OPER_COLON) {
+			if (!contexts.lsize || contexts[contexts.lsize - 1].op != OPER_QUESTION) {
+				data.mess = "using : without previous ?";
+				return (res, -2);
+			}
+			context ctx = contexts[contexts.lsize - 1];
+			data.nlinks = ctx.nlinks;
+			data.nints = ctx.nints;
+			data.nfloats = ctx.nfloats;
+			data.nchars = ctx.nchars;
+			dst.cpush(1);
+			dst.cpush(DPVM_CODE_LF);
+			dst.cpush(DPVM_CODE_JNZF);
+			data.ndst += 3;
+
+		}
+
+		context ctx = {data.nlinks, data.nints, data.nfloats, data.nchars, data.ndst, data.pos,
+				nextop, lasttype};
+		if (nextop == OPER_COLON)
+			ctx.ndst -= 3;
+		contexts.lpush(ctx);
+
+	} while (nextop >= 0);
+
+	return (res, lasttype);
+}

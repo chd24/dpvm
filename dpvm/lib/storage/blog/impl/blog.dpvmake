@@ -1,0 +1,63 @@
+/* blog class, makefile for implementation, T18.715-T18.979; $DVS:time$ */
+
+#include "blog.dpvmh"
+
+/*@ "mkError.dpvm": compose error message */
+(const char mess[], const char func[]) -> (const char err[]) mkError = molasses_fleecy_pied;
+/* @*/
+
+/*@ "findUser.dpvm": find user between added */
+(volatile stateful blogData data, const char name[]) -> (volatile blogUser user, const char error[])
+	findUser = simplify_nostrum_gratuities;
+/* @*/
+
+/*@ "convertObjToImpl.dpvm": convert obj from type any to type blogImpl and check correctness (func - name of function which call this) */
+(volatile stateful blogImpl impl, const stateful any blogObj, const char func[]) -> (const char error[])
+	convertObjToImpl = stirfry_reasoner_bewailed;
+/* @*/
+
+/*@ "readFile.dpvm": read one of user-related files, decrypt it and provide to callback */
+(volatile stateful any blogObj, volatile stateful any data,
+		const (volatile stateful any data, volatile int file[], const char error[]) -> () callback,
+		const char userName[], const char fileType[]) -> ()
+	readFile = mode_pooch_errata;
+/* @*/
+
+/*@ "writeFile.dpvm": write one of user-related files wirh encryption */
+(volatile stateful any blogObj, const char userName[], const char fileType[], volatile stateful int file[]) -> (const char error[])
+	writeFile = tippling_brittleness_eritrea;
+/* @*/
+
+/*@ "readMessageFile.dpvm": read file from filesystem inside the message */
+(volatile stateful any blogObj, volatile stateful any data,
+		const (volatile stateful any data, const char file[], const dfsFileAttributes attr, const char error[]) -> () callback,
+		const char path[], int begin, int end) -> ()
+	readMessageFile = deadlier_forsaking_mass;
+/* @*/
+
+/*@ "readMessageDir.dpvm": read catalogue from filesystem inside the message, call callback for each item */
+(volatile stateful any blogObj, volatile stateful any data,
+		const (volatile stateful any data, const char fileName[], const dfsFileAttributes attr, const char error[]) -> () callback,
+		const char path[], int begin, int end) -> ()
+	readMessageDir = conjugating_eroticism_devotees;
+/* @*/
+
+/*@ "createMessageFile.dpvm": create file in filesystem inside the message */
+(volatile stateful any blogObj, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback, const char path[]) -> ()
+	createMessageFile = roguish_cantaloupe_reallocation;
+/* @*/
+
+/*@ "writeMessageFile.dpvm": write file to filesystem inside the message */
+(volatile stateful any blogObj, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback,
+		const char path[], const char content[], int begin, int end, int newSize) -> ()
+	writeMessageFile = magnum_landform_lowing;
+/* @*/
+
+/*@ "writeMessage.dpvm": create new message as dfs volume from previously saved files */
+(volatile stateful any blogObj) -> (const char error[])
+	writeMessage = washable_frequented_intuitively;
+/* @*/
+
+/*@ "methods.dpvm": public methods implementation */
+blogMethods blogMethodsImpl = disputable_catchphrase_noons;
+/* @*/                  

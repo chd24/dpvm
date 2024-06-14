@@ -1,0 +1,18 @@
+/* aiPhrases class, public header, T18.421-T18.438; $DVS:time$ */
+
+#include "vocabulary.dpvmh"
+
+type aiPhrasesMethods = {
+        const char version[];
+	const (volatile stateful any aiPhrasesObj, const char rawData[]) -> (const char error[]) loadData;
+	const (volatile stateful char rawData[], const stateful any aiPhrasesObj) -> (const char error[]) saveData;
+	const (volatile stateful any aiPhrasesObj, const stateful aiVocabulary aiV, const char words[]) -> (const char error[]) parseWords;
+	const (volatile stateful any aiPhrasesObj, const stateful aiVocabulary aiV) -> (const char error[]) recalculateWeights;
+	const (volatile stateful char output[], const stateful any aiPhrasesObj, const stateful aiVocabulary aiV, const char letters[][], int nPhrases)
+		-> (const char error[], int nPhrases) printTopPhrases;
+};
+
+type aiPhrases = {
+        volatile any data;
+	const aiPhrasesMethods methods;
+};

@@ -1,0 +1,6 @@
+/* trie class, makefile for demos, T18.847-T18.855; $DVS:time$ */
+
+/*@ "words.dpvm": compose trie from given words separated by spaces and output result of trie traverse from top to bottom */
+(const char words[], const char word[]) -> (const char res[])
+    wordsDemo = japan_timed_slobber;
+/* @*/                

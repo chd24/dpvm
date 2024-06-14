@@ -1,0 +1,114 @@
+/* return base ^ exp % mod; T17.523-T17.547; $DVS:time$ */
+
+#include "long.dpvmake"
+
+(const stateful int base[], const stateful int exp[], const stateful int mod[]) 
+		-> (volatile int res[]) powmod {
+	int res[];
+	res.ipush(1);
+
+	int i;
+	int j;
+	for (i = exp.isize - 1; i >= 0; i -= 1) {
+		int r = exp[i];
+		for (j = 63; j >= 0; j -= 1) {
+			res = mul_long(res, res);
+			mod_long(res, mod);
+			if (r >> j & 1) {
+				res = mul_long(res, base);
+				mod_long(res, mod);
+			}
+		}
+	}
+
+	return res;
+}
+
+(const stateful int mod[]) -> (volatile int inv[]) inverse_mod2k {
+	int sum[];
+	int shift[] = copy_long(mod);
+	int inv[];
+
+	sum.ipush(0);
+
+	int i;
+	int j;
+	int size = mod.isize;
+	for (i = 0; i < size; i += 1) {
+		int res;
+		for (j = 0; j < 64; j += 1) {
+			if (!(sum[i] >> j & 1))
+				add_long(sum, shift),
+				res |= 1 << j;
+			shl_1(shift);
+		}
+		inv.ipush(res);
+	}
+
+	while (inv.isize && !inv[inv.isize - 1]) inv.ipop(1);
+	return inv;
+}
+
+(const stateful int prod[], const stateful int mod[], const stateful int inv[]) ->
+		(volatile int res[]) montgomery_mod_long {
+	int t[] = copy_long(prod);
+	int size = mod.isize;
+
+	if (t.isize > size) t.ipop(t.isize - size);
+	while (t.isize && !t[t.isize - 1]) t.ipop(1);
+
+	t = mul_long(t, inv);
+	if (t.isize > size) t.ipop(t.isize - size);
+	while (t.isize && !t[t.isize - 1]) t.ipop(1);
+
+	t = mul_long(t, mod);
+	add_long(t, prod);
+
+	int res[];
+	int i;
+	int tsize = t.isize;
+	for (i = size; i < tsize; i += 1)
+		res.ipush(t[i]);
+
+	while (sub_cond_long(res, mod));
+	return res;
+}
+
+(const stateful int base[], const stateful int exp[], const stateful int mod[]) 
+		-> (volatile int res[]) {
+	if (exp.isize <= 1 || !mod.isize || !(mod[0] & 1))
+		return powmod(base, exp, mod);
+
+	int size = mod.isize;
+	int i;
+	int inv[] = inverse_mod2k(mod);
+
+	int mbase[];
+	for (i = 0; i < size; i += 1)
+		mbase.ipush(0);
+	int bsize = base.isize;
+	for (i = 0; i < bsize; i += 1)
+		mbase.ipush(base[i]);
+	mod_long(mbase, mod);
+
+	int res[];
+	for (i = 0; i < size; i += 1)
+		res.ipush(0);
+	res.ipush(1);
+	mod_long(res, mod);
+
+	int j;
+	for (i = exp.isize - 1; i >= 0; i -= 1) {
+		int r = exp[i];
+		for (j = 63; j >= 0; j -= 1) {
+			res = mul_long(res, res);
+			res = montgomery_mod_long(res, mod, inv);
+			if (r >> j & 1) {
+				res = mul_long(res, mbase);
+				res = montgomery_mod_long(res, mod, inv);
+			}
+		}
+	}
+
+	return montgomery_mod_long(res, mod, inv);
+}

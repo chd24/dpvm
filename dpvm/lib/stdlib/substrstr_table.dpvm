@@ -1,0 +1,19 @@
+/* find src in dst[begin..end], return index or -1; T15.543-T17.061; $DVS:time$ */
+	
+(const stateful char dst[], const stateful char src[],
+		const stateful char table[256], int begin, int end) -> (int index) {
+	int size = src.csize;
+	int bigsize = end;
+	int index;
+
+	for (index = begin; size + index <= bigsize; index = index + 1) {
+		int i = -1;
+		do {
+			i = i + 1;
+			if (i == size)
+				return index;
+		} while (table[src[i]] == table[dst[i + index]]);
+	}
+	
+	return -1;
+}

@@ -1,0 +1,114 @@
+/* blog class, readMessageDir method, T18.841-T18.842; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "blog.dpvmake"
+
+int READ_SIZE = 0x10000;
+
+type readMessageDirData = {
+    volatile stateful blogImpl impl;
+    const (volatile stateful any data, const char fileName[], const dfsFileAttributes attr, const char error[]) -> () callback;
+    volatile stateful any data;
+    const char path[];
+    int inode;
+    int pos;
+    int begin;
+};
+
+(volatile stateful readMessageDirData d, const char file[], int status) -> () readMessageDirCallback = {
+    blogMessage m = d.impl.data.message;
+    dfsClass dfs = m.dfsObj;
+    dfsFileAttributes attr;
+
+    if (status < 0 || status == file.csize) {
+        if (status <= 0 || status & 0x1ff) {
+            char mess[];
+            printf(mess, "Error reading catalogue '%s' or illegal catalogue (inode=%X, pos=%X, status=%X)",
+                {m.path, d.inode, d.pos, status});
+            d.callback(d.data, "", attr, mkError(mess, "readMessageDirCallback"));
+            return;
+        }
+
+        int arr[] = chars2ints32(file, 0, status), i, nSector = d.pos >> 9, nSectors = status >> 9;
+
+        if (!d.pos) {
+            dfs_set_data(m.dfsCtx, chars2ints32(file, 0, 0x200));
+            i = 1;
+        }
+
+        for (i = i; i < nSectors; i += 1)
+            dfs_decrypt(m.dfsCtx, arr, i << 7, 0x80, nSector + i);
+
+        char error[] = dfs.methods.addVolumePart(dfs, ints32_2ints(arr, 0, arr.isize), d.pos >> 3);
+        if (error.csize) {
+            d.callback(d.data, "", attr, error);
+            return;
+        }
+
+        if (!d.pos)
+            m.inited = 1;
+    }
+
+    if (!d.inode) {
+        char error[];
+        (attr, error) = dfs.methods.findPath(dfs, d.path);
+        int inode = attr.inode;
+        if (error.csize) {
+            if (strstr(error, "need more") >= 0) {
+                d.pos = inode << 5 & -READ_SIZE;
+                read(code, d, m.path, d.pos, READ_SIZE);
+                return;
+            }
+            d.callback(d.data, "", attr, error);
+            return;
+        }
+        if ((attr.mode & DFS_IFMT) != DFS_IFDIR) {
+            d.callback(d.data, "", attr, mkError("item is not a directory", "readMessageDirCallback"));
+            return;
+        }
+
+        d.inode = inode;
+    }
+
+    int inode;
+    char error[];
+    (error, inode, d.begin) = dfs.methods.listCatalogue(dfs, d.data, d.callback, d.inode, d.begin, (1 << 63) - 1);
+    if (error.csize) {
+        if (strstr(error, "need more") >= 0) {
+            d.pos = inode << 5 & -READ_SIZE;
+            read(code, d, m.path, d.pos, READ_SIZE);
+            return;
+        }
+        d.callback(d.data, "", attr, error);
+        return;
+    }
+
+
+    d.callback(d.data, "", attr, "");
+    return;
+};
+
+(volatile stateful any blogObj, volatile stateful any data,
+        const (volatile stateful any data, const char fileName[], const dfsFileAttributes attr, const char error[]) -> () callback,
+        const char path[], int begin, int end) -> () readMessageDir = {
+    blogImpl impl;
+    dfsFileAttributes attr;
+    char err[] = convertObjToImpl(impl, blogObj, "readMessageDir");
+    if (err.csize) return callback(data, "", attr, err);
+
+    if (!impl.data.message.path.csize)
+        return callback(data, "", attr, mkError("message is not set", "readMessageDir"));
+
+    if (begin || end != (1 << 63) - 1)
+        return callback(data, "", attr, mkError("not implemented", "readMessageDir"));
+
+    readMessageDirData d = {impl, callback, data, path};
+
+    if (impl.data.message.inited)
+        readMessageDirCallback(d, "", 1);
+    else
+        read(readMessageDirCallback, d, impl.data.message.path, 0, READ_SIZE);
+    return;
+};

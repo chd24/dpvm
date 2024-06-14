@@ -1,0 +1,26 @@
+/* hash table of objects, header, T18.016-T18.305; $DVS:time$ */
+
+type hashData = {
+    volatile int indexes[];
+    volatile int revertIndexes[];
+    volatile any objects[][];
+    int hashSize;
+    int nBuckets;
+    int nObjects;
+    int flags;
+};
+
+int hashFlagKeyValue = 1; /* store key-values in the hash */
+
+type hashClass = {
+    char version[];
+    (volatile stateful hashData hash, int hashSize) -> (int) init;
+    (volatile stateful hashData hash, int hashSize, int flags) -> (int) initExt;
+    (volatile stateful hashData hash, const any object) -> (int added) findAdd;
+    (volatile stateful hashData hash, const any key, const any value) -> (int added) findAddKeyValue;
+    (volatile stateful hashData hash, const any object) -> (int found) find;
+    (volatile stateful hashData hash, const any key) -> (const any value, int found) findGetValue;
+    (volatile stateful hashData hash, const any key) -> (int removed) remove;
+    (volatile stateful char text[], const hashData hash) -> () dump;
+    (int hashSize) -> (const char result[]) test;
+};

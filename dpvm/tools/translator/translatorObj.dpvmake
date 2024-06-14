@@ -1,0 +1,18 @@
+/* translatorObj, makefile; T17.668-T19.643; $DVS:time$ */
+
+#include "../registry/registry.dpvmh"
+
+/*@ "translator.dpvmake": translator symbol for external usage */
+(const stateful any func, const stateful addrs_list addrs, const stateful checker_data cdata, const stateful char arch[])
+		-> (volatile mach_code machcode, int res)
+	translator = paperthin_tedious_dinosaurs;
+/* @*/
+
+/*@ "registry.dpvm": copy and check registry */
+(const stateful any regSrc) -> (volatile registryData reg, const char error[])
+	registryPrepare = ventricular_goodly_babbled;
+/* @*/
+
+/*@ "translatorObj.dpvm": all public translator methods */
+translatorClass translatorObj = britain_townsman_sanitise;
+/* @*/          

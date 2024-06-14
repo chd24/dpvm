@@ -1,0 +1,33 @@
+/* dpvm: instruction - void expression; T15.453-T20.114; $DVS:time$ */
+
+/* voidexpr; */
+
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const Instr instr) -> (int status) {
+	int pos;
+	int end;
+	int status;
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status == 15) {
+		data.pos = pos;
+		return 0;
+	}
+
+	status = getvoidexpr(data, instr);
+	if (status < 0) return status;
+	
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	if (status != 15) {
+		data.mess = "; expected after void expression";
+		status = -2;
+	} else {
+		data.pos = pos;
+		status = 0;
+	}
+
+	return status;
+}

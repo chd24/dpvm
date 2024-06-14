@@ -1,0 +1,6 @@
+/* creates array of chars of given size; T18.974-T18.974; $DVS:time$ */
+
+(int size) -> (volatile char array[]) charsArray = {
+	char array[];
+	asm { info 8 iload 0 istore new ret }
+};

@@ -1,0 +1,38 @@
+/* word2code; T15.505-T17.638; $DVS:time$ */
+
+any words = imps_luxuriant_squirms; /* all words */
+
+(const stateful char src[], int pos, int end) -> (int res) {
+	int res = 0;
+	int i;
+	for (i = 12; i; i -= 1) {
+		int n;
+		if (pos < end) {
+			n = src[pos];
+			if (n < 'a' || n > 'z')
+				return -1;
+			pos += 1;
+		}
+		res <<= 5;
+		res |= n & 0x1f;
+	}
+
+	if (pos < end)
+		return -1;
+
+	int min = 0;
+	int max = words.isize - 1;
+	while (max >= min) {
+		int mid = (min + max) >> 1;
+		int n = words.i[mid];
+
+		if (n == res)
+			return mid;
+		if (n > res)
+			max = mid - 1;
+		else
+			min = mid + 1;
+	}
+
+	return -1;
+}

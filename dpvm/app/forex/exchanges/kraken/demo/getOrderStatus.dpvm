@@ -1,0 +1,66 @@
+/* kraken class */
+
+int _Z = 0;
+#include "../../../../../common/sysParams.dpvmh"
+#include "../../../../../common/taskFlags.dpvmh"
+#include "../../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../../lib/utils/utils.dpvmake"
+#include "../kraken.dpvmake"
+
+char version[] = "getOrderStatus demo 0.1.0, T19.996-T20.075"; /* $DVS:time$ */
+
+type demoData = {
+	const char publicKey[];
+	volatile stateful krakenClass krakenObj;
+	const char txid[];
+	volatile int status[];
+};
+
+(volatile stateful any d, const char error[]) -> () getCallback = {
+	demoData darr[];
+	pushObject(d, darr);
+	demoData data = darr[0];
+
+	const char statuses[][] = {"unknown", "pending", "open", "executed", "canceled", "expired"};
+
+	char text[];
+	if (error.csize)
+		printf(text, "%s\r\n", {error});
+	else
+		printf(text, "Order status: %s.\r\n", {statuses[data.status[0]]});
+
+	outputp("", "", text);
+	return;
+};
+
+(volatile stateful demoData data, const char text[], int status) -> () inputCallback = {
+	char error[];
+	if (status <= 0)
+		error = "Error: empty private key.";
+	else
+		error = data.krakenObj.methods.setKey(data.krakenObj, data.publicKey, text);
+
+	if (error.csize) {
+		outputp("", "", error);
+		outputp("", "", "\r\n");
+		return;
+	}
+
+	data.krakenObj.methods.getOrderStatus(data.status, data.krakenObj, getCallback, data, data.txid);
+	return;
+};
+
+(const char publicKey[], const char txid[]) -> () getOrderStatus = {
+	krakenClass krakenObj = krakenCreate();
+	demoData data = {publicKey, krakenObj, txid};
+
+	const int vars[] = {DPVM_SYS_PARAM_FLAGS};
+	const int flags = DPVM_TASK_FLAG_NO_INPUT_HISTORY + DPVM_TASK_FLAG_NO_INPUT_ECHO;
+	const int values[] = {flags};
+	setsysp("", "", vars, values);
+
+	outputp("", "", "Private key: ");
+
+	input(inputCallback, data, 256, -1);
+	return;
+};

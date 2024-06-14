@@ -1,0 +1,8 @@
+btc	bitcoin		    0.00044
+eth	ethereum	    0.29542
+xrp	ripple		   10.4434
+ada	cardano		    4.035636
+sol	solana		    0.00539
+doge	dogecoin	    0.000001
+ltc	litecoin	    0.00395
+xdag	dagger	        14760.88

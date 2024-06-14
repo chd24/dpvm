@@ -1,0 +1,43 @@
+/* scan unicode char from utf8 string src[begin..end); T18.322-T18.322; $DVS:time$ */
+	
+(const stateful char src[], int begin, int end) -> (int unicode, int next) {
+        if (begin >= end)
+	        return (-1, begin);
+
+        int c = src[begin];
+
+        if (c < 0x80)
+	        return (c, begin + 1);
+
+        if (c < 0xC0)
+	        return (-1, begin);
+
+        if (c < 0xE0 && end - begin >= 2) {
+	        int d = src[begin + 1];
+		if (d < 0x80 || d >= 0xC0)
+		        return (-1, begin);
+
+                return ((c & 0x1f) << 6 | (d & 0x3f), begin + 2);
+		}
+
+        if (c < 0xF0 && end - begin >= 3) {
+	        int d = src[begin + 1];
+		int e = src[begin + 2];
+		if (d < 0x80 || d >= 0xC0 || e < 0x80 || e >= 0xC0)
+		        return (-1, begin);
+
+                return ((c & 0xf) << 12 | (d & 0x3f) << 6 | (e & 0x3f), begin + 3);
+		}
+
+        if (c < 0xF8 && end - begin >= 4) {
+	        int d = src[begin + 1];
+		int e = src[begin + 2];
+		int f = src[begin + 3];
+		if (d < 0x80 || d >= 0xC0 || e < 0x80 || e >= 0xC0 || f < 0x80 || f >= 0xC0)
+		        return (-1, begin);
+
+                return ((c & 0x7) << 18 | (d & 0x3f) << 12 | (e & 0x3f) << 6 | (f & 0x3f), begin + 4);
+	}
+
+        return (-1, begin);
+}

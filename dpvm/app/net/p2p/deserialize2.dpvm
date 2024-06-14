@@ -1,0 +1,141 @@
+/* p2p deserialize object, stage 2: final; T16.966-T19.705; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "deserialize.dpvmh"
+
+int INT_MIN = 0x8000000000000000;
+int INT_MAX = 0x7fffffffffffffff;
+any anyobj = {};
+
+(const stateful char str[], int pos) -> (float res) str2float {
+	int ieee = str2int(str, pos);
+
+	int mantissa = ieee & 0xfffffffffffff | 0x10000000000000;
+	if (ieee & INT_MIN)
+		mantissa = -mantissa;
+
+	int exponent = ieee >> 52 & 0x7ff;
+	if (!exponent)
+		exponent = INT_MIN;
+	else if (exponent == 0x7ff)
+		exponent = INT_MAX;
+	else
+		exponent -= 1023 + 52;
+
+	return fmerge(mantissa, exponent);
+}
+
+(const stateful char str[], const stateful any objspool, const stateful any depobjs,
+                int nextdepobj) -> (any obj, int missed_deps[], const char error[], int nextdepobj) {
+    int pos = 32, ah[4];
+
+    (ah[0], ah[1], ah[2], ah[3]) = getfullhash(anyobj.type);
+
+	int head[];
+	int j;
+	for (j = 0; j < 8; j += 1, pos += 8)
+		head.ipush(str2int(str, pos));
+
+    int missed_deps[];
+    any obj;
+	for (j = 0; j < head[4] + 1; j += 1, pos += 32) {
+		any foundobj = depobjs.l[nextdepobj];
+		nextdepobj += 1;
+
+		int h[];
+		str2hash(h, str, pos);
+
+		int g[4];
+		(g[0], g[1], g[2], g[3]) = getfullhash(foundobj);
+
+        if (!(h[0] | h[1] | h[2] | h[3])) {
+			if (!j)
+                return (obj, missed_deps, "Type of object equals to object", nextdepobj);
+			foundobj = obj;
+
+        } else if (h[0] != g[0] || h[1] != g[1] || h[2] != g[2] || h[3] != g[3]) {
+			int found;
+			int k;
+			for (k = objspool.lsize - 1; k >= 0; k -= 1) {
+				int f[4];
+				(f[0], f[1], f[2], f[3]) = getfullhash(objspool.l[k]);
+
+                if (h[0] == f[0] && h[1] == f[1] && h[2] == f[2] && h[3] == f[3]) {
+					foundobj = objspool.l[k];
+					found = 1;
+					k = 0;
+				}
+			}
+
+            if (!found)
+                missed_deps.ipush(pos);
+        }
+
+        if (!missed_deps.isize) {
+            int fh[4];
+
+            (fh[0], fh[1], fh[2], fh[3]) = getfullhash(foundobj.type);
+
+            if (!j) {
+                type t;
+                int th[4], oh[4];
+
+                (th[0], th[1], th[2], th[3]) = getfullhash(t.type);
+                (oh[0], oh[1], oh[2], oh[3]) = getfullhash(foundobj);
+
+                if (th[0] != fh[0] || th[1] != fh[1] || th[2] != fh[2] || th[3] != fh[3])
+                    return (obj, missed_deps, "Illegal type of object", nextdepobj);
+
+                if (th[0] != oh[0] || th[1] != oh[1] || th[2] != oh[2] || th[3] != oh[3]) {
+                    if (ah[0] != oh[0] || ah[1] != oh[1] || ah[2] != oh[2] || ah[3] != oh[3])
+                        objcopyto(t, foundobj);
+                    else
+                        t = anyobj.type;
+                } else
+                    t = t.type;
+
+                int i;
+                for (i = 0; i < 8; i += 1)
+                    if (head[i] < t.i[i + (i & 4)] || head[i] > t.i[i + 4 + (i & 4)])
+                        return (obj, missed_deps, "Illegal size of object", nextdepobj);
+
+                obj = new_object(t, head[0], head[1], head[2], head[3], head[4], head[5], head[6], head[7]);
+            } else {
+                int ind = 4 + j - 1, oh[4];
+                if (ind >= obj.type.lsize)
+                    ind = 2 + (ind & 1);
+
+                (oh[0], oh[1], oh[2], oh[3]) = getfullhash(obj.type.l[ind]);
+
+                if ((oh[0] != ah[0] || oh[1] != ah[1] || oh[2] != ah[2] || oh[3] != ah[3]) &&
+                    (oh[0] != fh[0] || oh[1] != fh[1] || oh[2] != fh[2] || oh[3] != fh[3]))
+                    return (obj, missed_deps, "Illegal dependence type of object", nextdepobj);
+
+                obj.l[j - 1] = foundobj;
+            }
+        }
+	}
+
+    if (!missed_deps.isize) {
+        for (j = 0; j < head[5]; j += 1, pos += 8)
+            obj.i[j] = str2int(str, pos);
+
+        for (j = 0; j < head[6]; j += 1, pos += 8)
+            obj.f[j] = str2float(str, pos);
+
+        for (j = 0; j < head[7]; j += 1, pos += 1)
+            obj.c[j] = str[pos];
+
+        int h[4];
+        (h[0], h[1], h[2], h[3]) = getfullhash(obj);
+
+        int g[];
+        str2hash(g, str, 0);
+
+        if (h[0] != g[0] || h[1] != g[1] || h[2] != g[2] || h[3] != g[3])
+            return (obj, missed_deps, "Hash mismatches an object", nextdepobj);
+    }
+
+    return (obj, missed_deps, "", nextdepobj);
+}

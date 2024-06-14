@@ -1,0 +1,58 @@
+/* compiler, lexems IDs, T18.377-T20.114; $DVS:time$ */
+
+int LEX_CIRCLE_L	=  0;
+int LEX_CIRCLE_R	=  1;
+int LEX_SQUARE_L	=  2;
+int LEX_SQUARE_R	=  3;
+int LEX_FIGURE_L	=  4;
+int LEX_FIGURE_R	=  5;
+int LEX_COMMA		=  6;
+int LEX_ARROW_R		=  7;
+
+int LEX_DOT_COMMA	= 15;
+
+int LEX_BIN_OPER	= 20;
+int LEX_PLUS		= 20;
+int LEX_MINUS		= 21;
+int LEX_MULTIPLY	= 22;
+int LEX_DIVIDE		= 23;
+int LEX_AND		= 24;
+int LEX_OR		= 25;
+int LEX_XOR		= 26;
+int LEX_REMAINDER	= 27;
+int LEX_SHIFT_L		= 28;
+int LEX_SHIFT_R		= 29;
+int LEX_EQ		= 30;
+int LEX_NOT_EQ		= 31;
+int LEX_GT		= 32;
+int LEX_LT		= 33;
+int LEX_GT_EQ		= 34;
+int LEX_LT_EQ		= 35;
+int LEX_BIN_OPER_END	= 36;
+
+int LEX_ASSIGN		= 36;
+
+int LEX_NOT		= 37;
+int LEX_NOT_NOT		= 38;
+int LEX_DOT		= 39;
+
+int LEX_OP_EQ		= 40;
+int LEX_PLUS_EQ		= 40;
+int LEX_MINUS_EQ	= 41;
+int LEX_MULTIPLY_EQ	= 42;
+int LEX_DIVIDE_EQ	= 43;
+int LEX_AND_EQ		= 44;
+int LEX_OR_EQ		= 45;
+int LEX_XOR_EQ		= 46;
+int LEX_REMAINDER_EQ	= 47;
+int LEX_SHIFT_L_EQ	= 48;
+int LEX_SHIFT_R_EQ	= 49;
+int LEX_PLUS_PLUS	= 50;
+int LEX_MINUS_MINUS	= 51;
+int LEX_OP_EQ_END	= 52;
+
+int LEX_AND_AND		= 52;
+int LEX_OR_OR		= 53;
+int LEX_QUESTION	= 54;
+int LEX_COLON		= 55;
+

@@ -1,0 +1,19 @@
+/* aiAlphabet class, codetables makefile, T18.383-T18.413"; $DVS:time$ */
+
+#include "codetables.dpvmh"
+
+/*@ "utf-8.ru.dpvm": default utf-8 codetable for Russian language */
+aiAlphabetPredefinedCodeTable ai_utf_8_ru = cornish_inefficiency_hampers;
+/* @*/
+
+/*@ "utf-8.ru.fb2.dpvm": utf-8 codetable for Russian language, fb2 e-book format */
+aiAlphabetPredefinedCodeTable ai_utf_8_ru_fb2 = service_conned_acquittals;
+/* @*/
+
+/*@ "koi8-r.ru.txt.dpvm": koi8-r codetable for Russian language, txt format */
+aiAlphabetPredefinedCodeTable ai_koi8_r_ru_txt = discreetness_guilts_mange;
+/* @*/
+
+/*@ "codetables.dpvm": array of all codetables */
+aiAlphabetPredefinedCodeTable aiAlphabetPredefinedCodeTables[] = firing_insects_plaint;
+/* @*/             

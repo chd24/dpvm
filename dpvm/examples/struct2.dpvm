@@ -1,0 +1,26 @@
+/* example of using structures with different fields; T17.996-T17.997; $DVS:time$ */
+
+type ex = {
+        const char str[];
+	int n;
+	float x;
+	char ch;
+};
+
+() -> (volatile ex res) {
+	ex s;
+
+	s.str = "abc";
+	s.n = 5;
+	s.x = 0.1;
+	s.ch = '$';
+
+	ex t;
+
+	t.str = s.str;
+	t.n = s.n;
+	t.x = s.x;
+	t.ch = s.ch;
+
+	return t;
+}

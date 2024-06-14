@@ -1,0 +1,124 @@
+/* kraken class, addOrder() method implementation, T19.829-T20.040; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../../common/sysParams.dpvmh"
+#include "../../../../../common/mpopenFlags.dpvmh"
+#include "../../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../../lib/math/crypto/json/json.dpvmake"
+#include "../../../forexConstants.dpvmh"
+#include "kraken.dpvmake"
+
+int TIMEOUT = 60000000000;
+
+type requestData = {
+	volatile stateful krakenImpl impl;
+	volatile stateful char out[];
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	const char parameters[];
+	volatile char text[];
+};
+
+(volatile stateful requestData d, const char text[], int status) -> () inputCallback = {
+	if (status < 0 && !d.text.csize) {
+		char error[];
+		printf(error, "Input failed: error %d.", {status});
+		d.callback(d.data, error);
+		return;
+	}
+	if (status > 0) {
+		strcat(d.text, text);
+		input(code, d, 0x100000, TIMEOUT);
+		return;
+	}
+	if (!d.text.csize) {
+		d.callback(d.data, "Empty output.");
+		return;
+	}
+
+	jsonClass json = jsonCreate();
+	jsonMethods j = json.methods;
+	jsonObject obj;
+	char error[];
+	int next;
+	(obj, error, next) = j.deserialize(d.text, 0, d.text.csize);
+	if (error.csize) {
+		d.callback(d.data, error);
+		return;
+	}
+	jsonObject err = j.getObjectByIndex(j.getObjectByName(obj, "error"), 0);
+	if (!j.isNull(err)) {
+		char e[];
+		error = j.getString(e, err);
+		if (error.csize)
+			d.callback(d.data, error);
+		else
+			d.callback(d.data, e);
+		return;
+	}
+
+	error = j.getString(d.out, j.getObjectByIndex(j.getObjectByName(j.getObjectByName(obj, "result"), "txid"), 0));
+	d.callback(d.data, error);
+	return;
+};
+
+(volatile stateful requestData d, int status) -> () mpopenCallback = {
+	if (status != DPVM_MPOPEN_READ) {
+		char error[];
+		printf(error, "Mpopen failed: error %d.", {status});
+		d.callback(d.data, error);
+		return;
+	}
+	char text[];
+	d.text = text;
+	input(inputCallback, d, 0x100000, TIMEOUT);
+	return;
+};
+
+(volatile stateful requestData d, const int values[]) -> () timeCallback = {
+	d.impl.data.nonce = values[0];
+
+	char args[][];
+	char error[];
+	(args, error) = formPrivateQuery(d.impl, "AddOrder", d.parameters);
+	mpopen(mpopenCallback, d, WGET_BIN, args, DPVM_MPOPEN_READ);
+	return;
+};
+
+(volatile stateful char out[], volatile stateful any krakenObj,
+		const (volatile stateful any data, const char error[]) -> () callback, volatile stateful any data,
+		const char currencyPair[], int orderType, int direction, float volume, float price) -> () addOrder = {
+	krakenImpl impl;
+	char err[] = convertObjToImpl(impl, krakenObj, "addOrder");
+	if (err.csize) {
+		callback(data, err);
+		return;
+	}
+
+	if (orderType < 0 || orderType >= ORDER_TYPE_END || volume <= 0 || price <= 0 ||
+			(direction != ORDER_DIRECTION_BUY && direction != ORDER_DIRECTION_SELL)) {
+		callback(data, mkError("illegal order parameters", "addOrder"));
+		return;
+	}
+
+	char parameters[];
+	const char orderTypes[][] = {"market", "limit", "stop-loss", "trailing-stop"};
+	const char directions[][] = {"buy", "sell"};
+	printf(parameters, "pair=%s&ordertype=%s&type=%s&volume=%.5f&price=",
+		{currencyPair, orderTypes[orderType], directions[direction != ORDER_DIRECTION_BUY],
+		volume + 0.000004});
+
+	if (price <= 2)
+		printf(parameters, "%.5f", {price + 0.000004});
+	else
+		printf(parameters, "%.2f", {price + 0.004});
+
+	char text[];
+	requestData d = {impl, out, callback, data, parameters, text};
+
+	const int vars[] = {DPVM_SYS_PARAM_TIME};
+	int values[] = {impl.data.nonce + REQUEST_INTERVAL};
+	setsys(timeCallback, d, vars, values);
+	return;
+
+}

@@ -1,0 +1,8 @@
+/* registry class, makefile; T18.314-T18.355; $DVS:time$ */
+
+#include "class.dpvmh"
+#include "consts.dpvmh"
+
+/*@ "registry.dpvm": registry of top utility programs */
+registryClass registryObj = VNs8KCDH4nu_ZEsbXeY1b7m_SrJuzgtsgUr_kwFc5858juG /* crowded_presenting_reprocessing */;
+/* @*/ 

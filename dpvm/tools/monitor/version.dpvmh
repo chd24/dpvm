@@ -1,0 +1,29 @@
+/* return version of monitor */
+
+char version[] = "DPVM monitor version 0.8.0, T15.570-T20.171"; /* $DVS:time$
+
+history:
+
+T20.171 ver 0.8.0: added support for long object names
+
+T20.029 ver 0.7.9: added ALLOCED and MAPPED output to stats command
+
+T19.704 ver 0.7.8: fixed bugs in profile parsing
+
+T19.700 ver 0.7.7: replace checker and translator in dpvm when corresponding environment variable set
+
+T19.649 ver 0.7.6: reintegrated debugger
+
+T19.640 ver 0.7.5: added 'quota' command; used environment variables taskFlags, taskMemory, timeZone, totalMemory
+
+T19.635 ver 0.7.4: memory used and quota added to tasks output
+
+T19.623 ver 0.7.3: the kill command finishes after task is actually completed
+
+T19.619 ver 0.7.2: fixed bug with mixing output from different tasks
+
+T19.547 ver 0.7.1: added output of memory system parameter
+
+T18.355 ver 0.7.0: integration with registry, added commands set, upgrade, version
+
+*/

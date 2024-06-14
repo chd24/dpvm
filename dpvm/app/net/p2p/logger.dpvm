@@ -1,0 +1,99 @@
+/* p2p log writer; T16.957-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "p2p.dpvmake"
+#include "mailbox.dpvmh"
+
+type logger = {
+	p2pdata data;
+	any objs;
+};
+
+(volatile stateful logger log, const stateful p2pmess mess, 
+		const stateful int values[]) -> () log_one {
+	char out[];
+
+	strftime(out, "%Y-%m-%d %H:%M:%S", values[0], log.data.timezone);
+
+	out.push('.');
+	printint(out, values[0] / 1000000 % 1000, 3);
+	out.push(' ');
+	out.push('[');
+	printhex(out, log.data.task_id, 4, 0);
+	out.push(':');
+	printint(out, mess.port, 1 + (mess.port >= 0));
+	out.push(':');
+        substrcat(out, "NONEFATACRITINTEERROWARNMESSINFODBUGTRACDUMP",
+		mess.task << 2, (mess.task + 1) << 2);
+	out.push(']');
+	out.push(' ');
+	out.push(' ');
+	strcat(out, mess.data);
+	out.push('\r');
+	out.push('\n');
+
+	writep("", "", log.data.log_file, out, -1);
+	return;
+}
+
+(volatile stateful logger log, const stateful int values[]) -> () log_all {
+	int i;
+
+	for (i = 0; i < log.objs.lsize; i = i + 1) {
+		p2pmess mess;
+		if (mess.type != log.objs.l[i].type) {
+			mess.data = "Dropped mailbox message of illegal format";
+			mess.task = 2;
+			mess.port = log.data.thread_id;
+		} else {
+			objcopyto(mess, log.objs.l[i]);
+		}
+
+		log_one(log, mess, values);
+	}
+	
+	mrecv(log.data.func, log, log.data.mboxaddr, -1);
+	return;	
+}
+
+(volatile stateful logger log, any objs, int status) -> () read_mbox {
+	if (status) {
+		any objs1;
+		p2pmess mess;
+                char m[];
+                strcat(m, "Error ");
+                printint(m, status, 1);
+                strcat(m, " when received mail in logger");
+                mess.data = m;
+		mess.task = 2;
+		mess.port = log.data.thread_id;
+		objs1.lpush(mess);
+		objs = objs1;
+	}
+
+	log.objs = objs;
+	
+	const int vars[] = {0};
+	getsys(log_all, log, vars);
+	return;
+}
+
+(const stateful p2pdata d, const int values[]) -> () {
+	p2pdata data;
+	objcopyto(data, d);
+
+	data.func = read_mbox;
+	data.thread_id = -5;
+
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+	addr.service = P2P_LOGGER;
+	addr.task_id = data.task_id;
+	data.mboxaddr = addr;
+
+	logger log;
+	log.data = data;
+
+	mrecv(data.func, log, data.mboxaddr, -1);
+	return;
+}

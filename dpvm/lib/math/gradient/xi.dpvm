@@ -1,0 +1,19 @@
+/* produce vector of value and gradient for i-th variable; T16.486-T16.487; $DVS:time$ */
+
+(float point[], int i) -> (float res[]) {
+	float res[];
+	float x;
+	int n;
+	int j;
+
+	n = point.fsize;
+	res.push(point.f[i]);
+
+	j = 0; do {
+		x = (i == j);
+		res.push(x);
+		j = j + 1;
+	} while (j < n);
+
+	return (res); 
+}

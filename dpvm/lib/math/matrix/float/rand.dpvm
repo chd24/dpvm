@@ -1,0 +1,21 @@
+/* make random matrix; T17.915-T17.917; $DVS:time$ */
+
+#include "../../../utils/utils.dpvmake"
+#include "matrix.dpvmake"
+
+(volatile stateful int rand[4], int rows, int columns, float min, float max) -> (volatile matrix m) {
+    matrix m;
+    m.rows = rows;
+    m.columns = columns;
+
+    float maxmod = max - min;
+    float values[] = m.elements;
+    int size = rows * columns;
+    int i;
+    for (i = 0; i < size; i += 1) {
+        (rand[0], rand[1], rand[2], rand[3]) = getfullhash(rand);
+        values.fpush(rand[0] * 1.0 / (1 << 32) / (1 << 32) * maxmod + min);
+    }
+
+    return m;
+}

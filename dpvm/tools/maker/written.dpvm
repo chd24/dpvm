@@ -1,0 +1,19 @@
+/* make projects utility, called after makefile rewritten; T16.602-T19.640; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "maker.dpvmake"
+
+(volatile stateful makedata data, int status) -> () {
+	if (status != data.allfiles[0].file.csize) {
+		char err[];
+		strcat(err, version_maker());
+		strcat(err, ": error writing makefile");
+		data.callback(data.arg, err);
+		return;
+	}
+
+	char out[];
+	printobjname(out, data.objs.l[data.objs.lsize - 1]);
+	data.callback(data.arg, out);
+	return;
+}

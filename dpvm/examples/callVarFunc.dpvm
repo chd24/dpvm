@@ -1,0 +1,11 @@
+/* call variable function; T18.038-T18.038; $DVS:time$ */
+
+(const () -> () f) -> () callFunc {
+	f();
+	return;
+}
+
+() -> () {
+	callFunc(code);
+	return;
+}

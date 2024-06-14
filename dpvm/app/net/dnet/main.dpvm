@@ -1,0 +1,326 @@
+/* dnet node, main routine; T17.534-T19.646; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../../math/crypto/rsa/rsa.dpvmake"
+#include "../../math/crypto/crc32/crc32.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const int values[]) -> () set_last_time {
+	ctx.last_time = values[0];
+	ctx.hosts[0].last_time = values[0];
+	ctx.conns[0].start_time = values[0];
+	ctx.conns[0].last_time = values[0];
+
+	dnet_connection c = ctx.conns[0];
+	c.flags |= DNET_CONN_PROFILE;
+	c.host = ctx.data.files[DNET_FILE_PROFILE];
+
+	control_connection(ctx, 0, 0x7f000001, 0);
+	return;
+}
+
+(const stateful dnet_data data) -> (volatile int privkey[], volatile int pubkey[]) keygen = {
+	int finalSize = 0x800 / 2 / 8;
+	int size = finalSize;
+	if (data.flags & DNET_FLAG_MOBILE)
+		size >>= 3;
+	int privkey[];
+	int pubkey[];
+	(privkey, pubkey) = rsa_keygen(data.random_text, size << 6);
+	if (privkey.isize == size && pubkey.isize == size && size != finalSize) {
+		int i, lim = finalSize - size;
+		for (i = 0; i < lim; i += 1) {
+			privkey.ipush(privkey[i]);
+			pubkey.ipush(pubkey[i]);
+		}
+	}
+	return (privkey, pubkey);
+}
+
+(volatile stateful dnet_context ctx) -> () process_files {    
+
+        /* key file */
+
+	char name[] = ctx.data.filenames[DNET_FILE_KEY];
+	char file[] = ctx.data.files[DNET_FILE_KEY];
+
+	if (file.csize != 0x800) {
+                if (ctx.data.flags & DNET_FLAG_FIRST_RUN && ctx.data.random_text.csize) {
+                    int privkey[];
+                    int pubkey[];
+                    outputp("", "", "RSA key generation. Please wait...\r\n");
+                    write_log(ctx, "RSA key generation start", 6);
+		    (privkey, pubkey) = keygen(ctx.data);
+                    if (privkey.isize != 0x800 / 2 / 8 || pubkey.isize != 0x800 / 2 / 8) {
+                        outputp("", "", "Failed.\r\n");
+                        write_log(ctx, "RSA key generation error", 1);
+                        return;
+                    }
+                    write_log(ctx, "RSA key generation end", 6);
+                    outputp("", "", "Generated.\r\n");
+
+                    char privstr[] = ints2chars(privkey, 0, 0x800 / 2 / 8);
+                    char pubstr[] = ints2chars(pubkey, 0, 0x800 / 2 / 8);
+                    strcat(privstr, pubstr);
+
+                    dnet_data d;
+                    objcopyto(d, ctx.data);
+                    char files[][];
+                    objcopyto(files, d.files);
+                    files[DNET_FILE_KEY] = privstr;
+                    d.files = files;
+                    ctx.data = d;
+                    file = privstr;
+                    writep("", "", name, file, 0);
+                } else {
+                    char mess[];
+                    strcat(mess, "Key file '");
+                    strcat(mess, name);
+                    strcat(mess, "' not found or has illegal size");
+                    write_log(ctx, mess, 1);
+                    return;
+                }
+	}
+
+	int s0[] = random_sector(ctx);
+	int s1[];
+	int s2[];
+	int s3[];
+	int s4[];
+	[
+	s1 = crypt(s0, file, 0, 0x400);
+	s2 = crypt(s0, file, 0x400, 0x800);
+	]
+	[
+	s3 = crypt(s1, file, 0x400, 0x800);
+	s4 = crypt(s2, file, 0, 0x400);
+	]
+
+	if (s0 != s3 || s0 != s4) {
+		char mess[];
+		strcat(mess, "Key file '");
+		strcat(mess, name);
+		strcat(mess, "' is illegal");
+		write_log(ctx, mess, 1);
+		return;
+	}
+
+	char hkey[];
+	substrcat(hkey, file, 0x400, 0x800);
+	char c = 'T';
+	int pos = strrchr(ctx.data.version, c);
+	char hversion[];
+	do {
+		hversion.cpush(c);
+		pos += 1;
+		c = ctx.data.version[pos];
+	} while ((c >= '0' && c <= '9') || c == '.');
+
+	dnet_host h;
+	h.key = hkey;
+	h.version = hversion;
+	h.flags = DNET_HOST_LOCAL | DNET_HOST_TRUSTED;
+	h.last_time = ctx.last_time;
+
+
+	/* name file */
+
+	name = ctx.data.filenames[DNET_FILE_NAME];
+	file = ctx.data.files[DNET_FILE_NAME];
+
+	if (file.csize)
+		h.name = file;
+
+	update_host(ctx, h);
+
+
+	/* keys file */
+
+	name = ctx.data.filenames[DNET_FILE_KEYS];
+	file = ctx.data.files[DNET_FILE_KEYS];
+
+	if (file.csize & 0x3ff) {
+		char mess[];
+		strcat(mess, "Keys file '");
+		strcat(mess, name);
+		strcat(mess, "' has illegal size");
+		write_log(ctx, mess, 1);
+		return;
+	}
+
+	int i;
+	for (i = 0; i < file.csize; i += 0x400) {
+		char gkey[];
+		substrcat(gkey, file, i, i + 0x400);
+
+		dnet_host g;
+		g.key = gkey;
+		g.flags = DNET_HOST_TRUSTED;
+		update_host(ctx, g);
+	}
+
+
+	/* profile */
+
+	name = ctx.data.filenames[DNET_FILE_PROFILE];
+	file = ctx.data.files[DNET_FILE_PROFILE];
+
+	if (!file.csize) {
+		char mess[];
+		strcat(mess, "Profile '");
+		strcat(mess, name);
+		strcat(mess, "' not found");
+		write_log(ctx, mess, 4);
+	}
+
+
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.thread_id = DNET_THREAD_ID_MEDIATOR;
+	addr.service = DNET_SERVICE_MEDIATOR;
+
+	mrecvp("", "", addr, 0);
+
+	const int vars[] = {0};
+	getsysp(mediator, ctx.data, vars);
+
+	dnet_context ctx2 = context_copy(ctx);
+	bindp(control_connection, ctx2, 0x4060000 | ctx2.data.control_port, 0, 0);
+
+	getsys(set_last_time, ctx, vars);
+	return;
+}
+
+(volatile stateful dnet_context ctx, const char data[], int status) -> () download_files {
+        dnet_data d;
+        objcopyto(d, ctx.data);
+        char files[][];
+        objcopyto(files, d.files);
+        char filenames[][];
+        objcopyto(filenames, d.filenames);
+
+	if (status <= data.csize)
+                files.lpush(data);
+
+        int n = files.lsize;
+	if (n >= dnet_filenames.lsize) {
+                d.files = files;
+                d.filenames = filenames;
+                ctx.data = d;
+		process_files(ctx);
+		return;
+	}
+
+	char filename[];
+	strcat(filename, ctx.data.catalog);
+	if (!filename.csize || filename[filename.csize - 1] != '/')
+		filename.cpush('/');
+
+	strcat(filename, dnet_filenames[n]);
+        filenames.lpush(filename);
+
+        d.files = files;
+        d.filenames = filenames;
+        ctx.data = d;
+        read(code, ctx, filename, 0, 0x100000);
+	return;
+}
+
+(const dnet_data d, const int values[]) -> () init {
+	dnet_data data;
+	objcopyto(data, d);
+
+	data.start_time = values[0];
+	data.task_id = values[1];
+
+	dnet_addr addr;
+	addr.version = data.version;
+	addr.task_id = data.task_id;
+	addr.thread_id = DNET_THREAD_ID_LOGGER;
+	addr.service = DNET_SERVICE_LOG;
+
+	mrecvp("", "", addr, 0);
+
+	const int hvars[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler, data, hvars);
+	const int vars[] = {0};
+	getsysp(logger, data, vars);
+
+	dnet_data ctxdata;
+	objcopyto(ctxdata, data);
+	char names[][];
+	char files[][];
+	ctxdata.filenames = names;
+	ctxdata.files = files;
+
+	dnet_context ctx;
+	ctx.data = ctxdata;
+	ctx.last_time = data.start_time;
+	ctx.conns[0].thread_id = DNET_THREAD_ID_STARTUP;
+
+	char mess[];
+	strcat(mess, "Starting ");
+	strcat(mess, data.version);
+	write_log(ctx, mess, 6);
+	
+	download_files(ctx, "", 1);
+	return;
+}
+
+(volatile dnet_data data, const char text[], int status) -> () input_text {
+        if (status > 0 && text.csize) {
+                data.random_text = text;
+        }
+
+        const int vars[] = {0, 0x201};
+        getsysp(init, data, vars);
+        return;
+}
+
+(const stateful any registry, const char log_file[], const char catalog[], int control_port, int flags)
+		-> (const char out[]) {
+	dnet_data data;
+
+	data.log_file		= log_file;
+	data.catalog		= catalog;
+	data.control_port	= control_port;
+        data.flags              = flags;
+
+	char vers[];
+	strcat(vers, version());
+	strcat(vers, " (");
+	printobjname(vers, code);
+	strcat(vers, ")");
+	data.version 		= vers;
+
+	char mess[];
+	(data.registry, mess) = registryPrepare(registry);
+	if (mess.csize) {
+		char err[];
+		strcat(err, vers);
+		strcat(err, ": error while preparing registry: ");
+		strcat(err, mess);
+		return err;
+	}
+	data.timezone		= data.registry.timeZone;
+	data.log_level		= data.registry.logLevel;
+
+	data.help		= help();
+
+	int crc32_ctx[];
+	data.crc32_ini		= crc32_init(crc32_ctx);
+	data.crc32_ctx		= crc32_ctx;
+
+	data.connection		= connection;
+
+        if (flags & DNET_FLAG_FIRST_RUN) {
+            outputp("", "", data.version);
+            outputp("", "", "\r\nEnter random text for key generation: ");
+            input(input_text, data, 256, -1);
+        } else
+            input_text(data, "", 0);
+
+	return (data.version);
+}

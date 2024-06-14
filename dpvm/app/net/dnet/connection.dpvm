@@ -1,0 +1,509 @@
+/* dnet node, connect command; T17.542-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../../math/crypto/dfs/dfs.dpvmake"
+#include "dnet.dpvmake"
+
+int CONN_IN_TIMEOUT	= 45000000000; /* 45 sec */
+int CONN_OUT_TIMEOUT	= 35000000000; /* 35 sec */
+int SEND_INFO_TIMEOUT	=  5000000000; /*  5 sec */
+
+type conn_t = {
+        volatile dnet_context           ctx;
+        volatile char                   peerkey[];
+        volatile int                    sector[];
+        volatile int                    dfsctx[];
+        volatile char                   data[];
+        const any                       func;
+        const any                       objs;
+        int                             peerhost;
+        int                             size;
+        int                             oldsize;
+        int                             unseen;
+        int                             decoding_state;
+        int                             last_sent_info;
+};
+
+(volatile stateful conn_t c) -> () init_dfsctx {
+	char csector[] = ints2chars(c.sector, 0, 0x40);
+	char pwd[];
+	
+	int i;
+	for (i = 0; i < 8; i += 1) {
+		int crc = crc32(c.ctx.data, csector, i * 0x40, (i + 1) * 0x40);
+		printhex(pwd, crc, 8, 1);
+	}
+
+	c.dfsctx = dfs_init(pwd);
+	dfs_set_data(c.dfsctx, ints2ints32(c.sector, 0, 0x40));
+	return;
+}
+
+(volatile stateful conn_t cc, const char data[]) -> () input_data {
+	dnet_connection c = cc.ctx.conns[0];
+
+	log_packet(cc.ctx, "Data   from", data, c.in_bytes, 0, 0);
+	int size = cc.data.csize;
+	c.in_bytes += data.csize;
+
+	if (c.flags & (DNET_CONN_OVERCATS_CLIENT | DNET_CONN_OVERCATS_SERVER)) {
+		cc.decoding_state = encoding(cc.data, data, c, 1, cc.decoding_state);
+		log_packet(cc.ctx, "Decode from", cc.data, cc.size, size, cc.data.csize);
+	} else
+		strcat(cc.data, data);
+
+	cc.oldsize = cc.size;
+	cc.size += cc.data.csize - size;
+	return;
+}
+
+(volatile stateful conn_t cc, const char data[]) -> () output_data {
+	dnet_connection c = cc.ctx.conns[0];
+	if (c.flags & (DNET_CONN_OVERCATS_CLIENT | DNET_CONN_OVERCATS_SERVER)) {
+		char enc[];
+		log_packet(cc.ctx, "Encode   to", data, cc.oldsize, 0, 0);
+		encoding(enc, data, c, 0, 0);
+		data = enc;
+	}
+	outputp("", "", data);
+	log_packet(cc.ctx, "Data     to", data, c.out_bytes, 0, 0);
+	c.out_bytes += data.csize;
+	return;
+}
+
+(volatile stateful conn_t c) -> () output_finish {
+	dnet_addr addr;
+	addr.version = c.ctx.data.version;
+	addr.task_id = c.ctx.data.task_id;
+	addr.thread_id = c.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_OUT;
+	
+	mrecvp("", "", addr, 1 << 63);
+	return;
+}
+
+(volatile stateful conn_t c, const int values[]) -> () output_get_time {
+	c.ctx.last_time = values[0];
+	any objs = c.objs;
+	int i;
+	char packets[];
+
+	for (i = 0; i < objs.lsize; i += 1) {
+		dnet_mess mess;
+		if (mess.type != objs.l[i].type) {
+			write_log(c.ctx, "Dropped mailbox message of illegal format in connection_output", 5);
+		} else {
+			objcopyto(mess, objs.l[i]);
+
+			if (mess.request == DNET_REQUEST_SEND_PACKET) {
+				char m[] = mess.mess;
+
+				int s = m.csize;
+				int p = packets.csize;
+				strcat(packets, m);
+
+				packets[p + 2] = s;
+				packets[p + 3] = s >> 8;
+				packets[p + 4] = 0;
+				packets[p + 5] = 0;
+				packets[p + 6] = 0;
+				packets[p + 7] = 0;
+
+				int crc = crc32(c.ctx.data, packets, p, p + s);
+
+				packets[p + 4] = crc; crc >>= 8;
+				packets[p + 5] = crc; crc >>= 8;
+				packets[p + 6] = crc; crc >>= 8;
+				packets[p + 7] = crc;
+
+				log_packet(c.ctx, "Packet   to", packets, 
+					c.ctx.conns[0].out_packets, p, p + s);
+				c.ctx.conns[0].out_packets += 1;
+			} else if (mess.request == DNET_REQUEST_STOP) {
+				output_finish(c);
+				return;
+			}
+		}
+	}
+
+	int size = packets.csize;
+	while (size & 0x1ff || !size)
+		packets.cpush(0), size += 1;
+
+	int data[] = chars2ints32(packets, 0, size);
+	int j;
+	size >>= 2;
+	c.oldsize = c.size;
+	for (j = 0; j < size; j += 0x80) {
+		dfs_encrypt(c.dfsctx, data, j, 0x80, (c.size >> 9) - 2);
+		c.size += 0x200;
+	}
+
+	char out[];
+	for (j = 0; j < size; j += 1) {
+		int n = data[j];
+		out.cpush(n); n >>= 8;
+		out.cpush(n); n >>= 8;
+		out.cpush(n); n >>= 8;
+		out.cpush(n);
+	}
+
+	output_data(c, out);
+	
+	if (c.ctx.last_time - c.last_sent_info >= SEND_INFO_TIMEOUT) {
+		context_send(c.ctx);
+		c.last_sent_info = c.ctx.last_time;
+	}	
+
+	dnet_addr addr;
+	addr.version = c.ctx.data.version;
+	addr.task_id = c.ctx.data.task_id;
+	addr.thread_id = c.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_OUT;
+	
+	mrecv(c.func, c, addr, CONN_OUT_TIMEOUT);
+	return;
+}
+
+(volatile stateful conn_t c, const any objs, int status) -> () connection_output {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received mail in connection_output");
+		write_log(c.ctx, m, 4);
+		outputp("", "", "");
+		output_finish(c);
+		return;
+	}
+
+	c.objs = objs;
+
+	const int vars[] = {0};
+	getsys(output_get_time, c, vars);
+	return;
+}
+
+(const stateful conn_t c) -> (volatile conn_t cc) conn_t_copy {
+	conn_t cc;
+	objcopyto(cc, c);
+	cc.ctx = context_copy(c.ctx);
+	dnet_connection dc;
+	objcopyto(dc, c.ctx.conns[0]);
+	cc.ctx.conns[0] = dc;
+	char str[];
+	cc.data = str;
+	return cc;
+}
+
+(const conn_t c, const int values[]) -> () connection_output_start {
+	conn_t cc = conn_t_copy(c);
+	cc.ctx.conns.lpop(cc.ctx.conns.lsize - 1);
+	cc.ctx.hosts.lpop(cc.ctx.hosts.lsize);
+	cc.func = connection_output;
+	connection_output(cc, "", 0);
+	return;
+}
+
+(volatile stateful conn_t c, const int values[]) -> () input_get_time {
+	c.ctx.last_time = values[0];
+	c.ctx.conns[0].last_time = values[0];
+	c.ctx.hosts[0].last_time = values[0];
+	if (c.peerhost)
+		c.ctx.hosts[c.peerhost].last_time = values[0];
+
+	int i;
+	int change;
+	for (i = 0; i + 0x200 <= c.data.csize; i += 0x200) {
+		int pos = c.size - c.data.csize + i;
+		if (c.oldsize < pos + 0x200 && c.size >= pos + 0x200) {
+			if (pos > 0x400) {
+				int data[] = chars2ints32(c.data, i, i + 0x200);
+				dfs_decrypt(c.dfsctx, data, 0, 0x80, (pos >> 9) - 2);
+				int j;
+				for (j = 0; j < 0x80; j += 1) {
+					int n = data[j];
+					int k = i + (j << 2);
+					c.data[k] = n; n >>= 8;
+					c.data[k + 1] = n; n >>= 8;
+					c.data[k + 2] = n; n >>= 8;
+					c.data[k + 3] = n;
+				}
+			} else if (pos == 0x400) {
+				conn_t cc = conn_t_copy(c);
+				cc.size = 0x600;
+				int sector[] = chars2ints(c.data, i, i + 0x200);
+                                c.sector = crypt(sector, c.ctx.data.files[DNET_FILE_KEY], 0, 0x400);
+				init_dfsctx(c);
+				log_packet(c.ctx, "Sector   in", ints2chars(c.sector, 0, 0x40), 0, 0, 0);
+				int vars[];
+
+				dnet_addr addr;
+				addr.version = c.ctx.data.version;
+				addr.task_id = c.ctx.data.task_id;
+				addr.thread_id = c.ctx.conns[0].thread_id;
+				addr.service = DNET_SERVICE_CONN_OUT;
+	
+				mrecvp("", "", addr, 0);
+
+				getsysp(connection_output_start, cc, vars);
+			} else if (pos == 0x200) {
+				dnet_host h;
+
+                                char key[];
+                                substrcat(key, c.data, 0, 0x400);
+                                c.peerkey = key;
+                                h.key = key;
+				h.flags = DNET_HOST_IMMEDIATE;
+				h.thread_id = c.ctx.conns[0].thread_id;
+				h.last_time = c.ctx.last_time;
+				
+				int ch;
+				(ch, c.peerhost) = update_host(c.ctx, h);
+				change |= ch;
+
+				c.sector = random_sector(c.ctx);
+				init_dfsctx(c);
+				log_packet(c.ctx, "Sector  out", ints2chars(c.sector, 0, 0x40), 0, 0, 0);
+                                char crypted[] = ints2chars(crypt(c.sector, c.peerkey, 0, 0x400), 0, 0x40);
+				output_data(c, crypted);
+			}
+		}
+	}
+
+	int search = 1;
+	int decoded = c.size & -0x200;
+	while (search && decoded > c.unseen) {
+		i = c.unseen - c.size + c.data.csize;
+		int size;
+		int res = c.data[i] >= 0x80 && c.data[i] < 0x8C;
+		if (res) {
+			res = decoded - c.unseen >= 8;
+			if (!res) search = 0;
+		}
+		if (res) {
+			size = c.data[i + 2] | c.data[i + 3] << 8;
+			res = decoded - c.unseen >= size;
+			if (!res) search = 0;
+		}
+		if (res) {
+			int x = c.data[i + 4];
+			int y = c.data[i + 5];
+			int z = c.data[i + 6];
+			int t = c.data[i + 7];
+			c.data[i + 4] = 0;
+			c.data[i + 5] = 0;
+			c.data[i + 6] = 0;
+			c.data[i + 7] = 0;
+			res = crc32(c.ctx.data, c.data, i, i + size) 
+					== (x | y << 8 | z << 16 | t << 24);
+			c.data[i + 4] = x;
+			c.data[i + 5] = y;
+			c.data[i + 6] = z;
+			c.data[i + 7] = t;
+		}
+		if (res) {
+			change |= process_packet(c.ctx, c.data, i, i + size);
+			c.unseen += size;
+		} else
+			c.unseen += search;
+	}
+
+	int unseen = c.unseen - c.size + c.data.csize;
+	if (unseen >= 0x1000) {
+		int todel = unseen & -0x200;
+		int tocopy = c.data.csize - todel;
+		for (i = 0; i < tocopy; i += 1)
+			c.data[i] = c.data[todel + i];
+		c.data.cpop(todel);
+	}
+
+	if (c.size >= 0x600 && (c.oldsize < 0x600 || change 
+			|| c.ctx.last_time - c.last_sent_info >= SEND_INFO_TIMEOUT)) {
+		context_send(c.ctx);
+		c.last_sent_info = c.ctx.last_time;
+	}
+	
+	input(c.func, c, 0x100000, CONN_IN_TIMEOUT);
+	return;
+}
+
+(const dnet_context ctx, int status) -> () shutdown_done {
+	char m[];
+	strcat(m, "Shutdown done for connection to node ");
+	printip(m, ctx.conns[0].ip0, ctx.conns[0].ip1);
+	strcat(m, ":");
+	printint(m, ctx.conns[0].port, 1);
+	write_log(ctx, m, 8);
+	return;
+}
+
+(volatile stateful conn_t c, const int values[]) -> () finish_get_time {
+	c.ctx.conns[0].flags |= DNET_CONN_FINISHED;
+	c.ctx.conns[0].last_time = values[0];
+
+	if (c.size >= 0x600) {
+		context_send(c.ctx);
+
+		dnet_addr addr;
+		addr.version = c.ctx.data.version;
+		addr.task_id = c.ctx.data.task_id;
+		addr.thread_id = c.ctx.conns[0].thread_id;
+		addr.service = DNET_SERVICE_CONN_OUT;
+
+		dnet_mess mess;
+		mess.request = DNET_REQUEST_STOP;
+		mess.thread_id = c.ctx.conns[0].thread_id;
+
+		msendp("", "", addr, mess);
+	}
+
+	dnet_addr addr;
+	addr.version = c.ctx.data.version;
+	addr.task_id = c.ctx.data.task_id;
+	addr.thread_id = c.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_IN;
+	
+	mrecvp("", "", addr, 1 << 63);
+
+	outputp(shutdown_done, c.ctx, "");
+	reconnect(c.ctx);
+	return;
+}
+
+(volatile stateful conn_t c) -> () finish_connection {
+	const int vars[] = {0};
+	getsys(finish_get_time, c, vars);
+	return;
+}
+
+(volatile stateful conn_t c, const any objs, int status) -> () input_process_messages {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received mail in connection_input");
+		write_log(c.ctx, m, 4);
+		finish_connection(c);
+		return;
+	}
+
+	int i;
+	for (i = 0; i < objs.lsize; i += 1) {
+		dnet_mess mess;
+		if (mess.type != objs.l[i].type) {
+			write_log(c.ctx, "Dropped mailbox message of illegal format in connection_input", 5);
+		} else {
+			objcopyto(mess, objs.l[i]);
+
+			if (mess.request == DNET_REQUEST_MERGE_CONTEXT) {
+				context_merge(c.ctx, mess.ctx);
+			}
+		}
+	}
+
+	const int vars[] = {0};
+	getsys(input_get_time, c, vars);
+	return;
+}
+
+(volatile stateful conn_t c, const char str[], int status) -> () connection_input {
+	if (status <= 0) {
+		char m[];
+		strcat(m, "Finished connection to node ");
+		printip(m, c.ctx.conns[0].ip0, c.ctx.conns[0].ip1);
+		strcat(m, ":");
+		printint(m, c.ctx.conns[0].port, 1);
+		write_log(c.ctx, m, 7);
+		finish_connection(c);
+		return;
+	}
+
+	input_data(c, str);
+
+	dnet_addr addr;
+	addr.version = c.ctx.data.version;
+	addr.task_id = c.ctx.data.task_id;
+	addr.thread_id = c.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_IN;
+	
+	mrecv(input_process_messages, c, addr, 0);
+	return;
+}
+
+(volatile dnet_context ctx, const int values[]) -> () connection_start {
+	dnet_connection c = ctx.conns[0];
+
+	char host[] = c.host;
+	int port = c.port >> 16;
+
+	c.host = "";
+	c.port &= 0xffff;
+	c.start_time = values[0];
+	c.last_time = values[0];
+	c.thread_id = c;
+	c.host = host;
+
+	char m[];
+	strcat(m, "Connected to node ");
+	printip(m, c.ip0, c.ip1);
+	strcat(m, ":");
+	printint(m, c.port, 1);
+	strcat(m, " (");
+	strcat(m, c.host);
+	strcat(m, ":");
+	printint(m, port, 1);
+	strcat(m, ")");
+
+	write_log(ctx, m, 7);
+
+	conn_t cc;
+	cc.ctx = ctx;
+	cc.unseen = 0x600;
+	cc.func = connection_input;
+
+	char pubkey[];
+	substrcat(pubkey, ctx.data.files[DNET_FILE_KEY], 0x400, 0x800);
+	output_data(cc, pubkey);
+
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.thread_id = ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_IN;
+	
+	mrecvp("", "", addr, 0);
+
+	input(cc.func, cc, 0x100000, CONN_IN_TIMEOUT);
+	return;
+}
+
+(const dnet_context ctx0, int port, int ip0, int ip1) -> () {
+	dnet_connection c0 = ctx0.conns[0];
+	if (port < 0) {
+		char m[];
+		strcat(m, "Failed connection to node '");
+		strcat(m, c0.host);
+		strcat(m, ":");
+		printint(m, c0.port, 1);
+		strcat(m, "': error 0x");
+		printhex(m, -port, 1, 0);
+		write_log(ctx0, m, 5);
+		reconnect(ctx0);
+		return;
+	}
+
+	dnet_context ctx = context_copy(ctx0);
+	dnet_connection c = ctx.conns[0];
+
+	c.ip0 = ip0;
+	c.ip1 = ip1;
+	c.port = port & 0xffff | c0.port << 16;
+	c.host = c0.host;
+	c.flags = c0.flags & ~DNET_CONN_FINISHED;
+
+	const int vars[] = {0};
+	getsys(connection_start, ctx, vars);
+	return;
+}

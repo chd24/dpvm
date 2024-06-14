@@ -1,0 +1,251 @@
+/* dpvm byte code translator, amd64 call/ret; T16.080-T19.605; $DVS:time$ */
+
+/* 
+ 	rsi = ints stack end
+*/
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> ()
+	ld = amd64_load;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		int datatype, int reg, int i, int n) -> ()
+	st = amd64_store;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res) {
+
+	if (c == DPVM_CODE_RET) {
+		int k;
+		for (k = 0; k < 4; k += 1) {
+			int n = data.func.type.l[1].i[k + 12];
+			int N = data.states.l[i].i[k];
+
+			if (N && !k) {
+				int j;
+				for (j = 1; j <= N; j += 1) {
+					int r = amd64_unlink(data, list, endlist, i, j);
+					if (r < 0) return -1;
+				}
+			}
+
+			if (N && n) {
+				int j;
+				for (j = 0; j < n; j += 1) {
+					ld(data, list, "mov", "48 8B", k, 0, 0, i, -j);
+					st(data, list, k, 0, i, N - 1 - j);
+				}
+			}
+		}
+
+		as(list, "xor rax,rax", "48 31 C0", 0, 0, 0, 0, 0);
+		as(list, "ret", "C3", 0, 0, 0, 0, 0);
+
+        } else if (c == DPVM_CODE_WAIT) {
+                stack_state t;
+                if (!i)
+                        t = data.input;
+                else
+                        t = data.states.l[i - 1];
+
+                int ftype = t.c[t.csize - 1];
+                if (!(ftype & CHECKER_TRANSACTION))
+                        return -1;
+
+                int addr1 = getaddr(data.addrs, "wait");
+                if (addr1 == -1) return -1;
+                int k = data.i[0];
+                data.i[0] = k + 1;
+                amd64_precall(list);
+                as(list, "lea rdi,[rdi+d]", "48 8D BF 124", 0, 0, (t.i[0] - data.input.i[0]) << 3, 0, 0);
+                as(list, "lea rsi,[rsi+d]", "48 8D B6 124", 0, 0, (t.i[1] - data.input.i[1]) << 3, 0, 0);
+                as(list, "lea rdx,[r11+d]", "49 8D 93 124", 0, 0, (t.i[2] - data.input.i[2]) << 3, 0, 0);
+                as(list, "lea rcx,[r10+d]", "49 8D 8A 124", 0, 0, t.i[3] - data.input.i[3], 0, 0);
+                amd64_call(list, addr1);
+                as(list, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
+                as(list, "jcc label", "0F 101 134", 0x85, 0, 0, k, 0);
+                as(endlist, "label", "", 0, 0, 0, k, 0);
+                as(endlist, "push rax", "50", 0, 0, 0, 0, 0);
+                amd64_stack_fail(data, endlist, i);
+                as(endlist, "pop rax", "58", 0, 0, 0, 0, 0);
+                int err = i;
+                if (i >= 0xf00) { err = 0xf00 | data.func.c[i]; }
+                as(endlist, "mov rdx,q", "48 BA 128", 0, 0, err << 5 | data.func << 17, 0, 0);
+                as(endlist, "or rax,rdx", "48 09 D0", 0, 0, 0, 0, 0);
+                as(endlist, "ret", "C3", 0, 0, 0, 0, 0);
+
+        } else if (c == DPVM_CODE_CALL || c == DPVM_CODE_RUN) {
+		stack_state t;
+		if (!i)
+			t = data.input;
+		else
+			t = data.states.l[i - 1];
+		int N = t.i[0] - data.states.l[i].i[0] - 1;
+
+		int unlink = 1;
+		if (i >= 3 && data.func.c[i - 3] == DPVM_CODE_CODE && data.func.c[i - 2] <= DPVM_CODE_NUM_MAX
+				&& data.func.c[i - 1] == DPVM_CODE_LGET)
+			unlink = 0;
+
+		int addr = -1;
+		int ftype = t.c[t.csize - 1];
+		if (!(ftype & (CHECKER_TYPE|CHECKER_OBJ)))
+			return -1;
+		if (ftype & CHECKER_OBJ)
+			ftype = 1;
+		else
+			ftype = 0;
+
+		if (ftype && t.l[t.lsize - 1] != data.func) { 
+			addr = getaddr(data.addrs, t.l[t.lsize - 1]);
+			if (addr == -1) return -1;
+			ftype = 2;
+		}
+
+		if (!ftype || unlink)
+			ld(data, list, "cp", "48 8B", 0, 0, 1, i, -N);
+
+		if (!ftype) {
+			int addr1 = getaddr(data.addrs, "check");
+			if (addr1 == -1) return -1;
+			as(list, "cmp rcx,[rcx+b]", "48 3B 49 111", 0, 0x68, 0, 0, 0);
+			int k = data.i[0];
+			data.i[0] = k + 2;
+			as(list, "jcc label", "0F 101 134", 0x84, 0, 0, k, 0);
+			as(endlist, "label", "", 0, 0, 0, k, 0);
+			amd64_precall(endlist);
+			as(endlist, "mov rdi,r8", "4C 89 C7", 0, 0, 0, 0, 0);
+			as(endlist, "mov rsi,rcx", "48 89 CE", 0, 0, 0, 0, 0);
+			/* 0x48 == (DPVM_THREAD_FLAG_MUST_TRANSLATE|DPVM_THREAD_FLAG_NO_PARENT) */
+			as(endlist, "mov rdx,d", "48 C7 C2 124", 0, 0, 0x48, 0, 0);
+			amd64_call(endlist, addr1);
+			ld(data, endlist, "cp", "48 8B", 0, 0, 1, i, -N);
+			as(endlist, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
+			as(endlist, "jcc label", "0F 101 134", 0x84, 0, 0, k + 1, 0);
+			as(endlist, "push rax", "50", 0, 0, 0, 0, 0);
+			amd64_stack_fail(data, endlist, i);
+			as(endlist, "pop rax", "58", 0, 0, 0, 0, 0);
+			int err = i;
+			if (i >= 0xf00) { err = 0xf00 | data.func.c[i]; }
+			as(endlist, "mov rdx,q", "48 BA 128", 0, 0, err << 5 | data.func << 17, 0, 0);
+			as(endlist, "or rax,rdx", "48 09 D0", 0, 0, 0, 0, 0);
+			as(endlist, "ret", "C3", 0, 0, 0, 0, 0);
+			as(list, "label", "", 0, 0, 0, k + 1, 0);	
+		}
+
+                if (c == DPVM_CODE_RUN) {
+			int addr1 = getaddr(data.addrs, "run");
+			if (addr1 == -1) return -1;
+			int k = data.i[0];
+			data.i[0] = k + 1;
+			amd64_precall(list);
+			as(list, "lea rdi,[rdi+d]", "48 8D BF 124", 0, 0, (t.i[0] - data.input.i[0]) << 3, 0, 0);
+			as(list, "lea rsi,[rsi+d]", "48 8D B6 124", 0, 0, (t.i[1] - data.input.i[1]) << 3, 0, 0);
+			as(list, "lea rdx,[r11+d]", "49 8D 93 124", 0, 0, (t.i[2] - data.input.i[2]) << 3, 0, 0);
+			as(list, "lea rcx,[r10+d]", "49 8D 8A 124", 0, 0, t.i[3] - data.input.i[3], 0, 0);
+			amd64_call(list, addr1);
+			as(list, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
+			as(list, "jcc label", "0F 101 134", 0x85, 0, 0, k, 0);
+			as(endlist, "label", "", 0, 0, 0, k, 0);
+			as(endlist, "push rax", "50", 0, 0, 0, 0, 0);
+			amd64_stack_fail(data, endlist, i);
+			as(endlist, "pop rax", "58", 0, 0, 0, 0, 0);
+			int err = i;
+			if (i >= 0xf00) { err = 0xf00 | data.func.c[i]; }
+			as(endlist, "mov rdx,q", "48 BA 128", 0, 0, err << 5 | data.func << 17, 0, 0);
+			as(endlist, "or rax,rdx", "48 09 D0", 0, 0, 0, 0, 0);
+			as(endlist, "ret", "C3", 0, 0, 0, 0, 0);
+
+			return 0;
+		}
+
+		if (ftype < 2) { 
+			as(list, "cp rax,[r8]", "49 8B 00", 0, 0, 0, 0, 0);
+			as(list, "mov rax,[rax]", "48 8B 00", 0, 0, 0, 0, 0);
+			if (!ftype) {
+				as(list, "cp r9,[rcx+b]", "4C 8B 49 111", 0, 0x68, 0, 0, 0);
+				as(list, "mov r9,[r9+b]", "4D 8B 49 111", 0, 8, 0, 0, 0);
+			}
+
+			int j;
+			for (j = 0; j < 4; j += 1) {
+				int n = t.i[j] - !j;
+				if (ftype)
+					n += data.machcode.i[j];
+				if (j < 3)
+					n <<= 3;
+
+				if (n >> 31)
+					as(list, "mov rdx,q", "48 BA 128", 0, 0, n, 0, 0);
+				else
+					as(list, "mov rdx,d", "48 C7 C2 124", 0, 0, n, 0, 0);
+
+				if (j == 0)
+					as(list, "add rdx,rdi", "48 01 FA", 0, 0, 0, 0, 0);
+				else if (j == 1)
+					as(list, "add rdx,rsi", "48 01 F2", 0, 0, 0, 0, 0);
+				else if (j == 2)
+					as(list, "add rdx,r11", "4C 01 DA", 0, 0, 0, 0, 0);
+				else
+					as(list, "add rdx,r10", "4C 01 D2", 0, 0, 0, 0, 0);
+
+				as(list, "sub rdx,[rax+b]", "48 2B 50 111", 0, j << 3, 0, 0, 0);
+				if (j < 3)
+					as(list, "shr rdx,b", "48 C1 EA 121", 0, 0, 3, 0, 0);
+				if (!ftype)
+					as(list, "add rdx,[r9+b]", "49 03 51 111", 0, j << 3, 0, 0, 0);
+
+				as(list, "cmp rdx,[rax+b]", "48 3B 50 111", 0, j << 3 | 0x40, 0, 0, 0);
+				amd64_fail(data, list, endlist, i, 0x8F, 0x18|j);
+			}
+		}
+
+		if (unlink) {
+			as(list, "push rcx", "51", 0, 0, 0, 0, 0);
+			as(list, "push rcx", "51", 0, 0, 0, 0, 0);
+		}
+		if (!ftype) {
+			as(list, "cp rax,[rcx+b]", "48 8B 41 111", 0, 0x68, 0, 0, 0);
+			as(list, "mov rax,[rax+b]", "48 8B 40 111", 0, 0x18, 0, 0, 0);
+		}
+		amd64_precall(list);
+		amd64_stack_top(data, list, i, 1);
+		if (!ftype)
+			as(list, "call rax", "FF D0", 0, 0, 0, 0, 0);
+		else if (ftype == 1) {
+			int k = data.i[0];
+			data.i[0] = k + 1;
+			as(list, "label", "", 0, 0, 0, k, list.l[0].i[1]);
+			as(list, "call label", "E8 134", 0, 0, 0, k, 0);
+		}
+		amd64_call(list, addr);
+		if (unlink) {
+			as(list, "pop rcx", "59", 0, 0, 0, 0, 0);
+			as(list, "push rax", "50", 0, 0, 0, 0, 0);
+			as(list, "mov rax,rcx", "48 89 C8", 0, 0, 0, 0, 0);
+			int r = amd64_unlink(data, list, endlist, -1, 0);
+			if (r) return r;
+			as(list, "pop rax", "58", 0, 0, 0, 0, 0);
+			as(list, "pop rcx", "59", 0, 0, 0, 0, 0);
+		}
+		int k = data.i[0];
+		data.i[0] = k + 1;
+		as(list, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
+		as(list, "jcc label", "0F 101 134", 0x85, 0, 0, k, 0);
+		as(endlist, "label", "", 0, 0, 0, k, 0);
+		as(endlist, "ret", "C3", 0, 0, 0, 0, 0);
+        } else {
+            return -1;
+        }
+
+	return 0;
+}

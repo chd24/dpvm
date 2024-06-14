@@ -1,0 +1,16 @@
+/* example of sending/receiving messages; T16.631-T17.195; $DVS:time$ */
+
+(any arg, any mess, int status) -> () received {
+	output("", "", mess.l[0]);
+	return;
+}
+
+(any addr, char mess[]) -> () {
+	mrecvp(received, "", addr, 10000000000);
+
+	int i;
+	for (i = 0; i < 1000000000; i += 1);
+
+	msendp("", "", addr, mess);
+	return;
+}

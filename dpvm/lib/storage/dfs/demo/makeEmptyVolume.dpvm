@@ -1,0 +1,47 @@
+/* dfs class, make empty volume demo, T18.861-T18.882; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../dfs.dpvmake"
+
+int READ_SIZE = 0x100000;
+
+type volumeData = {
+    const char volumePath[];
+};
+
+(volatile stateful any data, const stateful int part[]) -> () callback = {
+    volumeData to[];
+    objcopyto(to, {data});
+    volumeData d = to[0];
+
+    int i, todo, max = READ_SIZE >> 3;
+    for (i = 0; i < part.isize; i += todo) {
+	todo = part.isize - i;
+	if (todo > max)
+		todo = max;
+	writep("", "", d.volumePath, ints2chars(part, i, i + todo), -1);
+    }
+    return;
+};
+
+(const char volumeName[], const char filePaths[], const char volumePath[]) -> (const char error[]) makeEmptyVolume = {
+    dfsClass dfs = dfsCreate();
+
+    char parts[][] = splitString(filePaths, " ");
+    int i;
+    for (i = 0; i < parts.lsize; i += 1) {
+        dfsFileAttributes attr;
+        if (parts[i] == "/")
+            attr.mode = DFS_IFDIR;
+        else
+            attr.mode = DFS_IFREG;
+        char body[], error[] = dfs.methods.addPath(dfs, parts[i], body, attr);
+        if (error.csize)
+            return error;
+    }
+
+    volumeData data = {volumePath};
+
+    return dfs.methods.rolloutVolume(dfs, data, callback, volumeName);
+};

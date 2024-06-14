@@ -1,0 +1,7 @@
+/* monitor object, makefile; T18.850-T18.355; $DVS:time$ */
+
+#include "monitor.dpvmh"
+
+/*@ "monitorObj.dpvm": main object of monitor */
+monitorClass monitorObj = Gtv1Tz89TFZ_BrLMavcJfp2_L8zxETXk93E_QnAPXHvKVc2 /* innate_hundreds_buttercups */;
+/* @*/

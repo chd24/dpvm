@@ -1,0 +1,13 @@
+/* creates array of floats of fixed given size; T19.495-T20.056; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "utils.dpvmake"
+
+(int size) -> (volatile any array) floatsFixedArray = {
+	const type t0 = float[];
+	type t;
+	objcopyto(t, t0);
+	t.i[10] = size;
+	t.i[14] = size;
+	return new_object(t, t.i[0], t.i[1], t.i[2], t.i[3], 0, 0, size, 0);
+};

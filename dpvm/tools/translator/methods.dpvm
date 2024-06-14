@@ -1,0 +1,9 @@
+/* all translator methods; T17.668-T19.506; $DVS:time$ */
+
+#include "translator.dpvmake"
+
+translator_method translator_methods[] = {
+	amd64_graphs,
+	amd64_floats,
+	amd64_old
+};

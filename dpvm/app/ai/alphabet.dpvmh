@@ -1,0 +1,26 @@
+/* aiAlphabet class, public header, T18.379-T18.413; $DVS:time$ */
+
+int	AI_ALPHABET_SMALL	= 0x00,
+	AI_ALPHABET_BIG		= 0x80,
+	AI_ALPHABET_EMPTY	= 0xfa,
+	AI_ALPHABET_PARAGRAPH	= 0xfb,
+	AI_ALPHABET_DOT		= 0xfc,
+	AI_ALPHABET_SKIPPED	= 0xfd,
+	AI_ALPHABET_SPACE	= 0xfe,
+	AI_ALPHABET_ACCENT	= 0xff;
+
+type aiAlphabetMethods = {
+        const char version[];
+	const (volatile stateful any aiAlphabetObj, const char codeTableName[], const char letters[][], int flags) -> (const char error[]) addLetters;
+	const (const stateful any aiAlphabetObj, const char codeTableName[], int flags) -> (const char letters[][], const char error[]) getLetters;
+	const (volatile stateful any aiAlphabetObj, const char codeTableName[]) -> (const char error[]) addPredefinedCodeTable;
+	const (volatile stateful any aiAlphabetObj, const char codeTableName[]) -> (const char defaultCodeTableName[], const char error[]) getDefaultCodeTable;
+	const (volatile stateful any aiAlphabetObj, const char codeTableName[], const char text[]) -> (const char indexes[], const char error[]) parseText;
+	const (volatile stateful any aiAlphabetObj, const char codeTableName[], const char indexes[]) -> (const char text[], const char error[]) restoreText;
+	const (const stateful any aiAlphabetObj, const char codeTableName[]) -> (const int statistics[], const char error[]) getStatistics;
+};
+
+type aiAlphabet = {
+        volatile any data;
+	const aiAlphabetMethods methods;
+};

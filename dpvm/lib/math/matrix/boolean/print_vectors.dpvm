@@ -1,0 +1,40 @@
+/* generates string with system of partial vectors; T16.472-T16.472; $DVS:time$ */
+
+(int minvect[], int maxvect[]) -> (char str[]) {
+	char str[];
+	char c;
+	int mask;
+	int n;
+	int i;
+	int j;
+
+	if (!maxvect.isize) { return (str); }
+
+	i = 0; do {
+		mask = mask | maxvect.i[i];
+		i = i + 1;
+	} while (i < maxvect.isize);
+
+	if (!mask) { return (str); }
+
+	i = mask; do {
+		i = i >> 1;
+		n = n + 1;
+	} while (i);
+
+	i = 0; do {
+		j = n; do {
+			j = j - 1;
+			c = '*';
+			if (minvect.i[i] >> j & 1) { c = '1'; }
+			if (!(maxvect.i[i] >> j & 1)) { c = '0'; }
+			str.push(c);
+		} while (j);
+
+		str.push('\r');
+		str.push('\n');
+		i = i + 1;
+	} while (i < maxvect.isize);
+
+	return (str);
+}

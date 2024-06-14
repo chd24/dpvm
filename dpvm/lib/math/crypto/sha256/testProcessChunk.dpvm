@@ -1,0 +1,27 @@
+/* test for different process_chunk implementations; T16.582-T17.687; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "sha256.dpvmake"
+
+int startseed = 0x12345678;
+
+(const (volatile stateful int ctx[], const stateful int chunk[], int begin) -> () 
+		process_chunk, int niter) -> (volatile int ctx[]) {
+	int ctx[];
+	int chunk[];
+
+	sha256_init(ctx);
+
+	int i;
+	int seed = startseed;
+	for (i = 0; i < 16; i = i + 1)
+		seed = rand(seed),
+		chunk.ipush(seed & 0xffffffff);
+
+	for (i = 0; i < niter; i = i + 1)
+		process_chunk(ctx, chunk, 0);
+
+	ctx.ipop(ctx.isize - 8);
+
+	return (ctx);
+}

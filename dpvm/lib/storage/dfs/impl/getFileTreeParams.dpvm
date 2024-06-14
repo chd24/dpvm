@@ -1,0 +1,21 @@
+/* dfs class, return parameters of file tree for given file length, T19.007-T19.007; $DVS:time$ */
+
+(int fileSize) -> (int levelSizes[], int nLevels, int nLinkSectors) getFileTreeParams = {
+	int levelSizes[], nLinkSectors, nLevels;
+
+	if (!fileSize)
+		return (levelSizes, nLevels, nLinkSectors);
+
+	fileSize = -(-fileSize & -0x200) >> 9;
+	levelSizes.ipush(fileSize);
+	nLevels += 1;
+
+	while (fileSize > 1) {
+		fileSize = -(-fileSize & -0x40) >> 6;
+		levelSizes.ipush(fileSize);
+		nLinkSectors += fileSize;
+		nLevels += 1;
+	}
+
+	return (levelSizes, nLevels, nLinkSectors);
+};

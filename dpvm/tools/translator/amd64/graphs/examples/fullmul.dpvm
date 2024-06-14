@@ -1,0 +1,3 @@
+(int x) -> (int, int) {
+	asm { 3 mul ret };
+}

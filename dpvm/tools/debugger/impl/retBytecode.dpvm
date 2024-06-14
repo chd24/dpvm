@@ -1,0 +1,59 @@
+/* ret bytecode manual implementation; T16.503-T19.652; $DVS:time$ */
+
+#include "debugger.dpvmake"
+
+(volatile stateful thread t) -> () retBytecode = {
+	any func = t.function;
+	type stackType = func.type.l[1];
+	report(t, stackType);
+
+	if (!t.pointers.isize) {
+		t.pointer |= 1 << 63;
+		return;
+	}
+
+	int i, todo,
+		lsize = t.pointers[t.pointers.isize - 5],
+		isize = t.pointers[t.pointers.isize - 4],
+		fsize = t.pointers[t.pointers.isize - 3],
+		csize = t.pointers[t.pointers.isize - 2];
+	t.pointer = t.pointers[t.pointers.isize - 1];
+	t.pointers.ipop(5);
+
+	t.function = t.functions[t.functions.lsize - 1];
+	t.functions.lpop(1);
+	t.checkerData = t.checkerDatas[t.checkerDatas.lsize - 1];
+	t.checkerDatas.lpop(1);
+
+	any stack = t.stack;
+
+	todo = stackType.i[8];
+	if (stack.lsize - lsize > todo) {
+		for (i = 0; i < todo; i += 1)
+			stack.l[lsize + i] = stack.l[stack.lsize - todo + i];
+		stack.lpop(stack.lsize - lsize - todo);
+	}
+
+	todo = stackType.i[9];
+	if (stack.isize - isize > todo) {
+		for (i = 0; i < todo; i += 1)
+			stack.i[isize + i] = stack.i[stack.isize - todo + i];
+		stack.ipop(stack.isize - isize - todo);
+	}
+
+	todo = stackType.i[10];
+	if (stack.fsize - fsize > todo) {
+		for (i = 0; i < todo; i += 1)
+			stack.f[fsize + i] = stack.f[stack.fsize - todo + i];
+		stack.fpop(stack.fsize - fsize - todo);
+	}
+
+	todo = stackType.i[11];
+	if (stack.csize - csize > todo) {
+		for (i = 0; i < todo; i += 1)
+			stack.c[csize + i] = stack.c[stack.csize - todo + i];
+		stack.cpop(stack.csize - csize - todo);
+	}
+
+	return;
+}

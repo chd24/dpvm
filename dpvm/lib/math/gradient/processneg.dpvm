@@ -1,0 +1,30 @@
+/* add negation to schema; T16.488-T16.489; $DVS:time$ */
+
+(int schema[], int nvars, int cell) -> (int rescell) {
+	int n;
+
+	if (cell < nvars) {
+		cell = cell + nvars;
+		return (cell);
+	}
+
+	if (cell < nvars << 1) {
+		cell = cell - nvars;
+		return (cell);
+	}
+
+	n = schema.isize;
+	if (n >= 3) {
+		if (schema.i[n - 1] == cell 
+		  & schema.i[n - 2] == cell
+		  & schema.i[n - 3] == cell) {
+			schema.ipop(3);
+			return (cell);
+		}
+	}
+
+	schema.push(cell);
+	schema.push(cell);
+	schema.push(cell);
+	return (cell);
+}

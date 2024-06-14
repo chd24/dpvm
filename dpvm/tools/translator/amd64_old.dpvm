@@ -1,0 +1,51 @@
+/* old method for x86-64; T17.668-T20.100; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "amd64/amd64.dpvmake"
+
+asm_instr rules[][] = bookshop_imparted_pubescent; /* amd64/rules/rules() */
+asm_instr rulesfin[][] = compressible_normalising_outhouses; /* amd64/rules/final() */
+
+(volatile stateful translator_data data) -> (int res) translate {
+	asm_instr list[] = new_rule();
+	int res = amd64(data, list);
+	if (res) return res;
+
+	int level = getaddr(data.addrs, "debug");
+
+	if (level == 0) {
+		char str[] = asm2str(list);
+		objcopyto(data.machcode, str);
+		return 0;
+	} else if (level == 1) {
+		output(data.machcode, list);
+		return 0;
+	}
+
+	optimize(list, rules);
+
+	if (level == 2) {
+		char str[] = asm2str(list);
+		objcopyto(data.machcode, str);
+		return 0;
+	} else if (level == 3) {
+		output(data.machcode, list);
+		return 0;
+	}
+
+	optimize(list, rulesfin);
+
+	if (level == 4) {
+		char str[] = asm2str(list);
+		objcopyto(data.machcode, str);
+		return 0;
+	}
+
+	output(data.machcode, list);
+	return 0;
+}
+
+translator_method amd64_old = {
+	"amd64",
+	translate
+};

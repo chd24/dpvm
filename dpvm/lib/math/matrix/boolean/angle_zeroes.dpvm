@@ -1,0 +1,22 @@
+/* count angle zeroes in matrix; T16.473-T16.473; $DVS:time$ */
+
+(int matrix[], int n) -> (int angle_zeroes) {
+	int mask;
+	int m;
+	int sum;
+	int i;
+
+	do {
+		mask = mask | matrix.i[i];
+		m = mask;
+		m = m << 1;
+		if (m >> n) { return (sum); }	
+		do {
+			m = m << 1;
+			sum = sum + 1;
+		} while (!(m >> n));
+		i = i + 1;
+	} while (i < matrix.isize);
+
+	return (sum);
+}

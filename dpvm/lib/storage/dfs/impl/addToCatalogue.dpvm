@@ -1,0 +1,313 @@
+/* dfs class, addToCatalogue method implementation, T19.059-T19.351; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "dfs.dpvmake"
+
+type addCatalogueData = {
+	volatile stateful dfsImpl impl;
+	const (volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () writeCallback;
+	volatile stateful any data;
+	const char error[];
+	int sectorsInode;
+	int nodesInode;
+	int sectorsInodeChanged;
+	int nodesInodeChanged;
+};
+
+(volatile stateful addCatalogueData data, int inode) -> (volatile int volume[], int pos) findInode = {
+	dfsPart parts[] = data.impl.data.parts;
+	int volume[], inodeBegin, inodeEnd, i;
+
+	inode <<= 2;
+
+	for (i = 0; i < parts.lsize && (inode < inodeBegin || inode >= inodeEnd); i += 1)
+		volume = parts[i].volume, inodeBegin = parts[i].begin, inodeEnd = inodeBegin + volume.isize;
+
+	if (inode < inodeBegin || inode >= inodeEnd)
+		return (volume, -(inode >> 2));
+
+	return (volume, inode - inodeBegin);
+};
+
+(volatile stateful addCatalogueData data, int inode) -> (int res) saveInode = {
+	int volume[], pos;
+
+	(volume, pos) = findInode(data, inode);
+	if (pos < 0)
+		return pos;
+
+	if (data.impl.data.flags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[saveInode(1): inode=%X, pos=%X, content={%X, %X, %X, %X}]\r\n", {inode, pos, volume[pos], volume[pos + 1], volume[pos + 2], volume[pos + 3]});
+		outputp("", "", mess);
+	}
+
+	inode <<= 2;
+	data.writeCallback(data.data, volume, inode - pos, pos, pos + 4);
+
+	dfsPart parts[] = data.impl.data.parts;
+	int i;
+
+	for (i = 0; i < parts.lsize; i += 1) {
+		if (inode >= parts[i].begin && inode + 4 <= parts[i].begin + parts[i].volume.isize) {
+			int volume1[] = parts[i].volume, pos1 = inode - parts[i].begin;
+			volume1[pos1] = volume[pos];
+			volume1[pos1 + 1] = volume[pos + 1];
+			volume1[pos1 + 2] = volume[pos + 2];
+			volume1[pos1 + 3] = volume[pos + 3];
+		}
+	}
+
+	return 0;
+};
+
+(volatile stateful addCatalogueData data) -> (int inode) allocInode = {
+	dfsPart parts[] = data.impl.data.parts;
+	if (!parts[0].volume[data.nodesInode + 1]) {
+		int v[], i, nSector = parts[0].volume[data.sectorsInode + 3] + 1;
+		for (i = 0; i < 0x10; i += 1) {
+			v.ipush(1 << 32 | DFS_INODE_FREE | (0x10 ^ (i + 1)) << 24);
+			v.ipush(0);
+			v.ipush(0);
+			v.ipush(nSector & (((i + 1) >> 4) - 1));
+		}
+
+		data.writeCallback(data.data, v, nSector << 6, 0, 0x40);
+		dfsPart part = {v, nSector << 6};
+		parts.lpush(part);
+
+		parts[0].volume[data.sectorsInode + 3] = nSector;
+		data.sectorsInodeChanged = 1;
+
+		parts[0].volume[data.nodesInode + 1] = 0x10;
+		parts[0].volume[data.nodesInode + 2] = nSector;
+		parts[0].volume[data.nodesInode] &= ~0xff0000;
+		parts[0].volume[data.nodesInode] |= 0x100000;
+		data.nodesInodeChanged = 1;
+
+		if (data.impl.data.flags & DFS_FLAG_DEBUG) {
+			char mess[];
+			printf(mess, "[allocInode(1): nSector=%X]\r\n", {nSector});
+			outputp("", "", mess);
+		}
+	}
+
+	int inode = parts[0].volume[data.nodesInode + 2] << 4 | parts[0].volume[data.nodesInode] >> 16 & 0xf, volume[], pos;
+	(volume, pos) = findInode(data, inode);
+	if (pos < 0)
+		return pos;
+
+	parts[0].volume[data.nodesInode + 1] -= 1;
+	parts[0].volume[data.nodesInode + 2] = volume[pos + 3];
+	parts[0].volume[data.nodesInode] &= ~0xff0000;
+	parts[0].volume[data.nodesInode] |= volume[pos] >> 8 & 0xff0000;
+	volume[pos + 3] = 0;
+	volume[pos] &= ~0xff000000;
+	data.nodesInodeChanged = 1;
+
+	if (data.impl.data.flags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[allocInode(2): inode=%X, pos=%X]\r\n", {inode, pos});
+		outputp("", "", mess);
+	}
+
+	return inode;
+};
+
+(volatile stateful addCatalogueData data, const char name[], volatile int body[], const dfsFileAttributes attr, int parentInode, int inode) -> (int res) addToCatalogueWorker = {
+	int parentVolume[], parentPos;
+	(parentVolume, parentPos) = findInode(data, parentInode);
+	if (parentPos < 0)
+		return parentPos;
+
+	int volume[], ipos;
+	if (inode) {
+		(volume, ipos) = findInode(data, inode);
+		if (ipos < 0)
+			return ipos;
+
+		if (volume[ipos] >> 32 == 0xffffffff) {
+			data.error = mkError("too many links to inode", "addToCatalogueWorker");
+			return -1;
+		}
+	} else if (body.isize) {
+		char error[] = checkVolumePart(body, 0, 1);
+		if (error.csize) {
+			data.error = error;
+			return -1;
+		}
+	}
+
+	int itemVolume[], itemPos, itemInode = allocInode(data);
+	if (itemInode < 0)
+		return itemInode;
+	(itemVolume, itemPos) = findInode(data, itemInode);
+	if (itemPos < 0)
+		return itemPos;
+
+	itemVolume[itemPos] = 0x100000000 | DFS_INODE_ITEM;
+
+	int pos, end = name.csize, uni, unicode[];
+	while (pos < end) {
+		(uni, pos) = scanutf8(name, pos, end);
+		if (uni >> 16) {
+			if (uni < 0 || uni > 0x10ffff) {
+				data.error = mkError("illegal unicode symbol in name", "addToCatalogueWorker");
+				return -1;
+			}
+			uni -= 0x10000;
+			unicode.ipush(uni >> 10 | 0xD800);
+			uni &= 0x3ff;
+			uni |= 0xDC00;
+		}
+		unicode.ipush(uni);
+	}
+
+	while (unicode.isize < 12 || (unicode.isize & 7) != 4)
+		unicode.ipush(0xffff);
+
+	int prevVolume[] = itemVolume, prevPos = itemPos, prevInode = itemInode, prevLink = 1, done;
+
+	for (pos = 0, end = unicode.isize; pos < end; pos += done) {
+		if (end - pos > 12)
+			done = 8;
+		else
+			done = 12;
+
+		int d[3], i;
+		for (i = 0; i < done; i += 1)
+			d[i >> 2] |= unicode[pos + i] << ((i & 3) << 4);
+
+		int nameVolume[], namePos, nameInode = allocInode(data);
+		if (nameInode < 0)
+			return nameInode;
+		(nameVolume, namePos) = findInode(data, nameInode);
+		if (namePos < 0)
+			return namePos;
+
+		nameVolume[namePos] = 0x100000000 | DFS_INODE_NAME;
+		nameVolume[namePos + 1] = d[0];
+		nameVolume[namePos + 2] = d[1];
+		nameVolume[namePos + 3] = d[2];
+
+		prevVolume[prevPos + prevLink] = nameInode >> 4;
+		prevVolume[prevPos] |= (nameInode & 0xf | 0x10) << (prevLink << 3);
+
+		if (pos)
+			saveInode(data, prevInode);
+
+		prevInode = nameInode;
+		prevVolume = nameVolume;
+		prevPos = namePos;
+		prevLink = 3;
+	}
+
+	if (pos)
+		saveInode(data, prevInode);
+
+	if (inode) {
+		volume[ipos] += 0x100000000;
+		saveInode(data, inode);
+	} else if (body.isize) {
+		dfsPart parts[] = data.impl.data.parts;
+		int nSector = parts[0].volume[data.sectorsInode + 3] + 1;
+		char error[] = buildInVolume(body, nSector);
+		if (error.csize) {
+			data.error = error;
+			return -1;
+		}
+
+		data.writeCallback(data.data, body, nSector << 6, 0, body.isize);
+		nSector += body.isize >> 6;
+		parts[0].volume[data.sectorsInode + 3] = nSector - 1;
+		data.sectorsInodeChanged = 1;
+
+		inode = body[0x42] << 4 | body[0x40] >> 16 & 0xf;
+	} else {
+		inode = allocInode(data);
+		if (inode < 0)
+			return inode;
+		(volume, ipos) = findInode(data, inode);
+		if (ipos < 0)
+			return ipos;
+
+		volume[ipos + 2] = data.impl.methods.time2dfsTime(attr.mtime);
+
+		if ((attr.mode & DFS_IFMT) == DFS_IFDIR) {
+			volume[ipos] = 0x100000000 | DFS_INODE_DIR;
+			int res = code(data, ".", chars2ints("", 0, 0), attr, inode, inode);
+			if (res < 0) return res;
+			res = code(data, "..", chars2ints("", 0, 0), attr, inode, parentInode);
+			if (res < 0) return res;
+		} else
+			volume[ipos] = 0x100000000 | DFS_INODE_FILE;
+
+		saveInode(data, inode);
+	}
+
+	itemVolume[itemPos] &= ~0xffff0000;
+	itemVolume[itemPos + 2] = inode >> 4;
+	itemVolume[itemPos + 3] = parentVolume[parentPos + 3];
+	itemVolume[itemPos] |= (inode & 0xf | 0x10) << 16;
+	itemVolume[itemPos] |= parentVolume[parentPos] & 0xff000000;
+	saveInode(data, itemInode);
+
+	parentVolume[parentPos] &= ~0xff000000;
+	parentVolume[parentPos + 1] += 1;
+	parentVolume[parentPos] |= (itemInode & 0xf | 0x10) << 24;
+	parentVolume[parentPos + 3] = itemInode >> 4;
+	saveInode(data, parentInode);
+
+	return 0;
+};
+
+(volatile stateful any dfsObj, volatile stateful any data,
+		const (volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () writeCallback,
+		const char name[], const char body[], const dfsFileAttributes attr, int inode) -> (const char error[], int inode) addToCatalogue = {
+	dfsImpl impl;
+	char err[] = convertObjToImpl(impl, dfsObj, "addToCatalogue");
+	if (err.csize) return (err, 0);
+
+	addCatalogueData d = {impl, writeCallback, data};
+	dfsPart parts[] = impl.data.parts;
+
+	if (!parts.lsize)
+		return (mkError("volume not added", "addToCatalogue"), 0);
+
+	if (parts[0].begin || parts[0].volume.isize < 0x80)
+		return (mkError("illegal first volume", "addToCatalogue"), 0);
+
+	int i;
+	for (i = 0x40; i < 0x80; i += 4) {
+		int t = parts[0].volume[i] & 0xff;
+		if (t == DFS_INODE_SECTORS)
+			d.sectorsInode = i;
+		else if (t == DFS_INODE_NODES)
+			d.nodesInode = i;
+	}
+
+	if (!d.sectorsInode || !d.nodesInode)
+		return (mkError("standard inode not found in sector 1", "addToCatalogue"), 0);
+
+	if (body.csize) {
+		if ((attr.mode & DFS_IFMT) != DFS_IFDIR)
+			return (mkError("non-empty body allowed only for catalogues", "addToCatalogue"), 0);
+		if (body.csize < 0x400 || body.csize & 0x1ff)
+			return (mkError("illegal size of non-empty body", "addToCatalogue"), 0);
+	}
+	if ((attr.mode & DFS_IFMT) != DFS_IFDIR && (attr.mode & DFS_IFMT) != DFS_IFREG)
+		return (mkError("unsupported mode of item", "addToCatalogue"), 0);
+
+	int res = addToCatalogueWorker(d, name, chars2ints(body, 0, body.csize), attr, inode, 0);
+	if (d.sectorsInodeChanged)
+		saveInode(d, d.sectorsInode >> 2);
+	if (d.nodesInodeChanged)
+		saveInode(d, d.nodesInode >> 2);
+	if (res < 0) {
+		if (d.error.csize)
+			return (d.error, 0);
+		return (mkError("need more volume parts", "addToCatalogue"), -res);
+	}
+	return ("", res);
+};

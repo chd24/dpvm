@@ -1,0 +1,13 @@
+/* sha512 of substring; T16.493-T19.991; $DVS:time$ */
+
+#include "sha512.dpvmake"
+
+(const stateful char str[], int begin, int end) -> (volatile int hash[]) {
+	int ctx[];
+	
+	sha512_init(ctx);
+	sha512_addSubstr(ctx, str, begin, end);
+	sha512_finalize(ctx);
+
+	return ctx;
+}

@@ -1,0 +1,197 @@
+/* kraken class */
+
+int _Z = 0;
+#include "../../../../../common/sysParams.dpvmh"
+#include "../../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../../lib/utils/utils.dpvmake"
+#include "../../../../../tools/registry/registry.dpvmake"
+#include "../../../../../lib/storage/dfs/dfs.dpvmh"
+#include "../kraken.dpvmake"
+
+char version[] = "logData demo 0.1.0, T19.974-T19.976"; /* $DVS:time$ */
+
+int READ_MAX = 0x100000;
+
+type constLogDataData = {
+	const registryData registry;
+	const char logFile[];
+	const char currencyPair[];
+	const any main;
+	int interval;
+};
+
+type logDataData = {
+	const constLogDataData cdata;
+	volatile stateful krakenClass krakenObj;
+	volatile float arr[];
+	int time;
+	int lastTime;
+	int notfirst;
+};
+
+(volatile stateful logDataData data, const char mess[]) -> () outComment = {
+	char out[];
+	strftime(out, "# %Y-%m-%d %H:%M:%S  ", data.time, data.cdata.registry.timeZone);
+	strcat(out, mess);
+	strcat(out, "\r\n");
+	writep("", "", data.cdata.logFile, out, -1);
+	return;
+};
+
+(const stateful any cdata, const int values[]) -> () crashHandler = {
+	constLogDataData cdarr[];
+	pushObject(cdata, cdarr);
+	logDataData data = {cdarr[0]};
+	data.time = values[4];
+
+	char str[];
+	int cod;
+	int res;
+
+	printf(str, "%s crashed with error ", {version});
+	cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+
+	outComment(data, str);
+	return;
+};
+
+(volatile stateful any d, const char error[]) -> () getDataCallback = {
+	logDataData darr[];
+	pushObject(d, darr);
+	logDataData data = darr[0];
+
+	if (!data.notfirst)
+		;
+	else if (error.csize)
+		outComment(data, error);
+	else if (!data.arr.fsize)
+		outComment(data, "Empty float array returned by getData()");
+	else {
+		char out[];
+		int i;
+		float avg;
+		for (i = 0; i < data.arr.fsize; i += 1) {
+			float f = data.arr[i];
+			int r = i % DATA_ITEM_END, n = f;
+			if (r == DATA_TIMESTAMP) {
+				printf(out, "%d", {n});
+				data.lastTime = n * 1000000000;
+			} else if (r == DATA_TRANSACTIONS)
+				printf(out, ",%d,%.2f\r\n", {n, avg});
+			else if (r == DATA_VOLUME)
+				printf(out, ",%.8f", {f});
+			else if (r == DATA_AVERAGE_RATE)
+				avg = f;
+			else
+				printf(out, ",%.2f", {f});
+		}
+		writep("", "", data.cdata.logFile, out, -1);
+	}
+
+	data.arr.fpop(data.arr.fsize);
+
+	if (data.notfirst) {
+		data.time += data.cdata.interval;
+		const int vars[] = {DPVM_SYS_PARAM_TIME};
+		int values[] = {data.time};
+		setsysp("", "", vars, values);
+	}
+	data.notfirst = 1;
+
+	data.krakenObj.methods.getData(data.arr, data.krakenObj, code, data,
+			data.cdata.currencyPair, data.lastTime + 2000000000, data.cdata.interval);
+	return;
+};
+
+(volatile stateful logDataData data, const char text[], int status) -> () readCallback = {
+	if (status <= 0) {
+		char err[];
+		printf(err, "File '%s' is empty", {data.cdata.logFile});
+		outComment(data, err);
+	} else {
+		int pos = text.csize - 1;
+		if (text[pos] != '\n') {
+			char err[];
+			printf(err, "File '%s' not finished by end of line", {data.cdata.logFile});
+			outComment(data, err);
+		} else {
+			for (pos -= 1; pos >= 0; pos -= 1)
+				if (text[pos] == '\n') {
+					any dst;
+					scanf(dst, "%d", text, pos + 1, text.csize);
+					if (dst.isize) {
+						data.lastTime = dst.i[0] * 1000000000;
+						getDataCallback(data, "");
+						return;
+					}
+				}
+			char err[];
+			printf(err, "File '%s' not contains valid line with last time", {data.cdata.logFile});
+			outComment(data, err);
+		}
+	}
+	getDataCallback(data, "");
+	return;
+};
+
+(volatile stateful logDataData data, const any items) -> () mstatCallback = {
+	char mess[];
+	printf(mess, "Started %s (%p) based on %s", {version, data.cdata.main, data.krakenObj.methods.version});
+	outComment(data, mess);
+	int size;
+	if (items.lsize) {
+		dfsFileAttributes dfs;
+		const (volatile stateful any arr, int n, int val) -> () iSet = {
+			arr.i[n] = val;
+			return;
+		};
+		int i;
+		for (i = 0; i < items.l[0].isize; i += 1)
+			iSet(dfs, i, items.l[0].i[i]);
+		size = dfs.size;
+	} else {
+		char err[];
+		printf(err, "File '%s' not found", {data.cdata.logFile});
+		outComment(data, err);
+	}
+	int start = size - READ_MAX;
+	if (start < 0)
+		start = 0;
+	read(readCallback, data, data.cdata.logFile, start, size - start);
+	return;
+};
+
+(const constLogDataData cdata, const int values[]) -> () timeCallback = {
+	krakenClass krakenObj = krakenCreate();
+	float arr[];
+	logDataData data = {cdata, krakenObj, arr, values[0]};
+	mstat(mstatCallback, data, cdata.logFile, 0, 1);
+	return;
+};
+
+(const any registry, const char logFile[], const char currencyPair[], int interval) -> () logdata = {
+	constLogDataData cdata = {registryObj.copy(registry), logFile, currencyPair, code, interval};
+	const int hvars[] = {DPVM_SYS_PARAM_ERROR, DPVM_SYS_PARAM_CODE, DPVM_SYS_PARAM_POS, DPVM_SYS_PARAM_FUNC_SHORT,
+			DPVM_SYS_PARAM_TIME};
+	getsysp(crashHandler, cdata, hvars);
+	const int vars[] = {DPVM_SYS_PARAM_TIME};
+	getsysp(timeCallback, cdata, vars);
+	return;
+};

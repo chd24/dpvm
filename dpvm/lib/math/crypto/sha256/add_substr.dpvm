@@ -1,0 +1,25 @@
+/* add substring to sha256 context; T16.492-T17.687; $DVS:time$ */
+
+#include "sha256.dpvmake"
+
+(volatile stateful int ctx[], const stateful char text[], int begin, int end) -> () {
+	int n = ctx[72];
+	
+	while (begin < end) {
+		int c = text[begin];
+		int i = ((n >> 2) & 0xf) + 8;
+
+		if (!(n & 3)) ctx[i] = 0;
+		ctx[i] = ctx[i] | c << ((~n & 3) << 3);
+		n = n + 1;
+
+		if (!(n & 0x3f))
+			sha256_processChunk(ctx, ctx, 8);
+
+		begin = begin + 1;
+	}
+
+	ctx[72] = n;
+
+	return;
+}

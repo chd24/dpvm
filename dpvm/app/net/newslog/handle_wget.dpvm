@@ -1,0 +1,8 @@
+/* newslog: start read wget output; T15.590-T17.178; $DVS:time$ */
+
+#include "newslog.dpvmake"
+
+(volatile stateful news_data data, int status) -> () {
+	input(read_wget, data, 0x100000, WGET_READ_TIME_OUT);
+	return;
+}

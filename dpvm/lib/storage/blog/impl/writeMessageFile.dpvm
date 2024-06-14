@@ -1,0 +1,269 @@
+/* blog class, writeMessageFile method, T18.979-T19.012; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "blog.dpvmake"
+
+int READ_SIZE = 0x10000;
+int READ_MAX = 0x100000;
+
+type writeMessageFileData = {
+	volatile stateful blogImpl impl;
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	const char path[];
+	const char content[];
+	const dfsFileAttributes attr;
+	const int runs[];
+	volatile int volume[];
+	int inode;
+	int runsPos;
+	int begin;
+	int end;
+	int newSize;
+	int pos;
+	int size;
+	int minsize;
+	int contentPos;
+};
+
+(volatile stateful writeMessageFileData d, volatile int arr[], int begin) -> () writeToMessage = {
+	blogMessage m = d.impl.data.message;
+
+	while (arr.isize & 0x7f)
+		arr.ipush(0);
+
+	int nSectors = arr.isize >> 7, sector0 = begin >> 9, i;
+
+	for (i = !begin; i < nSectors; i += 1)
+		dfs_encrypt(m.dfsCtx, arr, i << 7, 0x80, i + sector0);
+
+	if (m.dfsFlags & DFS_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[ writeMessageFile:writeToMessage: begin=%X, arr.isize=%X, nSectors=%X, sector0=%X]\r\n", {begin, arr.isize, nSectors, sector0});
+		outputp("", "", mess);
+	}
+
+	writep("", "", m.path, ints32_2chars(arr, 0, arr.isize), begin);
+	return;
+};
+
+(volatile stateful writeMessageFileData d) -> (int res) processFileRun = {
+	if (d.pos == (d.begin & -0x200) && d.size >= 0x200) {
+		int begin = d.begin & 0x1ff, end = d.size;
+
+		if (d.end - (d.begin & -0x200) < end)
+			end = d.end - (d.begin & -0x200);
+
+		if (end > begin) {
+			writeToMessage(d, chars2ints32(d.content, d.contentPos + begin, d.contentPos + end), d.pos);
+			d.begin += end - begin;
+			d.contentPos += end - begin;
+		}
+	}
+
+	if (d.begin == d.end) {
+		if (d.runsPos >= d.runs.isize) {
+			d.callback(d.data, "");
+			return 0;
+		}
+
+		d.begin = d.runs[d.runsPos];
+		d.end = d.runs[d.runsPos + 1];
+
+		d.runsPos += 2;
+	}
+
+	d.pos = d.begin & -0x200;
+	d.size = -(-d.end & -0x200) - d.pos;
+	if (d.size > READ_MAX)
+		d.size = READ_MAX;
+
+	return 1;
+};
+
+(volatile stateful any data, const stateful int volume[], int begin, int changeBegin, int changeEnd) -> () resizeCallback = {
+	writeMessageFileData to[];
+	objcopyto(to, {data});
+	writeMessageFileData d = to[0];
+
+	writeToMessage(d, ints2ints32(volume, changeBegin & -0x40, -(-changeEnd & -0x40)), (begin + (changeBegin & -0x40)) << 3);
+	return;
+};
+
+(volatile stateful writeMessageFileData d, const char file[], int status) -> () writeMessageFileCallback = {
+	blogMessage m = d.impl.data.message;
+	int arr[];
+
+	if (status < 0 || status == file.csize) {
+		if (status <= 0 || status & 0x1ff || (d.path != "volume.bin" && status != d.size && status != READ_MAX && (!d.minsize || status < d.minsize))) {
+			if (d.path == "volume.bin" && !status && d.pos)
+				d.callback(d.data, "");
+			else {
+				char mess[];
+				printf(mess, "Error reading file '%s' or illegal file (inode=%X, begin=%X, end=%X, pos=%X, size=%X, minsize= %X, status=%X)",
+						{m.path, d.inode, d.begin, d.end, d.pos, d.size, d.minsize, status});
+				d.callback(d.data, mkError(mess, "writeMessageFileCallback"));
+			}
+			return;
+		}
+
+		arr = chars2ints32(file, 0, status);
+
+		int i, nSector = d.pos >> 9, nSectors = status >> 9;
+
+		if (!d.pos) {
+			if (!m.inited)
+				dfs_set_data(m.dfsCtx, chars2ints32(file, 0, 0x200));
+			i = 1;
+		}
+
+		for (i = i; i < nSectors; i += 1)
+			dfs_decrypt(m.dfsCtx, arr, i << 7, 0x80, nSector + i);
+	}
+
+	d.minsize = 0;
+
+	if (!d.runs.isize && d.path != "volume.bin") {
+		dfsClass dfs = m.dfsObj;
+		char error[];
+
+		if (status == file.csize) {
+			int volume[] = ints32_2ints(arr, 0, arr.isize);
+
+			if (d.volume.isize || (d.size != status && status == READ_MAX)) {
+				if (d.volume.isize)
+					copyints(d.volume, volume, 0, volume.isize);
+				else
+					d.volume = volume;
+
+				if (d.size != status) {
+					d.pos += status;
+					d.size -= status;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+
+				volume = d.volume;
+				int v[];
+				d.volume = v;
+			}
+
+			error = dfs.methods.addVolumePart(dfs, volume, d.pos >> 3);
+			if (error.csize) {
+				d.callback(d.data, error);
+				return;
+			}
+
+			if (!d.pos)
+				m.inited = 1;
+		}
+
+		if (!d.inode) {
+			dfsFileAttributes attr;
+			(attr, error) = dfs.methods.findPath(dfs, d.path);
+			int inode = attr.inode;
+			if (error.csize) {
+				if (strstr(error, "need more") >= 0) {
+					d.pos = inode << 5 & -READ_SIZE;
+					d.size = READ_SIZE;
+					d.minsize = (inode >> 4 << 9) + 0x200 - d.pos;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+				d.callback(d.data, error);
+				return;
+			}
+			if ((attr.mode & DFS_IFMT) != DFS_IFREG) {
+				d.callback(d.data, mkError("item is not a file", "writeMessageFileCallback"));
+				return;
+			}
+
+			d.attr = attr;
+			d.inode = inode;
+
+			if (d.newSize != d.attr.size) {
+				int begin, end;
+				(error, begin, end) = dfs.methods.resizeFile(dfs, d, resizeCallback, d.inode, d.newSize, d.impl.data.currentTime);
+				if (error.csize) {
+					if (strstr(error, "need more") >= 0 && begin < end) {
+						d.pos = begin << 3 & -0x200;
+						d.size = -(-end << 3 & -0x200) - d.pos;
+						read(code, d, m.path, d.pos, d.size);
+						return;
+					}
+					d.callback(d.data, error);
+					return;
+				}
+			}
+		}
+
+		int runs[], begin, end, arr0[];
+		(runs, error, begin, end) = dfs.methods.getFileRuns(dfs, d.inode, d.begin, d.end);
+		if (error.csize) {
+			if (strstr(error, "need more") >= 0 && begin < end) {
+				d.pos = begin << 3 & -0x200;
+				d.size = -(-end << 3 & -0x200) - d.pos;
+				if (d.size <= 0x200) {
+					d.minsize = d.size;
+					d.size += (end - begin) << 9;
+				}
+				read(code, d, m.path, d.pos, d.size);
+				return;
+			}
+			d.callback(d.data, error);
+			return;
+		}
+
+		arr = arr0;
+		d.runs = runs;
+		d.begin = 0;
+		d.end = 0;
+
+	} else if (!d.pos && d.path == "volume.bin") {
+		int i;
+		for (i = 0x80; i < 0x100; i += 8)
+			if ((arr[i] & 0xff) == 4) {
+				dfsFileAttributes attr;
+				attr.size = ((arr[i | 6] | arr[i | 7] << 32) + 1) << 9;
+				d.attr = attr;
+				i = 0x100;
+			}
+	}
+
+	while (processFileRun(d));
+
+	return;
+};
+
+(volatile stateful any blogObj, volatile stateful any data, const (volatile stateful any data, const char error[]) -> () callback,
+		const char path[], const char content[], int begin, int end, int newSize) -> () writeMessageFile = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "writeMessageFile");
+	if (err.csize) return callback(data, err);
+
+	if (!impl.data.message.path.csize)
+		return callback(data, mkError("message is not set", "writeMessageFile"));
+
+	if (begin < 0 || begin > end || end > newSize || end - begin != content.csize || begin & 0x1ff || end & 0x1ff && end != newSize)
+		return callback(data, mkError("illegal begin/end parameters", "writeMessageFile"));
+
+	if (begin == end)
+		return callback(data, "");
+
+	writeMessageFileData d = {impl, callback, data, path, content};
+	d.begin = begin;
+	d.end = end;
+	d.newSize = newSize;
+
+	if (!impl.data.message.inited) {
+		if (path == "volume.bin")
+			d.size = 0x400;
+		else
+			d.size = READ_SIZE, d.minsize = 0x400;
+		read(writeMessageFileCallback, d, impl.data.message.path, 0, d.size);
+	} else
+		writeMessageFileCallback(d, "", 1);
+	return;
+};

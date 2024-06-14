@@ -1,0 +1,40 @@
+/* main routine for amd64 ghaph-based translation; T16.595-T17.667; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "graphs.dpvmake"
+
+(volatile stateful mach_code machcode, const stateful any func) -> (int res) {
+	int end = findend(func, 0);
+	if (end < 0 | end >= func.csize) return -1;
+	if (func.c[end] != 0x88) return -2;
+	if (func.type.l[0].i[8] || func.type.l[0].i[10] || func.type.l[0].i[11] ||
+	    func.type.l[1].i[8] || func.type.l[1].i[10] || func.type.l[1].i[11])
+		return -3;
+
+	schema s;
+	(s, end) = makeschema(func, 0, end, 0);
+	if (end) return end;
+
+	removeconst(s);
+	removeleaf(s);
+	shifts2rotates(s);
+	addoutputleaf(s);
+	split2chains(s);
+
+	asm_instr list[];
+	asm_instr a;
+	list.push(a);
+	asm_add(list, "mov r10,rcx", "49 89 CA", 0, 0, 0, 0, 0);
+	asm_add(list, "mov r11,rdx", "49 89 D3", 0, 0, 0, 0, 0);
+	assembly(list, func, s);
+	asm_add(list, "xor eax,eax", "31 C0", 0, 0, 0, 0, 0); 
+	asm_add(list, "ret", "C3", 0, 0, 0, 0, 0);
+
+	output(machcode, list);
+	end = s.startmem + s.nmems - func.type.l[0].i[9];
+	if (end > machcode.i[1]) machcode.i[1] = end;
+
+	destroyschema(s);
+
+	return 0;
+}

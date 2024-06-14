@@ -1,0 +1,153 @@
+/* block read from storage; T16.508-T19.572; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../../math/crypto/base58/base58.dpvmake"
+#include "xdag.dpvmake"
+
+int SLEEP_TIME = 30000000000; /* 30 sec */
+
+(const xdagdata data, const int values[]) -> () check_child {
+	if (values.isize < 2) { /* after sleep */
+		const int vars[] = {DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ID_CHILD};
+		getsys(code, data, vars);
+	} else { /* after getsys */
+		if (values[1] == -1) { /* if no child - make a connection to pool */
+			connectp(connected, data, data.cdata.pooladdr, 
+				0x406 << 16 | data.cdata.poolport);
+		}
+
+		/* sleep befor next check */
+		const int vars[] = {DPVM_SYS_PARAM_TIME};
+		int values1[];
+		values1.ipush(values[0] + SLEEP_TIME);
+		setsys(code, data, vars, values1);
+	}
+	return;
+}
+
+(const stateful xdagdata data, const char cblock[], int status) -> () {
+	xdagdata d = xdagcopy(data);
+	xdagcdata c;
+	objcopyto(c, d.cdata);
+
+	int method = c.method & 0xff;
+	char encblock[];
+
+	if (method >= 8) {
+		base58Class base58Obj = base58Create();
+
+		char err[] = base58Obj.methods.decode(encblock, base58Obj, cblock, 0, status);
+
+		if (err.csize) {
+			char mess[];
+			strcat(mess, "Can't decode base58 address '");
+			strcat(mess, cblock);
+			strcat(mess, "'");
+			write_log(data, mess, 1);
+			return;
+		}
+
+		int iblockhash[] = chars2ints32(encblock, 0, encblock.csize), i;
+		for (i = 0; i < iblockhash.isize; i += 1)
+			iblockhash[i] = htonl(iblockhash[i]);
+		while (iblockhash.isize < 8)
+			iblockhash.ipush(0);
+		c.blockhash = iblockhash;
+		d.sendseq += 16;
+
+	} else {
+		if (status != 0x200) {
+			char mess[];
+			strcat(mess, "Can't read initial block from file '");
+			strcat(mess, data.cdata.blockfile);
+			strcat(mess, "'");
+			write_log(data, mess, 1);
+			return;
+		}
+
+		int block[] = chars2ints32(cblock, 0, 0x200);
+		c.blockhash = block_hash(cblock);
+		encblock = encrypt(d, block);
+	}
+
+	if (method >= 16) {
+		jsonMethods j = c.json.methods;
+
+		d.sendseq = 1;
+		jsonObject t = j.makeObject("", JSON_OBJECT),
+		o = j.makeObject("id", JSON_INT|JSON_NAME); j.setInt(o, d.sendseq); j.addObject(t, o);
+		o = j.makeObject("jsonrpc", JSON_STRING|JSON_NAME), j.setString(o, "2.0"); j.addObject(t, o);
+		o = j.makeObject("method", JSON_STRING|JSON_NAME), j.setString(o, "login"); j.addObject(t, o);
+
+		jsonObject p = j.makeObject("params", JSON_OBJECT|JSON_NAME);
+		o = j.makeObject("agent", JSON_STRING|JSON_NAME);
+		j.setString(o, "XMRig-4-XDAG/6.20.0 (Linux x86_64) libuv/1.44.2 gcc/9.4.0"); j.addObject(p, o);
+
+		jsonObject a = j.makeObject("algo", JSON_ARRAY|JSON_NAME);
+		const char algo[][] = {"rx/xdag","cn/2","cn/r","cn/fast","cn/half","cn/xao","cn/rto","cn/rwz","cn/zls",
+			"cn/double","cn/ccx","rx/0","rx/wow","rx/arq","rx/graft","rx/sfx","rx/keva","cn/1","argon2/chukwa",
+			"argon2/chukwav2","argon2/ninja"};
+		int i;
+		for (i = 0; i < algo.lsize; i += 1) {
+			o = j.makeObject("", JSON_STRING), c.json.methods.setString(o, algo[i]); j.addObject(a, o);
+		}
+		j.addObject(p, a);
+
+		o = j.makeObject("login", JSON_STRING|JSON_NAME); j.setString(o, cblock); j.addObject(p, o);
+		o = j.makeObject("pass", JSON_STRING|JSON_NAME); j.setString(o, c.workername); j.addObject(p, o);
+		j.addObject(t, p);
+
+		char raw[];
+		j.serialize(raw, t);
+		raw.cpush('\n');
+		encblock = raw;
+
+	} else {
+		if (method >= 3) {
+			char raw[];
+			raw.cpush(encblock.csize);
+			raw.cpush(encblock.csize >> 8);
+			raw.cpush(encblock.csize >> 16);
+			raw.cpush(encblock.csize >> 24);
+			strcat(raw, encblock);
+			encblock = raw;
+		}
+
+		if (data.cdata.workername.csize) {
+			char out[];
+			out.cpush(0x53);
+			out.cpush(0x98);
+			out.cpush(0x6b);
+			out.cpush(0xf4);
+			int size = data.cdata.workername.csize;
+			if (size > 28) size = 28;
+			int i;
+			for (i = 0; i < size; i += 1)
+				out.cpush(data.cdata.workername[i]);
+			for (i = i; i < 28; i += 1)
+				out.cpush(0);
+			char name[] = encrypt(d, chars2ints32(out, 0, 0x20));
+
+			if (method >= 3) {
+				encblock.cpush(name.csize);
+				encblock.cpush(name.csize >> 8);
+				encblock.cpush(name.csize >> 16);
+				encblock.cpush(name.csize >> 24);
+			}
+			strcat(encblock, name);
+		}
+	}
+
+	c.block = encblock;
+	c.sendseq = d.sendseq;
+	d.cdata = c;
+
+	log_block(d, d.cdata.blockhash, "Block", 6);
+
+	int values[];
+	check_child(d, values);
+	return;
+}

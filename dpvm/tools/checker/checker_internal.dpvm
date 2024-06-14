@@ -1,0 +1,44 @@
+/* dpvm byte code checker, main; T16.013-T18.012; $DVS:time$ */
+
+#include "checker.dpvmake"
+
+(const stateful any func, int mode) -> (volatile any funcs[], volatile checker_data data, char error[], int flags) {
+	checker_data data;
+	any funcs[];
+	char error[];
+	int flags;
+	int res;
+
+	(data.input, data.output, error, res) = check_func_type_(func.type);
+	flags |= res;
+	if (flags & CHECKER_ILLEGAL) { 
+		error = mkerror(error, func, -1);
+		return (funcs, data, error, flags); 
+	}
+
+	(data.jumps_map, res) = check_jumps(func);
+	flags |= res;
+	if (flags & CHECKER_ILLEGAL) { 
+		error = mkerror("check_jumps() failed", func, -1); 
+		return (funcs, data, error, flags); 
+	}
+
+	(data.code_map, res) = check_flow(func, data.jumps_map);
+	flags |= res;
+	if (flags & CHECKER_ILLEGAL) { 
+		error = mkerror("check_flow() failed", func, -1); 
+		return (funcs, data, error, flags); 
+	}
+
+	res = check_code(func, data.code_map);
+	flags |= res;
+	if (flags & CHECKER_ILLEGAL) { 
+		error = mkerror("check_code() failed", func, -1); 
+		return (funcs, data, error, flags); 
+	}
+
+        (data.states, funcs, error, res) = check_stack(func, data.jumps_map, data.code_map, data.input, data.output, mode);
+	flags |= res;
+
+	return (funcs, data, error, flags);
+}

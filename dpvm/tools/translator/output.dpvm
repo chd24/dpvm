@@ -1,0 +1,45 @@
+/* output list of instructions; T16.083-T19.643; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "translator_utils.dpvmake"
+
+(volatile stateful mach_code machcode, const stateful asm_instr list[]) -> () {
+	int labels[];
+	int jumps[];
+	int params[];
+	int n;
+	int i;
+	int j;
+	int res;
+	char c;
+	
+	for (i = list[0].next; i; i = list[i].next) {
+		params.ipush(list[i].param0);
+		params.ipush(list[i].param1);
+		params.ipush(list[i].param2);
+		n = list[i].param3;
+		params.ipush(n);
+		res = pushcode(machcode, list[i].hex, params);
+		if (strstr(list[i].mnem, "label") >= 0) {
+			while (labels.isize <= n) {
+				labels.push(-1);
+				jumps.push(-1);
+			}
+			if (list[i].mnem == "label")
+				labels[n] = machcode.csize;
+			else
+				jumps[n] = machcode.csize;
+		}
+		params.ipop(4);
+	}
+	
+	for (i = 0; i < labels.isize; i += 1) {
+		if (labels[i] >= 0 && jumps[i] >= 0) {
+			n = labels[i] - jumps[i];
+			for (j = 0; j < 4; j += 1, n >>= 8)
+				machcode.c[jumps[i] - 4 + j] = n;
+		}
+	}
+
+	return;
+}

@@ -1,0 +1,55 @@
+/* time to components; T15.543-T15.944; $DVS:time$ */
+	
+(int time, int offset) -> (int year, int month, int day, int weekday, 
+			   int hour, int min, int sec, int nanosec) {
+	int year;
+	int month;
+	int day;
+	int weekday;
+	int hour;
+	int min;
+	int sec;
+	int nanosec;
+	int days;
+	int n;
+	
+	nanosec = time % 1000000000;
+	time = time / 1000000000;
+	sec = time % 60;
+	time = time / 60;
+	min = time % 60;
+	time = time / 60;
+	time = time + offset;
+	hour = time % 24;
+	time = time / 24;
+
+	weekday = (time + 4) % 7;
+
+	year = 1970;
+	do {
+		days = 365 + ((year & 3) == 0);
+		n = (time >= days);
+		if (n) {
+			time = time - days;
+			year = year + 1;
+		}
+	} while (n);
+
+	month = 1;
+	if (time >= 31) { month =  2; time = time - 31; n = 28 + ((year & 3) == 0);
+	if (time >=  n) { month =  3; time = time -  n; 
+	if (time >= 31) { month =  4; time = time - 31; 
+	if (time >= 30) { month =  5; time = time - 30;
+	if (time >= 31) { month =  6; time = time - 31; 
+	if (time >= 30) { month =  7; time = time - 30; 
+	if (time >= 31) { month =  8; time = time - 31; 
+	if (time >= 31) { month =  9; time = time - 31; 
+	if (time >= 30) { month = 10; time = time - 30; 
+	if (time >= 31) { month = 11; time = time - 31; 
+	if (time >= 30) { month = 12; time = time - 30; 
+	}}}}}}}}}}}
+	
+	day = time + 1;
+
+	return (year, month, day, weekday, hour, min, sec, nanosec);
+}

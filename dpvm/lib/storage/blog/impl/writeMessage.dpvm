@@ -1,0 +1,83 @@
+/* blog class, writeMessage method, T18.885-T18.885; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/rand/rand.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "blog.dpvmake"
+
+int READ_SIZE = 0x100000;
+
+type writeData = {
+	volatile blogMessage m;
+	volatile randData r;
+	int pos;
+};
+
+(volatile stateful any data, const stateful int part[]) -> () writeCallback = {
+	writeData to[];
+	objcopyto(to, {data});
+	writeData d = to[0];
+
+	int i, todo, max = READ_SIZE >> 3;
+	for (i = 0; i < part.isize; i += todo) {
+		todo = part.isize - i;
+		if (todo > max)
+		todo = max;
+
+		int sectors[] = ints2ints32(part, i, i + todo), j;
+		for (j = 0; j < sectors.isize; j += 0x80, d.pos += 0x200) {
+			int nSector = d.pos >> 9;
+			if (!nSector) {
+				int k;
+				for (k = 0; k < 0x80; k += 1)
+					sectors[k] = randObj.getLimited(d.r, 0x100000000);
+
+				dfs_set_data(d.m.dfsCtx, sectors);
+			} else {
+				dfs_encrypt(d.m.dfsCtx, sectors, j, 0x80, nSector);
+			}
+		}
+
+		writep("", "", d.m.path, ints32_2chars(sectors, 0, sectors.isize), -1);
+	}
+	return;
+};
+
+(volatile stateful any blogObj) -> (const char error[]) writeMessage = {
+	blogImpl impl;
+	char err[] = convertObjToImpl(impl, blogObj, "writeMessage");
+	if (err.csize) return err;
+
+	if (!impl.data.root.csize)
+		return mkError("blog root is not set", "writeMessage");
+
+	blogMessage m = impl.data.message;
+
+	if (!m.time)
+		return mkError("message not set", "writeMessage");
+
+	int raw[], t = m.time, i;
+	randData r;
+	randObj.initObj(r, m.seed);
+
+	for (i = 0; i < 8; i += 1)
+		raw.ipush(randObj.get(r));
+
+	raw[0] = t;
+	raw[1] = m.parentTime;
+
+	m.raw = ints2chars(raw, 0, 4);
+	char path[];
+	printf(path, "%s/%08X/%02X/%08X.dfs", {impl.data.root, t >> 32, t >> 24 & 0xfc, t & 0xffffffff});
+	m.path = path;
+	char password[];
+	for (i = 16; i < 32; i += 1)
+		printf(password, "%02X", {+m.raw[i]});
+	m.dfsCtx = dfs_init(password);
+
+	char volumeName[];
+	printf(volumeName, "%X", {t});
+	writeData d = {m, r};
+	return m.dfsObj.methods.rolloutVolume(d.m.dfsObj, d, writeCallback, volumeName);
+};

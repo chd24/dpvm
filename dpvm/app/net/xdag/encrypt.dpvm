@@ -1,0 +1,31 @@
+/* encrypt int32[] data before send; T16.508-T19.555; $DVS:time$ */
+
+#include "../../utils/utils.dpvmake"
+#include "../../math/crypto/crc32/crc32.dpvmake"
+#include "../../math/crypto/dfs/dfs.dpvmake"
+#include "xdag.dpvmake"
+
+(volatile stateful xdagdata data, volatile stateful int arr[]) -> (volatile char raw[]) {
+	if ((data.cdata.method & 0xff) >= 4) {
+		data.sendseq += arr.isize >> 8;
+		return ints32_2chars(arr, 0, arr.isize);
+	}
+
+	if (arr.isize == 0x80) {
+		arr[0] = 0x3fca9e2b;
+		arr[1] = 0;
+		int crc = data.cdata.crcinit;
+		crc = crc32_addints32(data.cdata.crcctx, arr, 0, 0x80, crc);
+		crc = crc32_finalize(data.cdata.crcctx, crc);
+		arr[1] = crc;
+	}
+
+	int seq = data.sendseq;
+	int i;
+	for (i = 0; i < arr.isize; i += 8, seq += 1)
+		dfs_encrypt(data.cdata.dfsctx, arr, i, 8, seq);
+
+	data.sendseq = seq;
+
+	return ints32_2chars(arr, 0, arr.isize);
+}

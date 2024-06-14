@@ -1,0 +1,7 @@
+/* te class, makefile; T18.319-T18.336; $DVS:time$ */
+
+#include "te.dpvmh"
+
+/*@ "te.dpvm": te viewer/editor */
+teClass teObj = deity_robed_careerists;
+/* @*/                         

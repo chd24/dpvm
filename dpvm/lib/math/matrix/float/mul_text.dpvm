@@ -1,0 +1,34 @@
+/* multiply two matrices given as strings and return output as string; T17.917-T17.917; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "matrix.dpvmake"
+
+(int error) -> (const char res[]) mkerror {
+    char res[];
+    strcat(res, "Error ");
+    printint(res, error, 1);
+    return res;
+}
+
+(const stateful char matrix1[], const stateful char matrix2[], int parallel_cut) -> (const char result[]) {
+    matrix m1;
+    int error;
+    int pos;
+    (m1, error, pos) = matrix_scan(matrix1, 0, matrix1.csize);
+    if (error) return mkerror(error * 10 - 1);
+
+    matrix m2;
+    (m2, error, pos) = matrix_scan(matrix2, 0, matrix2.csize);
+    if (error) return mkerror(error * 10 - 2);
+
+    matrix res;
+    res.rows = m1.rows;
+    res.columns = m2.columns;
+    error = matrix_mul(res, m1, m2, parallel_cut);
+    if (error) return mkerror(error * 10 - 3);
+
+    char dst[];
+    matrix_print(dst, res, 8);
+
+    return dst;
+}

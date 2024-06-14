@@ -1,0 +1,11 @@
+/* test for run/wait bytecodes; T17.890-T17.890; $DVS:time$ */
+
+(const (int) -> (int) f, int x, int y) -> (int fx, int fy) {
+	asm {
+		1 iload 0 lload run
+		0 iload 1 lload run
+		wait 0 istore
+		wait 1 istore
+		ret
+	};
+}

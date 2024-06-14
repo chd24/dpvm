@@ -1,0 +1,96 @@
+/* trie class, words demo, T18.847-T18.871; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../trie.dpvmake"
+
+(const stateful any leftKey, const stateful any rightKey) -> (int bitNo, int leftBit, int rightBit) compare = {
+    int lsize = leftKey.csize, rsize = rightKey.csize, i;
+
+    for (i = 0; i < lsize && i < rsize && leftKey.c[i] == rightKey.c[i]; i += 1);
+
+    int bitNo = i << 3;
+
+    if (i == lsize) {
+        if (i == rsize)
+            return (bitNo, -1, -1);
+
+        return (bitNo, -1, rightKey.c[i] >> 7);
+    }
+
+    if (i == rsize)
+        return (bitNo, leftKey.c[i] >> 7, -1);
+
+    int diff = leftKey.c[i] ^ rightKey.c[i], bit = -1;
+
+    while (diff)
+        diff >>= 1, bit += 1;
+
+    return (bitNo + 7 - bit, leftKey.c[i] >> bit & 1, rightKey.c[i] >> bit & 1);
+};
+
+(volatile stateful char out[], volatile stateful trieNode node) -> () printNode = {
+    char key[] = "[no]";
+
+    if (node.flags & TRIE_FLAG_KEY) {
+        any from;
+        char to[][];
+        from.lpush(node.key);
+        objcopyto(to, from);
+        key = to[0];
+    }
+
+    int value = -1;
+
+    if (node.flags & TRIE_FLAG_VALUE) {
+        value = node.value.i[0];
+    }
+
+    printf(out, "'%s' (%d, %d, %X)", {key, value, node.bitNo, node.flags});
+    return;
+};
+
+(volatile stateful any data, volatile stateful trieNode parentNode, volatile stateful trieNode node, int dir) -> () callback = {
+    any from;
+    char to[][];
+    from.lpush(data);
+    objcopyto(to, from);
+    char out[] = to[0];
+
+    printNode(out, parentNode);
+    printf(out, " %c-> ", {"DLR"[dir + 1]});
+    printNode(out, node);
+    strcat(out, "\r\n");
+    return;
+};
+
+(const char words[], const char word[]) -> (const char res[]) wordsDemo = {
+    trieClass trie = trieCreate();
+
+    char error[] = trie.methods.setCompare(trie, compare);
+    if (error.csize)
+        return error;
+
+    char parts[][] = splitString(words, " ");
+    int i;
+    for (i = 0; i < parts.lsize; i += 1) {
+        error = trie.methods.addKeyValue(trie, parts[i], {i});
+        if (error.csize)
+            return error;
+    }
+
+    char out[];
+    error = trie.methods.traverseDown(trie, out, callback);
+    if (error.csize)
+        return error;
+
+    trieNode node;
+    (node, error) = trie.methods.findKey(trie, word);
+    if (error.csize)
+        return error;
+
+    strcat(out, "\r\n");
+    printNode(out, node);
+    strcat(out, "\r\n");
+    return out;
+};

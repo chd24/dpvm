@@ -1,0 +1,37 @@
+/* test dfs crypt; T16.513-T16.516; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "dfs.dpvmake"
+
+(const stateful char password[], int size, int seed) -> (int correct) {
+	int ctx[];
+	int rnd[];
+	int data[];
+	int src[];
+	int res;
+	int i;
+
+	ctx = dfs_init(password);
+
+	for (i = 0; i < 0x80; i += 1) {
+		seed = rand(seed);
+		rnd.ipush(seed & 0xffffffff);
+	}
+
+	dfs_set_data(ctx, rnd);
+
+	for (i = 0; i < size; i += 1) {
+		seed = rand(seed);
+		data.ipush(seed & 0xffffffff);
+		src.ipush(seed & 0xffffffff);
+	}
+
+	seed = rand(seed);
+	res = dfs_encrypt(ctx, data, 0, size, seed);
+	res <<= 1;
+	res |= dfs_decrypt(ctx, data, 0, size, seed);
+	res <<= 1;
+	res |= data != src;
+
+	return res;
+}

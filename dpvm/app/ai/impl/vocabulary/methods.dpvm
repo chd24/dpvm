@@ -1,0 +1,677 @@
+/* aiVocabulary class, methods implementatio, T18.397-T18.441; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/long/long.dpvmake"
+#include "../../alphabet.dpvmh"
+#include "vocabulary.dpvmh"
+#include "version.dpvmh"
+
+int INT_MIN			= 0x8000000000000000;
+int INT_MAX			= 0x7fffffffffffffff;
+
+int AIV_HEADER_SIZE		= 80;
+int AIV_POS_BITS		= 32;
+char vocabularyFormatString[]	= "aiVocabularyData";
+
+int AIV_CHECK_STATISTICS	= 1;
+int AIV_CHECK_WORDS		= 2;
+int AIV_CHECK_HASH		= 4;
+int AIV_CHECK_WEIGHTS		= 8;
+
+(const char mess[], const char func[]) -> (const char err[]) mkError = {
+	char err[];
+	strcat(err, version);
+	strcat(err, ": Error in function ");
+	strcat(err, func);
+	strcat(err, "(): ");
+	strcat(err, mess);
+	return err;
+};
+
+(volatile stateful aiVocabularyImpl impl, const stateful any aiVocabularyObj, const char func[]) -> (const char error[]) convertObjToImpl = {
+	if (aiVocabularyObj.type != aiVocabularyImpl && (aiVocabularyObj.type != aiVocabulary
+			|| aiVocabularyObj.l[0].type != aiVocabularyData)) {
+		return mkError("aiVocabularyObj has illegal type", func);
+	}
+	objcopyto(impl, aiVocabularyObj);
+	if (impl.data.hashIndexes.isize != AIV_HALF_HASH_SIZE)
+		return mkError("aiVocabularyObj has illegal size", func);
+	return "";
+};
+
+(int size) -> (volatile int array[]) createIntArray = {
+	int array[];
+	asm { info 8 iload 2 istore new ret }
+};
+
+(int size) -> (volatile float array[]) createFloatArray = {
+	float array[];
+	asm { info 8 iload 1 istore new ret }
+};
+
+(volatile stateful char words[], int id, int d) -> (const char err[]) encodeWordID = {
+	if (d < 0 || d >= 5) return mkError("Illegal words delimiter", "encodeWordID");
+
+	if (!(id >> 21))
+		words.cpush(d << 5 | id >> 16);
+	else {
+		if (!(id >> 28))
+			words.cpush((d + 10) << 4 | id >> 24);
+		else if (!(id >> 33))
+			words.cpush(0xF0 | d << 1 | id >> 32), words.cpush(d >> 24);
+		else if (!(id >> 40))
+			words.cpush(0xF0 | (10 + d)), words.cpush(d >> 32), words.cpush(d >> 24);
+		else
+			words.cpush(0xFF), code(words, id >> 24, d);
+		words.cpush(id >> 16);
+	}
+	words.cpush(id >> 8);
+	words.cpush(id);
+	return "";
+}
+		
+(const stateful char words[], int begin, int end) -> (const char err[], int id, int delim, int nextBegin) decodeWordID = {
+	if (begin >= end)
+		return (mkError("End of stream", "decodeWordID"), -1, 0, end);
+	if (end - begin < 3)
+		return (mkError("Invalid stream (1)", "decodeWordID"), -1, 0, end);
+
+	int c = words[begin], n, i, id, delim;
+	if (c < 0xa0) n = 2, delim = c >> 5, c &= 0x1f;
+	else if (c < 0xf0) n = 3, delim = (c >> 4) - 0xa, c &= 0xf;
+	else if (c < 0xfa) n = 4, delim = (c >> 1) - 0x70, c &= 0x1;
+	else if (c < 0xff) n = 5, delim = c - 0xfa, c = 0;
+	else {
+		begin += 1, c = words[begin];
+		if (c < 0xa0) n = 5, delim = c >> 5, c &= 0x1f;
+		else if (c < 0xf0) n = 6, delim = (c >> 4) - 0xa, c &= 0xf;
+		else if (c < 0xfa) n = 7, delim = (c >> 1) - 0x70, c &= 0x1;
+		else if (c < 0xff) n = 8, delim = c - 0xfa, c = 0;
+		else
+			return (mkError("Invalid stream (2)", "decodeWordID"), -1, 0, end);
+	}
+
+	begin += 1;
+	if (end - begin < n)
+		return (mkError("Invalid stream (3)", "decodeWordID"), -1, 0, end);
+
+	for (i = 0, id = c; i < n; i += 1, begin += 1)
+		id <<= 8, id += words[begin];
+
+	return ("", id, delim, begin);
+};
+
+(const stateful aiVocabularyData d, const stateful char word[]) -> (int low, int high) encodeWord = {
+	int W[], i, size = word.csize, n = d.nLetters, low, high;
+	for (i = 0; i < size; i += 1) {
+		mul_short(W, n);
+		add_short(W, word[i] + 1);
+	}
+	if (W.isize <= 2) {
+		if (W.isize >= 2) high = W[1];
+		if (W.isize >= 1) low = W[0];
+	}
+	return (low, high);
+}
+
+(const stateful aiVocabularyData d, int low, int high) -> (const char res[]) decodeWord = {
+	int W[], I[], n = d.nLetters, size, i, j;
+	I.ipush(1);
+
+	if (high)
+		W.ipush(low), W.ipush(high);
+	else if (low)
+		W.ipush(low);
+
+	while (sub_cond_long(W, I)) {
+		mul_short(I, n);
+		size += 1;
+	}
+
+	char res[], reverse[];
+	for (i = W.isize - 1; i >= 0; i -= 1)
+		for (j = 63; j >= 0; j -= 1)
+			shl_1_base(reverse, n, W[i] >> j & 1);
+
+	for (i = size - reverse.csize; i; i -= 1)
+		res.cpush(0);
+
+	for (i = reverse.csize - 1; i >= 0; i -= 1)
+		res.cpush(reverse[i]);
+
+	return res;
+};
+
+(const stateful aiVocabularyData d, const stateful char word[], int count) -> (float weight) wordWeight = {
+	if (!count)
+		return 0.0;
+
+	int i, size = word.csize, n = d.nLetters;
+	float logstat[] = d.logStatistics, weight = flog(count) + size * d.logTotalSymbols - logstat[n];
+	for (i = 0; i < size; i += 1)
+		weight -= logstat[word[i]];
+
+	return weight * count / d.totalSymbols;
+};
+
+(const stateful aiVocabularyImpl impl) -> (int x, int y, int z, int t) getDataHash = {
+	any obj;
+	obj.lpush(impl.data.statistics);
+	obj.lpush(impl.data.hashIndexes);
+	obj.lpush(impl.data.wordsLow);
+	obj.lpush(impl.data.wordsHigh);
+	obj.lpush(impl.data.wordsCount);
+	obj.lpush(impl.data.wordsWeight);
+
+	return getfullhash(obj);
+};
+
+(const stateful aiVocabularyData d, int pos) -> (int next) getNextPos = {
+	if (pos >= AIV_HASH_SIZE)
+		return d.wordsCount[pos - AIV_HASH_SIZE] & (1 << AIV_POS_BITS) - 1;
+	if (pos & 1)
+		return d.hashIndexes[pos >> 1] >> 32 & (1 << AIV_POS_BITS) - 1;
+	return d.hashIndexes[pos >> 1] & (1 << AIV_POS_BITS) - 1;
+};
+
+(volatile stateful aiVocabularyData d, int pos, int next) -> () setNextPos = {
+	if (pos >= AIV_HASH_SIZE)
+		d.wordsCount[pos - AIV_HASH_SIZE] &= -1 << AIV_POS_BITS,
+		d.wordsCount[pos - AIV_HASH_SIZE] |= next;
+	else if (pos & 1)
+		d.hashIndexes[pos >> 1] &= ~(((1 << AIV_POS_BITS) - 1) << 32),
+		d.hashIndexes[pos >> 1] |= next << 32;
+	else
+		d.hashIndexes[pos >> 1] &= ~((1 << AIV_POS_BITS) - 1),
+		d.hashIndexes[pos >> 1] |= next;
+	return;
+};
+
+(const stateful aiVocabularyImpl impl, int check_flags) -> (const char err[]) checkData = {
+	aiVocabularyData d = impl.data;
+
+	/* check statistics */
+	if (check_flags & AIV_CHECK_STATISTICS) {
+		if (d.nLetters <= 0) return mkError("Nonpositive number of letters", "checkData");
+		if (d.nLetters >= AI_ALPHABET_EMPTY - AI_ALPHABET_BIG) return mkError("Too much letters", "checkData");
+		if (d.statistics.isize != d.nLetters + 1) return mkError("Statistics size mismatches", "checkData");
+		if (d.logStatistics.fsize != d.nLetters + 1) return mkError("Log statistics size mismatches", "checkData");
+		int i, size, count;
+		for (i = 0, size = d.statistics.isize; i < size; i += 1) {
+			int n = d.statistics[i];
+			if (n < 0) mkError("Negative number in statistics", "checkData");
+			if (n && flog(n) != d.logStatistics[i]) mkError("Log of statistics number mismatches", "checkData");
+			if (count + n < count) mkError("Negative summa in statistics", "checkData");
+			count += n;
+		}
+		if (count != d.totalSymbols) mkError("Total number of symbols mismatches", "checkData");
+		if (count && flog(count) != d.logTotalSymbols) mkError("Log of total number of symbols mismatches", "checkData");
+	}
+
+	/* check words */
+	if (check_flags & AIV_CHECK_WORDS) {
+		if (d.nWords < 0) return mkError("Negative number of words", "checkData");
+		if (d.nWords + AIV_HASH_SIZE > 1 << AIV_POS_BITS) return mkError("Too large number of words", "checkData");
+		if (d.wordsLow.isize != d.nWords) return mkError("Size of wordsLow array mismatches", "checkData");
+		if (d.wordsHigh.isize != d.nWords) return mkError("Size of wordsHigh array mismatches", "checkData");
+		if (d.wordsCount.isize != d.nWords) return mkError("Size of wordsCount array mismatches", "checkData");
+		if (d.wordsWeight.fsize != d.nWords) return mkError("Size of wordsWeight array mismatches", "checkData");
+	}
+
+	/* check hash */
+	if (check_flags & AIV_CHECK_HASH) {
+		if (d.hashIndexes.isize != AIV_HALF_HASH_SIZE) return mkError("Illegal length og hash indexes array", "checkData");
+		int i, size, count;
+		for (i = 0, size = AIV_HASH_SIZE, count = 0; i < size; i += 1) {
+			int pos;
+			for (pos = getNextPos(d, i); pos != i; pos = getNextPos(d, pos)) {
+				int p = pos - AIV_HASH_SIZE;
+				if (p < 0) return mkError("Hash bucket list intersects with another bucket", "checkData");
+				if (p >= d.nWords) return mkError("Hash bucket list contains too larger pos", "checkData");
+				char word[] = decodeWord(d, d.wordsLow[p], d.wordsHigh[p]);
+				if (!word.csize) return mkError("Empty word", "checkData");
+				int j;
+				for (j = 0; j < word.csize; j += 1) {
+					if (word[j] >= d.nLetters) return mkError("Illegal letter in word", "checkData");
+					if (!d.statistics[word[j]]) return mkError("Letter from word has zero statistics", "checkData");
+				}
+				if ((word & (AIV_HASH_SIZE - 1)) != i) return mkError("Hash of word mismatches hash bucket", "checkData");
+				if (check_flags & AIV_CHECK_WEIGHTS
+						&& wordWeight(d, word, d.wordsCount[p] >> AIV_POS_BITS) != d.wordsWeight[p])
+					return mkError("Weight of word mismatches", "checkData");
+				if (p && d.wordsWeight[(p - 1) >> 1] < d.wordsWeight[p])
+					return mkError("Weight in parent heap node lesser", "checkData");
+				count += 1;
+				if (count > d.nWords) return mkError("Hash bucket list has infinite cycle", "checkData");
+			}
+		}
+		if (count != d.nWords) return mkError("Not all words contained in hash bucket lists", "checkData");
+	}
+
+	return "";
+};
+
+(const stateful char in[], int pos) -> (int n) loadInt = {
+	return in[pos] | in[pos + 1] << 8 | in[pos + 2] << 16 | in[pos + 3] << 24 |
+		in[pos + 4] << 32 | in[pos + 5] << 40 | in[pos + 6] << 48 | in[pos + 7] << 56;
+};
+
+(const stateful char in[], int pos) -> (float f) loadFloat = {
+	int ieee = loadInt(in, pos);
+
+	int mantissa = ieee & 0xfffffffffffff | 0x10000000000000;
+	if (ieee & INT_MIN)
+		mantissa = -mantissa;
+
+	int exponent = ieee >> 52 & 0x7ff;
+	if (!exponent)
+		exponent = INT_MIN;
+	else if (exponent == 0x7ff)
+		exponent = INT_MAX;
+	else
+		exponent -= 1023 + 52;
+
+	return fmerge(mantissa, exponent);
+};
+
+(volatile stateful any aiVocabularyObj, const char in[]) -> (const char error[]) loadData = {
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "loadData");
+	if (err.csize) return err;
+
+	if (in.csize < AIV_HEADER_SIZE)
+		return mkError("Input stream shorter than header size", "loadData");
+
+	char sign[];
+	substrcat(sign, in, 0, 16);
+	if (sign != vocabularyFormatString)
+		return mkError("Input stream signature not matched", "loadData");
+
+	if (loadInt(in, 16) != vocabularyFormatVersion)
+		return mkError("Input stream format version not matched", "loadData");
+
+	if (loadInt(in, 24) != AIV_HEADER_SIZE)
+		return mkError("Input stream header size not matched", "loadData");
+
+	int nLetters = loadInt(in, 64), nWords = loadInt(in, 72);
+
+	if (in.csize != AIV_HEADER_SIZE + (nLetters + 1 + AIV_HALF_HASH_SIZE + 4 * nWords) * 8)
+		return mkError("Input stream size not matched", "loadData");
+
+	int pos = AIV_HEADER_SIZE, i, size;
+
+	int statistics[];
+	for (i = 0, size = nLetters + 1; i < size; i += 1, pos += 8)
+		statistics.ipush(loadInt(in, pos));
+
+	impl.methods.setStatistics(impl, statistics);
+
+	aiVocabularyData d = impl.data;
+	int hashIndexes[] = d.hashIndexes;
+	for (i = 0, size = AIV_HALF_HASH_SIZE; i < size; i += 1, pos += 8)
+		hashIndexes[i] = loadInt(in, pos);
+
+	int wordsLow[] = createIntArray(nWords), wordsHigh[] = createIntArray(nWords), wordsCount[] = createIntArray(nWords);
+	float wordsWeight[] = createFloatArray(nWords);
+
+	for (i = 0, size = nWords; i < size; i += 1, pos += 32) {
+		wordsLow[i] = loadInt(in, pos);
+		wordsHigh[i] = loadInt(in, pos + 8);
+		wordsCount[i] = loadInt(in, pos + 16);
+		wordsWeight[i] = loadFloat(in, pos + 24);
+	}
+
+	d.nWords = nWords;
+	d.wordsLow = wordsLow;
+	d.wordsHigh = wordsHigh;
+	d.wordsCount = wordsCount;
+	d.wordsWeight = wordsWeight;
+
+	int x,y,z,t;
+	(x,y,z,t) = getDataHash(impl);
+
+	if (x != loadInt(in, 32) || y != loadInt(in, 40) || z != loadInt(in, 48) || t != loadInt(in, 56))
+		return mkError("Input stream hash not matched", "loadData");
+
+	return checkData(impl, AIV_CHECK_STATISTICS | AIV_CHECK_WORDS | AIV_CHECK_HASH);
+};
+
+(volatile stateful char out[], int n) -> () saveInt = {
+	out.cpush(n); out.cpush(n >> 8); out.cpush(n >> 16); out.cpush(n >> 24);
+	out.cpush(n >> 32); out.cpush(n >> 40); out.cpush(n >> 48); out.cpush(n >> 56);
+	return;
+};
+
+(volatile stateful char out[], float f) -> () saveFloat = {
+	int mantissa, exponent, ieee;
+	(mantissa, exponent) = fsplit(f);
+
+	if (mantissa < 0) {
+		mantissa = -mantissa;
+		ieee = INT_MIN;
+	}
+
+	if (exponent > INT_MIN && exponent < INT_MAX)
+		exponent += 1023 + 52;
+
+	ieee |= mantissa & 0xfffffffffffff | (exponent & 0x7ff) << 52;
+	saveInt(out, ieee);
+	return;
+};
+
+(volatile stateful char out[], const stateful any aiVocabularyObj) -> (const char error[]) saveData = {
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "saveData");
+	if (err.csize) return err;
+
+	err = checkData(impl, AIV_CHECK_STATISTICS | AIV_CHECK_WORDS | AIV_CHECK_HASH);
+	if (err.csize) return err;
+
+	aiVocabularyData d = impl.data;
+	int x,y,z,t;
+	(x,y,z,t) = getDataHash(impl);
+
+	strcat(out, vocabularyFormatString);
+	saveInt(out, vocabularyFormatVersion);
+	saveInt(out, AIV_HEADER_SIZE);
+	saveInt(out, x);
+	saveInt(out, y);
+	saveInt(out, z);
+	saveInt(out, t);
+	saveInt(out, d.nLetters);
+	saveInt(out, d.nWords);
+
+	int i, size;
+	for (i = 0, size = d.nLetters + 1; i < size; i += 1)
+		saveInt(out, d.statistics[i]);
+
+	for (i = 0, size = AIV_HALF_HASH_SIZE; i < size; i += 1)
+		saveInt(out, d.hashIndexes[i]);
+
+	for (i = 0, size = d.nWords; i < size; i += 1) {
+		saveInt(out, d.wordsLow[i]);
+		saveInt(out, d.wordsHigh[i]);
+		saveInt(out, d.wordsCount[i]);
+		saveFloat(out, d.wordsWeight[i]);
+	}
+
+	return "";
+};
+
+(volatile stateful any aiVocabularyObj, const int statistics[]) -> (const char error[]) setStatistics = {
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "setStatistics");
+	if (err.csize) return err;
+
+	float logstat[];
+	int i, size = statistics.isize, count;
+	for (i = 0; i < size; i += 1) {
+		float f;
+		if (statistics[i])
+			f = flog(statistics[i]);
+		logstat.fpush(f);
+		count += statistics[i];
+	}
+
+	aiVocabularyData d = impl.data;
+	d.nLetters = size - 1;
+	d.statistics = statistics;
+	d.logStatistics = logstat;
+	d.totalSymbols = count;
+	if (count)
+		d.logTotalSymbols = flog(count);
+
+	return checkData(impl, AIV_CHECK_STATISTICS);
+};
+
+(const stateful any aiVocabularyObj) -> (const int statistics[], const char error[], int nWords) getStatistics = {
+	int stats[];
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "getStatistics");
+	if (err.csize) return (stats, err, 0);
+
+	objcopyto(stats, impl.data.statistics);
+	return (stats, "", impl.data.nWords);
+};
+
+(volatile stateful aiVocabularyData d, int p0, int p, int prev) -> (int newPrev) swapWords = {
+	int prev0, pos = p0 + AIV_HASH_SIZE;
+	for (prev0 = pos, pos = getNextPos(d, pos); pos != p0 + AIV_HASH_SIZE; prev0 = pos, pos = getNextPos(d, pos));
+
+	(d.wordsLow   [p0], d.wordsLow   [p]) = (d.wordsLow   [p], d.wordsLow   [p0]);
+	(d.wordsHigh  [p0], d.wordsHigh  [p]) = (d.wordsHigh  [p], d.wordsHigh  [p0]);
+	(d.wordsCount [p0], d.wordsCount [p]) = (d.wordsCount [p], d.wordsCount [p0]);
+	(d.wordsWeight[p0], d.wordsWeight[p]) = (d.wordsWeight[p], d.wordsWeight[p0]);
+
+	p += AIV_HASH_SIZE;
+	p0 += AIV_HASH_SIZE;
+
+	if (prev == p0)
+		prev = p;
+	else if (prev0 == p)
+		prev0 = p0;
+
+	setNextPos(d, prev, p0);
+	setNextPos(d, prev0, p);
+
+	return prev;
+};
+
+(volatile stateful aiVocabularyData d, const stateful char word[], int prevPos, int pos) -> (int newPos) recalculateWeight = {
+	int p = pos - AIV_HASH_SIZE;
+	d.wordsWeight[p] = wordWeight(d, word, d.wordsCount[p] >> AIV_POS_BITS);
+
+	/* move node up or down in the heap tree depending on weight */
+	while (p && d.wordsWeight[(p - 1) >> 1] < d.wordsWeight[p]) {
+		prevPos = swapWords(d, (p - 1) >> 1, p, prevPos);
+		p = (p - 1) >> 1;
+	}
+
+	while ((p << 1) + 1 < d.nWords && d.wordsWeight[p] < d.wordsWeight[(p << 1) + 1]
+			|| (p << 1) + 2 < d.nWords && d.wordsWeight[p] < d.wordsWeight[(p << 1) + 2]) {
+		int a = (p << 1) + 1 < d.nWords && d.wordsWeight[p] < d.wordsWeight[(p << 1) + 1],
+		    b = (p << 1) + 2 < d.nWords && d.wordsWeight[p] < d.wordsWeight[(p << 1) + 2];
+		if (a && b && d.wordsWeight[(p << 1) + 1] > d.wordsWeight[(p << 1) + 2] || a && !b)
+			prevPos = swapWords(d, (p << 1) + 1, p, prevPos),
+			p = (p << 1) + 1;
+		else
+			prevPos = swapWords(d, (p << 1) + 2, p, prevPos),
+			p = (p << 1) + 2;
+	}
+
+	return p + AIV_HASH_SIZE;
+}
+
+(volatile stateful aiVocabularyImpl impl, const stateful char word[]) -> (const char err[], int id) addWord = {
+	aiVocabularyData d = impl.data;
+	int low, high, bucket = word & (AIV_HASH_SIZE - 1), pos, prev, foundPos = -1, foundPrev, id;
+
+	/* encode the word */
+	(low, high) = encodeWord(d, word);
+	if (!(low | high)) return (mkError("Too long word", "addWord"), -1);
+
+	/* search for the word in bucket */
+	for (prev = bucket, pos = getNextPos(d, bucket); foundPos < 0 && pos != bucket; prev = pos, pos = getNextPos(d, pos), id += 1) {
+		int p = pos - AIV_HASH_SIZE;
+		if (d.wordsLow[p] == low && d.wordsHigh[p] == high) {
+			foundPos = pos;
+			foundPrev = prev;
+			if (!((d.wordsCount[p] + (1 << AIV_POS_BITS)) >> AIV_POS_BITS))
+				return (mkError("No space to increase word counter", "addWord"), bucket | id << AIV_LOG_HASH_SIZE);
+			d.wordsCount[p] += 1 << AIV_POS_BITS;
+			id -= 1;
+		}
+	}
+
+	/* add to bucket if not found */
+	if (foundPos < 0) {
+		if (d.nWords + AIV_HASH_SIZE >= 1 << AIV_POS_BITS)
+			return (mkError("No space to add new word", "asddWord"), -1);
+		foundPos = d.nWords + AIV_HASH_SIZE;
+		foundPrev = prev;
+		d.nWords += 1;
+		d.wordsLow.ipush(low);
+		d.wordsHigh.ipush(high);
+		d.wordsCount.ipush(0);
+		d.wordsWeight.fpush(0.0);
+		setNextPos(d, foundPrev, foundPos);
+		setNextPos(d, foundPos, bucket);
+	}
+
+	/* recalculate weight of the word */
+	recalculateWeight(d, word, foundPrev, foundPos);
+
+	/* return word id */
+	return ("", bucket | id << AIV_LOG_HASH_SIZE);
+};
+
+(volatile stateful aiVocabularyImpl impl, volatile stateful char words[], const stateful char word[], char c) -> (const char err[]) processWord = {
+	char err[];
+	int id;
+	(err, id) = addWord(impl, word);
+	if (err.csize) return err;
+	return encodeWordID(words, id, c - AI_ALPHABET_EMPTY);
+};
+
+(volatile stateful char words[], volatile stateful any aiVocabularyObj, const char indexes[], int begin, int end) -> (const char error[], int errorPos) parseIndexes = {
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "parseIndexes");
+	if (err.csize) return (err, -1);
+
+	int i;
+	char word[];
+	for (i = begin; i < end; i += 1) {
+		int c = indexes[i];
+		if (c < AI_ALPHABET_EMPTY)
+			word.cpush(c & ~AI_ALPHABET_BIG);
+		else if (c != AI_ALPHABET_ACCENT && word.csize) {
+			err = processWord(impl, words, word, c);
+			if (err.csize) return (err, i);
+			word.cpop(word.csize);
+		}
+	}
+	if (word.csize) {
+		err = processWord(impl, words, word, AI_ALPHABET_EMPTY);
+		if (err.csize) return (err, end);
+	}
+
+	return ("", end);
+};
+
+(volatile stateful any aiVocabularyObj) -> (const char error[]) recalculateWeights = {
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "recalculateWeights");
+	if (err.csize) return err;
+	aiVocabularyData d = impl.data;
+
+	int i;
+	for (i = 0; i < AIV_HASH_SIZE; i += 1) {
+		int pos, prev;
+		for (prev = i, pos = getNextPos(d, i); pos != i; prev = pos, pos = getNextPos(d, pos))
+			pos = recalculateWeight(d, decodeWord(d, d.wordsLow[pos - AIV_HASH_SIZE], d.wordsHigh[pos - AIV_HASH_SIZE]), prev, pos);
+	}
+
+	return checkData(impl, AIV_CHECK_STATISTICS | AIV_CHECK_WORDS | AIV_CHECK_HASH | AIV_CHECK_WEIGHTS);
+};
+
+(volatile stateful int wordIDs[], const stateful char words[], int begin, int end, int delim) -> (const char error[], int nextBegin) decodeWordIDs = {
+	char err[];
+	int id, del = AI_ALPHABET_ACCENT;
+
+	while (begin < end && del > delim) {
+		(err, id, del, begin) = decodeWordID(words, begin, end);
+		if (err.csize) return (err, begin);
+		wordIDs.ipush(id);
+		del += AI_ALPHABET_EMPTY;
+	}
+
+	return ("", begin);
+};
+
+(volatile stateful aiVocabularyWordInfo out[], const stateful any aiVocabularyObj, const stateful int wordIDs[], int begin, int end) -> (const char error[]) getWordsInfo = {
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "getWordsInfo");
+	if (err.csize) return err;
+	aiVocabularyData d = impl.data;
+
+	int i;
+	for (i = begin; i < end; i += 1) {
+		int id = wordIDs[i], bucket = id & (AIV_HASH_SIZE - 1), n = id >> AIV_LOG_HASH_SIZE, j, pos;
+
+		for (j = 0, pos = getNextPos(d, bucket); j < n && pos != bucket; j += 1, pos = getNextPos(d, pos));
+		if (pos == bucket) {
+			char mess[];
+			strcat(mess, "Word with given id 0x");
+			printhex(mess, id, 1, 0);
+			strcat(mess, " not exists");
+			return mkError(mess, "getWordsInfo");
+		}
+		pos -= AIV_HASH_SIZE;
+
+		aiVocabularyWordInfo info;
+		info.word = decodeWord(d, d.wordsLow[pos], d.wordsHigh[pos]);
+		info.id = id;
+		info.count = d.wordsCount[pos] >> AIV_POS_BITS;
+		info.weight = d.wordsWeight[pos];
+
+		out.lpush(info);
+	}
+
+	return "";
+};
+
+(volatile stateful char out[], const stateful any aiVocabularyObj, const char letters[][], int nWords) -> (const char error[]) printTopWords = {
+	aiVocabularyImpl impl;
+	char err[] = convertObjToImpl(impl, aiVocabularyObj, "printTopWords");
+	if (err.csize) return err;
+
+	aiVocabularyData d = impl.data;
+	int posVector[], i, j, maxj;
+	if (d.nWords) posVector.ipush(0);
+
+	for (i = 0; i < nWords && maxj >= 0; i += 1) {
+		int size = posVector.isize, maxpos;
+		float maxWeight;
+		for (j = 0, maxj = -1; j < size; j += 1) {
+			if (maxj < 0 || d.wordsWeight[posVector[j]] > maxWeight) {
+				maxj = j;
+				maxpos = posVector[j];
+				maxWeight = d.wordsWeight[maxpos];
+			}
+		}
+		if (maxj >= 0) {
+			char word[] = decodeWord(d, d.wordsLow[maxpos], d.wordsHigh[maxpos]);
+			int k;
+			for (k = 0; k < word.csize; k += 1)
+				strcat(out, letters[word[k]]);
+			for (k = k; k < 26; k += 1)
+				out.cpush(' ');
+			printint(out, d.wordsCount[maxpos] >> AIV_POS_BITS, 10);
+			strcat(out, "  ");
+			printfloat(out, 15, maxWeight);
+			strcat(out, "\r\n");
+
+			if (maxj != size - 1)
+				posVector[maxj] = posVector[size - 1];
+			posVector.ipop(1);
+			if ((maxpos << 1) + 1 < d.nWords) posVector.ipush((maxpos << 1) + 1);
+			if ((maxpos << 1) + 2 < d.nWords) posVector.ipush((maxpos << 1) + 2);
+		}
+	}
+
+	return "";
+};
+
+aiVocabularyMethods aiVocabularyMethodsImpl = {
+        version,
+	loadData,
+	saveData,
+	setStatistics,
+	getStatistics,
+	parseIndexes,
+	recalculateWeights,
+	decodeWordIDs,
+	getWordsInfo,
+	printTopWords
+};

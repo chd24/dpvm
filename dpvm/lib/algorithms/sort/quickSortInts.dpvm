@@ -1,0 +1,26 @@
+/* quick sort; T18.773-T18.773; $DVS:time$ */
+
+(volatile stateful int array[], int begin, int end) -> () quickSortInts = {
+    if (begin + 1 >= end || begin < 0 || end > array.isize)
+        return;
+
+    int m = {array, begin, end} % (end - begin) + begin, M = array[m], b = begin, e = end - 1;
+
+    while (b <= e) {
+        while (b <= e && array[b] <= M) b += 1;
+        while (b <= e && array[e] >= M) e -= 1;
+        if (b < e) (array[b], array[e]) = (array[e], array[b]);
+    }
+
+    if (b == begin) {
+        (array[m], array[b]) = (array[b], array[m]);
+        b += 1;
+    } else if (b == end) {
+        (array[m], array[e]) = (array[e], array[m]);
+        b -= 1;
+    }
+
+    code(array, begin, b);
+    code(array, b, end);
+    return;
+};

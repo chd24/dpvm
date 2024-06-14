@@ -1,0 +1,63 @@
+/* log packet in dnet; T17.534-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const stateful dnet_context ctx, const stateful char mess[], const stateful char packet[],
+		int pos, int begin, int end) -> () {
+	if (ctx.data.log_level < 9)
+		return;
+
+	if (!end)
+		end = packet.csize;
+
+	char m[];
+
+	strcat(m, mess);
+	strcat(m, " ");
+
+	char a[];
+	strcat(a, "                    ");
+	printip(a, ctx.conns[0].ip0, ctx.conns[0].ip1);
+	strcat(a, ":");
+	printint(a, ctx.conns[0].port, 1);
+	substrcat(m, a, a.csize - 21, a.csize);
+
+	strcat(m, ", pos = ");
+
+	char p[];
+	strcat(p, "       ");
+	printhex(p, pos, 1, 0);
+	substrcat(m, p, p.csize - 8, p.csize);
+
+	strcat(m, ", length = ");
+
+	char l[];
+	strcat(l, "     ");
+	printhex(l, end - begin, 1, 0);
+	substrcat(m, l, l.csize - 6, l.csize);
+
+	int sum;
+	int i;
+	for (i = begin; i < end; i += 1)
+		sum += packet[i]; 
+	strcat(m, ", sum = ");
+
+	char s[];
+	strcat(s, "       ");
+	printhex(s, sum, 1, 0);
+	substrcat(m, s, s.csize - 8, s.csize);
+
+	strcat(m, ", bytes =");
+	for (i = begin; i < end; i += 1) {
+		m.cpush(' ');
+		printhex(m, packet[i], 2, 0);
+		if (i == begin + 15 && end - begin > 24) {
+			strcat(m, " ...");
+			i = end - 8;
+		}
+	}
+
+	write_log(ctx, m, 9);
+	return;
+}

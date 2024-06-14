@@ -1,0 +1,275 @@
+/* dnet node, control connection; T17.589-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+int CONTROL_TIMEOUT = 600000000000; /* 10 min */
+
+type control = {
+        volatile stateful dnet_context ctx;
+        const char mess[];
+        const char command[];
+        const any func_get_time;
+	int begin;
+	int end;
+	int status;
+};
+
+(const stateful dnet_context ctx) -> () out_finish {
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.thread_id = ctx.streams[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_OUT;
+	
+	mrecvp("", "", addr, 1 << 63);
+	return;
+}
+
+(const dnet_context ctx, const any objs, int status) -> () process_out_messages {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received mail in output thread of control connection");
+		write_log(ctx, m, 4);
+		out_finish(ctx);
+		return;
+	}
+
+	int i;
+	for (i = 0; i < objs.lsize; i += 1) {
+		dnet_mess mess;
+		if (mess.type != objs.l[i].type) {
+			write_log(ctx, "Dropped mailbox message of illegal format in output thread of control connection", 5);
+		} else {
+			objcopyto(mess, objs.l[i]);
+
+			if (mess.request == DNET_REQUEST_SEND_PACKET) {
+				if (mess.mess.csize)
+					outputp("", "", mess.mess);
+			} else if (mess.request == DNET_REQUEST_STOP) {
+				out_finish(ctx);
+				return;
+			}
+		}
+	}
+
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.thread_id = ctx.streams[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_OUT;
+	
+	mrecv(code, ctx, addr, CONTROL_TIMEOUT);
+	return;
+}
+
+(volatile stateful control c) -> () finish {
+	if (!(c.ctx.conns[0].flags & DNET_CONN_PROFILE))
+		outputp("", "", "");
+	c.ctx.conns[0].flags |= DNET_CONN_FINISHED;
+	context_send(c.ctx);
+
+	dnet_addr addr;
+	addr.version = c.ctx.data.version;
+	addr.task_id = c.ctx.data.task_id;
+	addr.thread_id = c.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_OUT;
+	
+	dnet_mess mess;
+	mess.request = DNET_REQUEST_STOP;
+
+	msendp("", "", addr, mess);
+
+	dnet_addr addr1;
+	addr1.version = c.ctx.data.version;
+	addr1.task_id = c.ctx.data.task_id;
+	addr1.thread_id = c.ctx.conns[0].thread_id;
+	addr1.service = DNET_SERVICE_CONN_IN;
+	
+	mrecvp("", "", addr1, 1 << 63);
+	return;
+}
+
+(volatile stateful control c, const any objs, int status) -> () process_messages {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received mail in control connection");
+		write_log(c.ctx, m, 4);
+		finish(c);
+		return;
+	}
+
+	int i;
+	for (i = 0; i < objs.lsize; i += 1) {
+		dnet_mess mess;
+		if (mess.type != objs.l[i].type) {
+			write_log(c.ctx, "Dropped mailbox message of illegal format in control connection", 5);
+		} else {
+			objcopyto(mess, objs.l[i]);
+
+			if (mess.request == DNET_REQUEST_MERGE_CONTEXT) {
+				context_merge(c.ctx, mess.ctx);
+			}
+		}
+	}
+
+	const int vars[] = {0};
+	getsys(c.func_get_time, c, vars);
+	return;
+}
+
+(volatile stateful control c, const char mess[], int status) -> () control_input {
+	c.command = mess;
+	c.begin = 0;
+	c.end = mess.csize;
+	c.status = status;
+
+	dnet_addr addr;
+	addr.version = c.ctx.data.version;
+	addr.task_id = c.ctx.data.task_id;
+	addr.thread_id = c.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_IN;
+	
+	mrecv(process_messages, c, addr, 0);
+	return;
+}
+
+(volatile stateful control c, const int values[]) -> () control_get_time {
+	if (values[0] > c.ctx.last_time)
+		c.ctx.last_time = values[0];
+	if (values[0] > c.ctx.conns[0].last_time)
+		c.ctx.conns[0].last_time = values[0];
+
+	int error;
+
+	if (c.status <= 0) 
+		error = 2;
+	else {
+		char res[];
+		(res, error, c.begin) = process_commands(c.ctx, c.command, c.begin, c.end);
+		if (res.csize)
+			outputp("", "", res);
+
+		if (c.ctx.conns[0].flags & DNET_CONN_PROFILE)
+			error = 2 + (c.begin < c.end);
+	}
+
+	if (error == 2) {
+		dnet_connection cc = c.ctx.conns[0];
+		char m[];
+		if (cc.flags & DNET_CONN_PROFILE) {
+			write_log(c.ctx, "Ended evaluation of profile commands", 8);
+		} else {
+			strcat(m, "Ended control connection from ");
+			printip(m, cc.ip0, cc.ip1);
+			strcat(m, ":");
+			printint(m, cc.port, 1);
+		
+			write_log(c.ctx, m, 7);
+		}
+		finish(c);
+	} else if (error == 3 && c.begin < c.end) {
+		dnet_addr addr;
+		addr.version = c.ctx.data.version;
+		addr.task_id = c.ctx.data.task_id;
+		addr.thread_id = c.ctx.conns[0].thread_id;
+		addr.service = DNET_SERVICE_CONN_IN;
+		
+		mrecv(process_messages, c, addr, 0);
+		return;
+	} else {
+		outputp("", "", "dnet> ");
+		input(control_input, c, 0x100000, CONTROL_TIMEOUT);
+	}
+
+	return;
+}
+
+(volatile stateful dnet_context ctx, const int values[]) -> () start {
+	dnet_connection c = ctx.conns[0];
+	c.start_time = values[0];
+	c.last_time = values[0];
+	c.flags |= DNET_CONN_CONTROL;
+	c.thread_id = c | 1 << 63;
+
+	ctx.streams[0].thread_id = c.thread_id;
+
+	char profile[];
+
+	if (c.flags & DNET_CONN_PROFILE) {
+		write_log(ctx, "Starting evaluation of profile commands", 8);
+
+		profile = c.host;
+	} else {
+		char m[];
+		strcat(m, "Control connection from ");
+		printip(m, c.ip0, c.ip1);
+		strcat(m, ":");
+		printint(m, c.port, 1);
+
+		write_log(ctx, m, 7);
+
+		char m2[];
+		strcat(m2, ctx.data.version);
+		strcat(m2, "\r\n");
+		outputp("", "", m2);
+	}
+
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.thread_id = ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_CONN_IN;
+
+	mrecvp("", "", addr, 0);
+
+	dnet_addr addr1;
+	addr1.version = ctx.data.version;
+	addr1.task_id = ctx.data.task_id;
+	addr1.thread_id = ctx.conns[0].thread_id;
+	addr1.service = DNET_SERVICE_CONN_OUT;
+
+	mrecvp("", "", addr1, 0);
+
+	context_send(ctx);
+
+	mrecvp(process_out_messages, context_copy(ctx), addr1, CONTROL_TIMEOUT);
+
+	control r;
+	r.ctx = ctx;
+	r.func_get_time = control_get_time;
+
+	control_input(r, profile, 1);
+
+	return;
+}
+
+(const stateful dnet_context ctx, int port, int ip0, int ip1) -> () {
+	if (ip0 != 0x7f000001 || ip1) { /* 127.0.0.1 */
+		char m[];
+		strcat(m, "Control connection rejected from non-local host ");
+		printip(m, ip0, ip1);
+		strcat(m, ":");
+		printint(m, port, 1);
+
+		write_log(ctx, m, 8);
+		return;
+	}
+
+	dnet_context ctx2 = context_copy(ctx);
+	dnet_connection c = ctx2.conns[0];
+	c.ip0 = ip0;
+	c.ip1 = ip1;
+	c.port = port & 0xffff;
+	c.flags = ctx.conns[0].flags;
+	c.host = ctx.conns[0].host;
+
+	const int vars[] = {0};
+	getsys(start, ctx2, vars);
+	return;
+}
+

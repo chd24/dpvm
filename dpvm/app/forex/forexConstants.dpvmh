@@ -1,0 +1,15 @@
+/* forex class, public constants, T20.009-T20.009; $DVS:time$ */
+
+int ORDER_TYPE_MARKET		= 0; /* rate is current at the moment of expiration */
+int ORDER_TYPE_LIMIT		= 1; /* rate is limit */
+int ORDER_TYPE_STOP_LOSS	= 2; /* rate is limit */
+int ORDER_TYPE_TRAILING_STOP	= 3; /* rate in part of maximum value reaching which leads to stop */
+int ORDER_TYPE_END		= 4;
+
+int ORDER_DIRECTION_ADD_FIAT	= 0;
+int ORDER_DIRECTION_BUY		= 1;
+int ORDER_DIRECTION_SELL	= 2;
+int ORDER_DIRECTION_ADD_CRYPTO	= 3;
+int ORDER_DIRECTION_END		= 4;
+
+

@@ -1,0 +1,74 @@
+/* generate array of functions to process bytecodes; T16.495-T20.133; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../../lib/utils/utils.dpvmake"
+#include "debugger.dpvmake"
+
+(volatile stateful thread t) -> () defaultBytecode = {
+	t.pointer |= 1 << 63;
+	return;
+};
+
+(volatile stateful thread t) -> () outputpBytecode = {
+	any stack = t.stack;
+	int lsize = stack.lsize;
+	any callback = stack.l[lsize - 3], data = stack.l[lsize - 2], arg0 = stack.l[lsize - 1];
+
+	if (callback.csize)
+		return defaultBytecode(t);
+
+	char arr0[][];
+	pushObject(arg0, arr0);
+
+	stack.lpop(3);
+	outputp(callback, data, arr0[0]);
+	return;
+};
+
+(volatile stateful thread t) -> () writepBytecode = {
+	any stack = t.stack;
+	int lsize = stack.lsize, isize = stack.isize, pos = stack.i[isize - 1];
+	any callback = stack.l[lsize - 4], data = stack.l[lsize - 3], arg0 = stack.l[lsize - 2], arg1 = stack.l[lsize - 1];
+
+	if (callback.csize)
+		return defaultBytecode(t);
+
+	char arr0[][];
+	pushObject(arg0, arr0);
+	pushObject(arg1, arr0);
+
+	stack.lpop(4);
+	stack.ipop(1);
+	writep(callback, data, arr0[0], arr0[1], pos);
+	return;
+};
+
+(volatile stateful debuggerData data) -> (const char error[]) {
+	(volatile stateful thread t) -> () bytecodes[256..];
+	char error[];
+	int i;
+
+	for (i = 0; i < 256; i += 1) {
+		if (i >= DPVM_CODE_RET && i <= DPVM_CODE_RESERVED4 || i >= DPVM_CODE_IO_MIN)
+			bytecodes[i] = defaultBytecode;
+		else {
+			(bytecodes[i], error) = compileBytecode(data, i);
+			if (error.csize)
+				return error;
+		}
+	}
+
+	/* manual implementations for call and ret bytecodes */
+	bytecodes[DPVM_CODE_CALL] = callBytecode;
+	bytecodes[DPVM_CODE_RET] = retBytecode;
+
+	/* manual implementations for io bytecodes */
+	bytecodes[DPVM_CODE_OUTPUTP] = outputpBytecode;
+	bytecodes[DPVM_CODE_WRITEP] = writepBytecode;
+
+	data.bytecodes = bytecodes;
+	data.bytecodesInited = 1;
+
+	return "";
+}

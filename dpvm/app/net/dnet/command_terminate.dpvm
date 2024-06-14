@@ -1,0 +1,18 @@
+/* dnet node, terminate command; T17.534-T17.641; $DVS:time$ */
+
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) terminate_func {
+	const char mess[] = "Program terminated by manual command.\r\n";
+	write_log(ctx, mess, 1);
+	return (mess, 2);
+}
+
+dnet_command terminate_command = {
+	"terminate",
+	"terminate the program",
+	terminate_func,
+	0,
+	0		
+};

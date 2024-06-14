@@ -1,0 +1,49 @@
+/* dpvmb class, new() method implementation, T20.130-T20.155; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/bytecodes.dpvmh"
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../lib/utils/utils.dpvmake"
+#include "dpvmb.dpvmake"
+
+(volatile stateful any dpvmbObj) -> (const char error[]) new = {
+	dpvmbImpl impl;
+	char err[] = convertObjToImpl(impl, dpvmbObj, "new");
+	if (err.csize) return err;
+
+	any obj;
+	err = makeFirstObj(obj, impl);
+	if (err.csize) return err;
+
+	int i, size = obj.csize, h[] = intsArray(18);
+	type t;
+
+	(t, h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]) = object_info(obj);
+	(h[8], h[9], h[10], h[11]) = getfullhash(t);
+	(h[12], h[13], h[14], h[15]) = getfullhash(obj);
+	h[16] = obj.csize + 12 * 8, h[17] = DPVM_CODE_ILL << 56;
+
+	char db[] = ints2chars(h, 0, 12), header[] = ints2chars(h, 12, 18);
+	for (i = 0; i < size; i++)
+		db.cpush(obj.c[i]);
+	while (i & (DPVMB_OBJ_ALIGN - 1)) {
+		db.cpush(0);
+		i++;
+	}
+
+	Archiver verifyObj;
+	size = header.csize;
+	for (i = 0; i < size; i += 1)
+		verifyObj.cpush(header[i]);
+	h[17] |= verifyObj;
+
+	header.cpop(8);
+	strcat(db, header);
+	strcat(db, ints2chars(h, 17, 18));
+
+	impl.data.db = db;
+	impl.data.savedBytes = 0;
+	impl.data.dbInited = 0;
+
+	return "";
+};

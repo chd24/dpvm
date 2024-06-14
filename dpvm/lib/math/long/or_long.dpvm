@@ -1,0 +1,18 @@
+/* bitwise or long number src to dst, T19.376-T19.376; $DVS:time$ */
+
+(volatile stateful int dst[], const stateful int src[]) -> () or_long = {
+	int i, size = src.isize, dsize = dst.isize;
+
+	for (i = 0; i < size; i += 1) {
+		int res = src[i];
+
+		if (i == dsize) {
+			dst.ipush(res);
+			dsize += 1;
+		} else {
+			dst[i] |= res;
+		}
+	}
+
+	return;
+};

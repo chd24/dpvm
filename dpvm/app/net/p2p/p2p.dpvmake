@@ -1,0 +1,124 @@
+/* p2p module, makefile; T16.949-T19.706; $DVS:time$ */
+
+type p2pdata = { /* p2p data structure */
+        const char	version[];	/* p2p version */
+        const char	hosts_file[];	/* file with list of hosts */
+        const char	log_file[];	/* file for p2p logging */
+        const int	crc32_ctx[];	/* precomputed crc32 context */
+        volatile char input[];          /* unparsed input data from remote host */
+        const any	func;		/* function to call in cycle */
+        const any	mboxaddr;	/* address to receive mailbox messages */
+        const char	extaddr[];	/* external address of this host */
+        const char	remote_host[];	/* remote host for given connection */
+        int     port;                   /* external port of this host */
+        int     remote_port;            /* remote port for given connection */
+        int     crc32_init;             /* crc32 initial value */
+        int	flags;                  /* module flags, see below */
+        int	timezone;               /* timezone of current host */
+        int	log_level;              /* maximal level of outputing log messages */
+        int	task_id;                /* id of current task */
+        int	thread_id;              /* id of current thread */
+        int	last_sent;              /* last time when packet was sent through connection */
+};
+
+/* flags */
+int P2P_MBOX	= 1; /* p2p can accept objects to save via local mailbox */
+
+/*@ "version.dpvm": returns version of p2p */
+() -> (const char version[]) version_p2p = fictive_unseeded_dedicated;
+/* @*/
+
+/* net classes */
+int NET_LOCAL = 0;
+int NET_GRAY  = 1;
+int NET_WHITE = 2;
+
+/*@ "netclass.dpvm": return net class of host address (local, gray or white) */
+(const stateful char host[]) -> (int res) 
+	netclass = staging_headman_mixable;
+/* @*/
+
+/*@ "serialize.dpvm": write object in text format to out */
+(volatile stateful char out[], const stateful any obj) -> ()
+	serialize = crocks_winding_rowdy;
+/* @*/
+
+/*@ "deserialize0.dpvm": fast check validity of serialized object */
+(const stateful char str[], int begin, int end) -> (const char error[])
+	deserialize0 = mineworkers_annoyingly_gainers;
+/* @*/
+
+/*@ "deserialize1.dpvm": add object/dependencies hashes from str to hashes array */
+(volatile stateful int hashes[], const stateful char str[], int taskmask) -> ()
+	deserialize1 = provoke_sublayer_fertilise;
+/* @*/
+
+/*@ "deserialize2.dpvm": construct object read from str using depobjs[nextdepobj...]
+	for dependent objects, and objspool if dependent is absent */
+(const stateful char str[], const stateful any objspool, const stateful any depobjs,
+        int nextdepobj) -> (any obj, int missed_deps[], const char error[], int nextdepobj)
+	deserialize2 = laundry_wisdom_indirectly;
+/* @*/
+
+/*@ "write_log.dpvm": write message to p2p logfile */
+(const stateful p2pdata data, const char mess[], int level) -> ()
+	write_log = obligatory_touchandgo_shivering;
+/* @*/
+
+/*@ "logObject.dpvm": log object in hex format */
+(const stateful p2pdata data, const stateful char mess[], const stateful char objstr[], int begin, int end) -> ()
+	logObject = incursion_tackiness_feedstock;
+/* @*/
+
+/*@ "handler.dpvm": handle program crash */
+(const stateful p2pdata data, const int values[]) -> ()
+	handler_p2p = pottery_empties_enumerating;
+/* @*/
+
+/*@ "message_write.dpvm": write to 'out' message with given type and given body */
+(const stateful p2pdata data, volatile stateful char out[], 
+		const char body[], int messtype) -> ()
+	message_write = fairly_vulgarities_kraft;
+/* @*/
+
+/*@ "message_read.dpvm": read from 'in' message and return int body limits and type */
+(volatile stateful p2pdata data, const char in[], int begin, int end) 
+		-> (int begin, int end, int messtype, int error)
+	message_read = adjourning_hilly_bottlefeed;
+/* @*/
+
+/*@ "message_process.dpvm": process incoming message */
+(volatile stateful p2pdata data, const stateful char str[], int begin, int end, int messtype)
+		-> (int error)
+	message_process = poignant_caddie_pompously;
+/* @*/
+
+/*@ "connection.dpvm": handle incoming and outcoming connections */
+(const stateful p2pdata d, int port, int ip0, int ip1) -> ()
+	connection = tucks_consorting_ledger;
+/* @*/
+
+/*@ "logger.dpvm": thread which receives messages via mail and outputs them to logfile */
+(const stateful p2pdata d, const int values[]) -> ()
+	logger = heifer_craziness_disfigured;
+/* @*/
+
+/*@ "address_book.dpvm": thread which maintains hosts database and broadcasts objects */
+(const stateful p2pdata d, const int values[]) -> ()
+	address_book = royally_specifies_laughter;
+/* @*/
+
+/*@ "object_read.dpvm": thread which process all incoming serialized objects */
+(const stateful p2pdata d, const int values[]) -> ()
+	object_read = pounces_ingenious_sealed;
+/* @*/
+
+/*@ "object_write.dpvm": thread which process all outcoming objects */
+(const stateful p2pdata d, const int values[]) -> ()
+	object_write = curbed_outgrew_prohibiting;
+/* @*/
+
+/*@ "main.dpvm": main function of p2p module */
+(const stateful any registry, const char hosts_file[], const char log_file[], const char extaddr[], int port, int flags) -> ()
+	p2p = carnivorous_doorknob_mavericks;
+/* @*/                                

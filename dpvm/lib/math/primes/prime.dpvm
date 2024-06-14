@@ -1,0 +1,19 @@
+/* is number prime, simple method; T15.502-T17.918; $DVS:time$ */
+
+(int n) -> (int res) {
+	if (n < 64)
+		return 0x28208A20A08A28AC >> n & 1;
+
+	if (0x1F75D77D >> (n % 30) & 1)
+		return 0;
+
+	int d;
+	for (d = 7; d * d <= n; d += 30) { 
+		if (!(n % d) | !(n % (d + 4)) | !(n % (d + 6)) | !(n % (d + 10))
+				| !(n % (d + 12)) | !(n % (d + 16)) 
+				| !(n % (d + 22)) | !(n % (d + 24)))
+			return 0;
+	}
+
+	return 1;
+}

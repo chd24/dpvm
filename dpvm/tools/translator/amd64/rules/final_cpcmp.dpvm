@@ -1,0 +1,74 @@
+/* form amd64 final optimization cmp rules array; T16.083-T17.663; $DVS:time$ */
+
+#include "../../translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[], 
+		const stateful char mnem[], const stateful char hex[], 
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	a = asm_add;
+
+(volatile stateful asm_instr list[][]) -> () {
+	asm_instr r[];
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "cmp [rsi+b],d", "48 81 7E 111 124", 0, 0x4100, 0x4600, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "cmp [rsi+d],d", "48 81 BE 114 124", 0, 0x4100, 0x4600, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rcx,rax", "", 0, 0, 0, 0, 0);
+	a(r, "setcc al", "", 0xC10094, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+b]", "48 3B 46 111", 0, 0x4100, 0, 0, 0);
+	a(r, "setcc al", "0F 101 C0", 0x94, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rcx,rax", "", 0, 0, 0, 0, 0);
+	a(r, "setcc al", "", 0xC1009C, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+b]", "48 3B 46 111", 0, 0x4100, 0, 0, 0);
+	a(r, "setcc al", "0F 101 C0", 0x9F, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rcx,rax", "", 0, 0, 0, 0, 0);
+	a(r, "setcc al", "", 0xC1009F, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+b]", "48 3B 46 111", 0, 0x4100, 0, 0, 0);
+	a(r, "setcc al", "0F 101 C0", 0x9C, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rcx,rax", "", 0, 0, 0, 0, 0);
+	a(r, "setcc al", "", 0xC10094, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+d]", "48 3B 86 114", 0, 0x4100, 0, 0, 0);
+	a(r, "setcc al", "0F 101 C0", 0x94, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rcx,rax", "", 0, 0, 0, 0, 0);
+	a(r, "setcc al", "", 0xC1009C, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+d]", "48 3B 86 114", 0, 0x4100, 0, 0, 0);
+	a(r, "setcc al", "0F 101 C0", 0x9F, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rcx,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "cmp rcx,rax", "", 0, 0, 0, 0, 0);
+	a(r, "setcc al", "", 0xC1009F, 0, 0, 0, 0);
+	a(r, "cmp rax,[rsi+d]", "48 3B 86 114", 0, 0x4100, 0, 0, 0);
+	a(r, "setcc al", "0F 101 C0", 0x9C, 0, 0, 0, 0);
+	add_rule(list, r);
+
+	return;
+}

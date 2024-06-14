@@ -1,0 +1,13 @@
+/* add char[] substring to crc32 context; T16.508-T17.641; $DVS:time$ */
+
+(const stateful int ctx[], const stateful char data[], int begin, int end, int crc) -> (int crc) {
+	const int f = 0xff;
+
+	while (begin < end) {
+		int c = data[begin];
+		crc = ctx[(crc ^ c) & f] ^ crc >> 8;
+		begin = begin + 1;
+	}
+
+	return crc;
+}

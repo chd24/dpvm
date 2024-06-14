@@ -1,0 +1,20 @@
+/* destroys schema; T16.570-T16.613; $DVS:time$ */
+
+#include "graphs.dpvmake"
+
+(volatile stateful schema res) -> () {
+	gate g = res.base;
+	do {
+		gate n = g.next;
+		g.in0 = g;
+		g.in1 = g;
+		g.out0 = g;
+		g.out1 = g;
+		g.prev = g;
+		g.next = g;
+		g.edgesmask = -1;
+		g = n;
+	} while (g.edgesmask != -1);
+	
+	return;
+}

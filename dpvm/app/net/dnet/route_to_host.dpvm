@@ -1,0 +1,44 @@
+/* dnet node, find route to host; T17.569-T17.573; $DVS:time$ */
+
+#include "dnet.dpvmake"
+
+(const stateful dnet_context ctx, const dnet_host h) -> (int conn_number, int mode) {
+	if (h.flags & DNET_HOST_LOCAL)
+		return (-2, DNET_HOST_LOCAL);
+
+	if (h.flags & DNET_HOST_IMMEDIATE) {
+		int tid = h.thread_id;
+		int i;
+		for (i = 0; i < ctx.conns.lsize; i += 1) {
+			if (ctx.conns[i].thread_id == tid 
+					&& !(ctx.conns[i].flags & DNET_CONN_FINISHED))
+				return (i, DNET_HOST_IMMEDIATE);
+		}
+	}
+
+	if (h.flags & DNET_HOST_MANUAL) {
+		int crc = h.route_crc & 0xffffffff;
+		int i;
+		for (i = 0; i < ctx.hosts.lsize; i += 1) {
+			if (ctx.hosts[i].crc == crc && (ctx.hosts[i].flags & DNET_HOST_IMMEDIATE)) {
+				int tid = ctx.hosts[i].thread_id;
+				int j;
+				for (j = 0; j < ctx.conns.lsize; j += 1) {
+					if (ctx.conns[j].thread_id == tid 
+							&& !(ctx.conns[j].flags & DNET_CONN_FINISHED))
+						return (j, DNET_HOST_MANUAL);
+				}				
+			}
+		}
+	}
+
+	int tid = h.thread_id;
+	int i;
+	for (i = 0; i < ctx.conns.lsize; i += 1) {
+		if (ctx.conns[i].thread_id == tid
+				&& !(ctx.conns[i].flags & DNET_CONN_FINISHED))
+			return (i, DNET_HOST_AUTO);
+	}
+		
+	return (-1, DNET_HOST_AUTO);
+}

@@ -1,0 +1,44 @@
+/* dpvm: asm instruction; T15.437-T19.574; $DVS:time$ */
+
+/* asm { <instructions> } */
+
+(const stateful char src[], volatile stateful any dst, int pos, int end)
+		-> (int new_pos, int end, int status) {
+
+	use yeast_beatniks_finishes;		/* getlexem() */
+	use docker_aspect_swapped;		/* int[], compacted sorted lexems */
+	use colonels_misname_dogy;		/* int[], compacted sorted bytecodes */
+
+    asm {
+	1 iload 1 iload
+	
+	1 lload code 1 lget code 0 lget call 13 eq
+	jnzf
+		2 ipopn 0 not ret
+	lf
+
+	1 lload code 1 lget code 0 lget call 4 eq
+	jnzf
+		2 ipopn 0 not ret
+	lf
+	
+	lb
+		1 iload 1 iload
+
+		1 lload code 2 lget code 0 lget call
+		0 iload 16 shr
+		jzf
+			3 ipopn
+			1 lload code 1 lget code 0 lget call 5 eq
+			jnzf
+				2 ipopn 0 not ret
+			lf
+			0 ret
+		lf
+		
+		0 lload itoc cpush
+		ipops 1 istore
+	jb
+    }
+	
+}

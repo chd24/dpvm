@@ -1,0 +1,18 @@
+/* memory leak exploit; T17.580-T17.580; $DVS:time$ */
+
+(int a[]) -> () bug {
+	return;
+}
+
+() -> () test {
+	int a[];
+	bug(a);
+	return;
+}
+
+(int n) -> () {
+	int i;
+	for (i = 0; i < n; i += 1)
+		test();
+	return;
+}

@@ -1,0 +1,150 @@
+/* dpvm byte code translator, amd64 get/set operations; T16.081-T18.397; $DVS:time$ */
+
+/* 
+ 	rdi = links stack end
+*/
+
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> ()
+	ld = amd64_load;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		int datatype, int reg, int i, int n) -> ()
+	st = amd64_store;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c) -> (int res) {
+	int r;
+
+	c &= 7;
+	int d = c & 3;
+
+	int n = 0x80;
+	if (i) {
+		n = data.func.c[i - 1];
+		if (n < 0x80) {
+			asm_del(list, 0);
+			asm_del(list, 0);
+		}
+	}
+
+	int j = 1;
+	if (n < 0x80) {
+		j = 0;
+		any t = data.states.l[i - 1];
+		any typ = t.l[t.lsize - 1];
+		if (t.c[t.csize - 1] & CHECKER_OBJ)
+			typ = typ.type;
+		if (!(t.c[t.csize - 1] & (CHECKER_OBJ|CHECKER_TYPE)) || n >= typ.i[8+d])
+			j = 1;
+	}
+
+	if (n >= 0x80)
+		ld(data, list, "mov", "48 8B", 1, 0, 1, i, (c==1)-(c==5));
+	ld(data, list, "mov", "48 8B", 0, 0, 0, i, (c==0)-(c==4));
+
+	if (c >= 4) {
+		as(list, "cmp [rax+b],b", "48 83 78 111 121", 0, 0x70, 0, 0, 0);
+		amd64_fail(data, list, endlist, i, 0x8C, 0xC);
+	}
+
+	if (j) {
+		if (n < 0x80)
+			as(list, "cmp [rax+b],b", "48 83 78 111 121", 0, 0x20|d<<3, n, 0, 0);
+		else
+			as(list, "cmp [rax+b],rcx", "48 39 48 111", 0, 0x20|d<<3, 0, 0, 0);
+		amd64_fail(data, list, endlist, i, 0x86, 0x10|d);
+	}
+
+	if (c <= 3) { /* *get */
+		as(list, "cp rdx,[rax+b]", "48 8B 50 111", 0, c<<3, 0, 0, 0);
+
+		if (c != 3) {
+			if (n < 16)
+				as(list, "cp rdx,[rdx+b]", "48 8B 52 111", 0, n<<3, 0, 0, 0);
+			else if (n < 0x80)
+				as(list, "cp rdx,[rdx+d]", "48 8B 92 114", 0, n<<3, 0, 0, 0);
+			else
+				as(list, "cp rdx,[rdx+8*rcx]", "48 8B 14 CA", 0, 0, 0, 0, 0);
+
+			if (!c) {
+				as(list, "mov rcx,d", "48 C7 C1 124", 0, 0, 1, 0, 0);
+				as(list, "lock xadd [rdx+b],rcx", "F0 48 0F C1 4A 111", 0, 0x78, 0, 0, 0);
+			}
+		}
+
+		if (c == 3) {
+			if (n < 0x80)
+				as(list, "cp dl,[rdx+b]", "8A 52 111", 0, n, 0, 0, 0);
+			else
+				as(list, "cp dl,[rdx+rcx]", "8A 14 0A", 0, 0, 0, 0, 0);
+		}
+
+		st(data, list, c, 2, i, 0);
+		r = amd64_unlink(data, list, endlist, -1, 0);
+		return r;
+	}
+
+	r = amd64_type_match(data, list, endlist, d, i, n);
+	if (r) return r;
+
+	as(list, "cp r9,[rax+b]", "4C 8B 48 111", 0, d<<3, 0, 0, 0);
+
+	if (d > 0 && d < 3) {
+		if (n < 16)
+			as(list, "mov [r9+b],rdx", "49 89 51 111", 0, n<<3, 0, 0, 0);
+		else if (n < 0x80)
+			as(list, "mov [r9+d],rdx", "49 89 91 114", 0, n<<3, 0, 0, 0);
+		else
+			as(list, "mov [r9+8*rcx],rdx", "49 89 14 C9", 0, 0, 0, 0, 0);
+	}
+
+	if (d == 3) {
+		if (n < 0x80)
+			as(list, "mov [r9+b],dl", "41 88 51 111", 0, n, 0, 0, 0);
+		else
+			as(list, "mov [r9+rcx],dl", "41 88 14 09", 0, 0, 0, 0, 0);
+	}
+
+	if (!d) {
+		as(list, "cmp rax,rdx", "48 39 D0", 0, 0, 0, 0, 0);
+
+		if (n < 16)
+			as(list, "xchg rdx,[r9+b]", "49 87 51 111", 0, n<<3, 0, 0, 0);
+		else if (n < 0x80)
+			as(list, "xchg rdx,[r9+d]", "49 87 91 114", 0, n<<3, 0, 0, 0);
+		else
+			as(list, "xchg rdx,[r9+8*rcx]", "49 87 14 C9", 0, 0, 0, 0, 0);
+
+		as(list, "setcc cl", "0F 101 C1", 0x94, 0, 0, 0, 0);
+		as(list, "movzx rcx,cl", "48 0F B6 C9", 0, 0, 0, 0, 0);
+		as(list, "not rcx", "48 F7 D1", 0, 0, 0, 0, 0);
+		as(list, "push rax", "50", 0, 0, 0, 0, 0);
+		as(list, "push rdx", "52", 0, 0, 0, 0, 0);
+	}
+
+	r = amd64_unlink(data, list, endlist, ~!d, 0);
+	if (r) return r;
+
+	if (!d) {
+		j = data.i[0];
+		data.i[0] = j + 1;
+
+		as(list, "pop rax", "58", 0, 0, 0, 0, 0);
+		as(list, "pop rdx", "5A", 0, 0, 0, 0, 0);
+		as(list, "cmp rax,rdx", "48 39 D0", 0, 0, 0, 0, 0);
+		as(list, "jcc label", "0F 101 134", 0x84, 0, 0, j, 0);
+		r = amd64_unlink(data, list, endlist, -1, 0);
+		if (r) return r;
+		as(list, "label", "", 0, 0, 0, j, 0);
+	}
+
+	return 0;
+}

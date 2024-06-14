@@ -1,0 +1,4 @@
+(int x) -> (int x) {
+	x = x * x;
+	return x * x;
+}

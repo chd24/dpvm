@@ -1,0 +1,29 @@
+/* print unicode char as utf8 to dst; T15.598-T15.598; $DVS:time$ */
+	
+(volatile stateful char dst[], int unicode) -> () {
+	char c;
+
+	if (unicode >= 0x10000) {
+		c = 0xF0 | (unicode >> 18); 		dst.push(c);
+		c = 0x80 | (unicode >> 12 & 0x3F);	dst.push(c);
+		c = 0x80 | (unicode >>  6 & 0x3F);	dst.push(c);
+		c = 0x80 | (unicode       & 0x3F);	dst.push(c);
+		return;
+	}
+
+	if (unicode >= 0x800) {
+		c = 0xE0 | (unicode >> 12); 		dst.push(c);
+		c = 0x80 | (unicode >>  6 & 0x3F);	dst.push(c);
+		c = 0x80 | (unicode	  & 0x3F);	dst.push(c);
+		return;
+	}
+
+	if (unicode >= 0x80) {
+		c = 0xC0 | (unicode >>  6);		dst.push(c);
+		c = 0x80 | (unicode	  & 0x3F);	dst.push(c);
+		return;
+	}
+
+		c = 	    unicode;			dst.push(c);
+	return;
+}

@@ -1,0 +1,169 @@
+/* www server: main; T15.543-T20.191; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "www_server.dpvmake"
+
+int CHILD_TIME		= 90000000000; /* 1.5 min */
+int KILL_TIME		= 30000000000; /* 30 sec */
+int INIT_TIME		= 10000000; /* 10 ms */
+int MAX_NTHREADS	= 450;
+
+(volatile www_data data, const int values[]) -> () to_sleep {
+	const int vars1[] = {0};
+	int values1[];
+	values1.ipush(data.time);
+	setsys(data.after_sleep, data, vars1, values1);
+	return;
+}
+
+(volatile www_data data, const int values[]) -> () child_nthreads {
+	int max = MAX_NTHREADS;
+	if (data.flags & KEEP_ALIVE)
+		max = max << 2;
+	if (values[0] > max + 1) { /* number of thread > max -> kill child */
+		int vars1[];
+		const int values1[] = {-1};
+		vars1.ipush(values[1] << 16 | 0x200);
+		setsys(to_sleep, data, vars1, values1);
+	} else
+		to_sleep(data, values);
+
+	return;
+}
+
+(const www_data data, const int values[]) -> () child_start {
+	/* setup handler */
+	const int dbparams[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler_www, data, dbparams);
+
+	int ipaddr0;
+	int ipaddr1;
+	int proto;
+
+	/* todo: translate string ipaddr to numbers ipaddr and ipaddr1 */
+	ipaddr0 = 0;
+	ipaddr1 = 0;
+
+	/* proto = port | TCP_code << 16 | IPv4_code << 24 */
+	proto = 0x4060000 + data.port;
+
+	/* bind to port and listen connections */
+	bindp(handle_connection, data, proto, ipaddr0, ipaddr1);
+
+	return;	
+}
+
+(volatile www_data data, const int values[]) -> () child_id {
+	int id = values[0];
+
+	if (data.flags & USE_SSL) {
+		if (!data.killerid) {
+			if (id == -1) {
+				data.time = data.time - CHILD_TIME + INIT_TIME;
+				to_sleep(data, values);
+				return;
+			}
+			data.killerid = id;
+		}
+
+		if (data.killerid == id)
+			id = values[1];
+	}
+		
+	if (id == -1) { /* no child: create it */
+		int vars1[];
+		int values1[];
+
+		vars1.ipush(0x200);
+		values1.ipush(0);
+
+		vars1.ipush(0x201);
+		values1.ipush(0);
+
+		char name[];
+		strcat(name, "Work task of www_server ");
+		printhex(name, data.taskid, 4, 0);
+		
+		int var = 0x300;
+		int value;
+		int shift;
+		int i;
+		for (i = 0; i < name.csize; i = i + 1) {
+			value = value | name[i] << shift;
+			shift = shift + 8;
+			if (shift == 64 | i == name.csize - 1) {
+				vars1.ipush(var);
+				values1.ipush(value);
+				var = var + 1;
+				value = 0;
+				shift = 0;
+			}
+		}
+
+		www_data data1;
+		objcopyto(data1, data);
+		setsysp(child_start, data1, vars1, values1);
+
+		to_sleep(data, values);
+
+	} else { /* child present, check for number of threads */
+		int vars[];
+
+		vars.ipush(id << 16 | 2);
+		vars.ipush(id << 16 | 0x201);
+
+		getsys(child_nthreads, data, vars);
+	}
+
+	return;
+}
+
+(volatile www_data data, const int values[]) -> () after_sleep {
+	data.time = values[0] + CHILD_TIME;
+	int vars[];
+	vars.ipush(0x202);
+	vars.ipush(data.killerid << 16 | 0x203);
+	getsys(child_id, data, vars);
+	return;
+}
+
+(const www_data data0, const int values[]) -> () start {
+	www_data data;
+
+	/* fill data structure */
+	objcopyto(data, data0);
+	data.version = version_www();		/* version 		*/
+	data.mime = mimetypes();		/* mime types		*/
+	data.after_sleep = after_sleep;		/* after_sleep()	*/
+	data.taskid = values[0];		/* taskid		*/
+
+	/* kill hanged sslproxy processes */
+	if (data.flags & USE_SSL)
+		killer("sslproxy", KILL_TIME);
+
+	const int vars[] = {0};
+	getsys(after_sleep, data, vars);
+	return;
+}
+	
+(const char root[], const char index[], const char log[], const char domain[], 
+		const char ssl_cert[], const char ssl_pem[],
+		const char ipaddr[], int port, int flags, int offset) -> () {
+	www_data data;
+
+	/* partially fill data structure */
+	data.root = root;			/* root dir 		*/
+	data.index = index;			/* default index file	*/
+	data.log = log;				/* log file 		*/
+	data.domain = domain;			/* domain 		*/
+	data.ssl_cert = ssl_cert;		/* ssl_cert 		*/
+	data.ssl_pem = ssl_pem;			/* ssl_pem 		*/
+	data.port = port;			/* port 		*/
+	data.flags = flags;			/* different flags 	*/
+	data.offset = offset;			/* time offset 		*/
+
+	const int vars[] = {0x201};
+	getsysp(start, data, vars);
+	return;
+}

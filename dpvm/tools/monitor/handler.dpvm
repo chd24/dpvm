@@ -1,0 +1,54 @@
+/* monitor: error handler; T16.481-T19.639; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "monitor.dpvmake"
+#include "version.dpvmh"
+
+(const stateful mondata data, const stateful int values[]) -> () {
+	char str[];
+	int cod;
+
+	strcat(str, version);
+	strcat(str, ": program in task ");
+	printhex(str, values[5], 4, 0);
+	strcat(str, " failed at ");
+	strftime(str, "%Y/%m/%d %H:%M:%S", values[0], data.registry.timeZone);
+
+	strcat(str, " with error ");
+	cod = values[1] & 0x1f;
+	printhex(str, cod, 2, 0);
+	strcat(str, " (");
+	print_error(str, cod);
+
+	strcat(str, ") in ");
+	printobjname(str, values[4]);
+	strcat(str, "() pos ");
+	printhex(str, values[3] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[2] & 0xff;
+	printhex(str, cod, 2, 0);
+	strcat(str, " (");
+	print_bytecode(str, cod);
+	strcat(str, ").");
+
+	if (data.address.isize > 1) {
+		any obj;
+		obj.lpush(wind_speeded_hogwash);
+		obj.lpush(str);
+		obj.ipush(values[5]);
+		obj.ipush(data.time);
+		msend("", "", data.address, obj);
+	} else {
+		mondata data1;
+		objcopyto(data1, data);
+		any addr;
+		objcopyto(addr, data1.address);
+		addr.ipush(0);
+		addr.ipush(0);
+		addr.ipush(0);
+		data1.address = addr;
+		out_result(data1, str);
+	}
+	return;
+}

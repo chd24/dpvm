@@ -1,0 +1,8 @@
+/* lpush bytecode as function; T19.495-T19.495; $DVS:time$ */
+
+(const stateful any child, volatile stateful any parent) -> () pushObject = {
+    asm {
+	lpush
+	ret 
+    };
+};

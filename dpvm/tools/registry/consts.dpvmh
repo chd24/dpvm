@@ -1,0 +1,15 @@
+/* registry constants, header, T18.317-T19.646; $DVS:time$ */
+
+/* flags for registryObj.check() */
+int REGISTRY_CHECK		= 0x001;	/* check each funciton using checker; if not set, only not-empty check is performed */
+int REGISTRY_ALL		= 0x002;	/* check all programs */
+int REGISTRY_INT		= 0x004;	/* int field */
+
+                                                /* check the following particular programs: */
+int REGISTRY_CHECKER		= 0x010;	/*  - checker */
+int REGISTRY_COMPILER		= 0x020;	/*  - compiler */
+int REGISTRY_INTERPRETER	= 0x040;	/*  - interpreter */
+int REGISTRY_MAKER		= 0x080;	/*  - maker */
+int REGISTRY_MONITOR		= 0x100;	/*  - monitor */
+int REGISTRY_TRANSLATOR		= 0x200;	/*  - translator */
+int REGISTRY_DEBUGGER		= 0x400;	/*  - debugger */

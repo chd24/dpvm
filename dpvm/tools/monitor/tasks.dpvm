@@ -1,0 +1,134 @@
+/* monitor: tasks; T16.622-T19.635; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "monitor.dpvmake"
+
+(volatile stateful char str[], int value, char delim) -> () printMem = {
+	if (value < 0) {
+		value = -value;
+		str.cpush('-');
+	} else
+		str.cpush(delim);
+
+	if (value < 10000)
+		printf(str, "%04d", {value});
+	else {
+		const char ordNames[] = " KMGTPE";
+		float v = value;
+		int ord;
+		while (v >= 1000)
+			ord += 1, v /= 1000, value /= 1000;
+		if (value >= 10)
+			printf(str, "%03d%c", {value, ordNames[ord]});
+		else
+			printf(str, "%3.1f%c", {v, ordNames[ord]});
+	}
+
+	return;
+};
+
+(volatile stateful mondata data, const int values[]) -> () {
+	if (values.isize == 1) {
+		data.ids.ipush(values[0]);
+	} else {
+		int time = values[1] / 1000000000;
+		char suff, str[];
+
+		if (time < 600) suff = 's';
+		else { 
+			time /= 60;
+			if (time < 600) suff = 'm';
+			else {
+				time /= 60;
+				if (time < 240) suff = 'h';
+				else {
+					time /= 24;
+					if (time < 730) suff = 'd';
+					else time /= 365, suff = 'y';
+				}
+			}
+		}
+
+		printf(str, "%04x %03d%c ", {values[0], time, suff});
+
+		if (values[2] < 0)
+			str.cpush('-'),
+			printhex(str, -values[2], 1, 0);
+		else
+			printhex(str, values[2], 2, 0);
+
+		printMem(str, values[7], ' ');
+		printMem(str, values[8], '/');
+
+		printf(str, " %02d/%02d  ", {values[3], values[4]});
+
+		int i;
+		for (i = 0; i < 32; i += 1) {
+			int val = values[9 + i];
+			while (val) {
+				str.cpush(val);
+				val >>= 8;
+			}
+		}
+
+		data.strings.lpush(str);
+
+		for (i = 5; i < 7; i += 1) {
+			int id = values[i];
+			if (id != -1) {
+				int j, found;
+				for (j = 0; j < data.ids.isize && !found; j += 1)
+					if (data.ids[j] == id) found = 1;
+				if (!found) data.ids.ipush(id);
+			}
+		}
+	}
+
+	if (data.ids.isize == data.strings.lsize) {
+		int i;
+		for (i = data.ids.isize - 1; i; i -= 1) {
+			int j;
+			for (j = 0; j < i; j += 1) {
+				if (data.ids[j] > data.ids[j + 1]) {
+					(data.ids[j], data.ids[j + 1]) = (data.ids[j + 1], data.ids[j]);
+					(data.strings[j], data.strings[j + 1]) = (data.strings[j + 1], data.strings[j]);
+				}
+			}
+		}
+
+		char str[];
+		strcat(str, "ID   Time Fl Mem/Quota Ts/Th  Description/Command\r\n");
+		strcat(str, "-------------------------------------------------\r\n");
+
+		for (i = 0; i < data.strings.lsize; i += 1) {
+			strcat(str, data.strings[i]);
+			str.cpush('\r');
+			str.cpush('\n');
+		}
+
+		data.ids.ipop(data.ids.isize);
+		data.strings.lpop(data.strings.lsize);
+		out_result(data, str);
+		return;
+	}
+
+	int id = data.ids[data.strings.lsize] << 16, vars[];
+	vars.ipush(id | DPVM_SYS_PARAM_ID);
+	vars.ipush(id | DPVM_SYS_PARAM_TIME);
+	vars.ipush(id | DPVM_SYS_PARAM_FLAGS);
+	vars.ipush(id | DPVM_SYS_PARAM_NTASKS);
+	vars.ipush(id | DPVM_SYS_PARAM_NTHREADS);
+	vars.ipush(id | DPVM_SYS_PARAM_ID_CHILD);
+	vars.ipush(id | DPVM_SYS_PARAM_ID_NEXT);
+	vars.ipush(id | DPVM_SYS_PARAM_MEMORY);
+	vars.ipush(id | DPVM_SYS_PARAM_MEMORY_QUOTA);
+
+	int i;
+	for (i = 0; i < 32; i += 1)
+		vars.ipush(id | DPVM_SYS_PARAM_NAME | i);
+
+	getsys(code, data, vars);
+	return;
+}

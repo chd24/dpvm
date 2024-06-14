@@ -1,0 +1,7 @@
+/* infinite cycle; T16.640-T16.640; $DVS:time$ */
+
+() -> () {
+	int i;
+	for (i = 0; i < 10; i += 0);
+	return;
+}

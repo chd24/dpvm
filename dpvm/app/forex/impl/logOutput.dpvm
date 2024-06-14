@@ -1,0 +1,28 @@
+/* forex class, logOutput method implementation, T19.772-T19.772; $DVS:time$ */
+
+#include "forex.dpvmake"
+
+(const stateful any forexObj, const char mess[], int level) -> () logOutput = {
+	forexImpl impl;
+	char err[] = convertObjToImpl(impl, forexObj, "logOutput");
+	if (err.csize) return;
+	if (impl.data.registrySet && level > impl.data.registry.logLevel) return;
+
+	if (!impl.data.loggerRun) {
+		outputp("", "", mess);
+		return;
+	}
+
+	forexAddress addr;
+	addr.version = impl.methods.version;
+	addr.taskId = impl.data.taskId;
+	addr.serviceId = FOREX_ADDR_LOGGER;
+
+	forexMessage m;
+	m.message = mess;
+	m.messageId = FOREX_MESS_LOG;
+	m.level = level;
+
+	msendp("", "", addr, m);
+	return;
+};

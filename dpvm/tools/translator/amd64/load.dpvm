@@ -1,0 +1,98 @@
+/* dpvm byte code translator, amd64 int load to register; T16.080-T20.100; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../translator_utils.dpvmake"
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> () {
+	char a[];
+	char h[];
+	char from[];
+	char to[];
+	int r;
+	int c;
+
+	n = data.l[4].l[i].i[datatype] - data.l[0].i[datatype] - n;
+
+	if (datatype == 0) {
+		c = 7;
+		from = "rdi";
+		n <<= 3;
+	} else if (datatype == 1) {
+		c = 6;
+		from = "rsi";
+		n <<= 3;
+	} else if (datatype == 2) {
+		c = 3;
+		from = "r11";
+		n <<= 3;
+		if (asm_ == "mov" || asm_ == "cp") { hex_ = "49 8B"; }
+	} else {
+		c = 2;
+		from = "r10";
+		if (asm_ == "mov" || asm_ == "cp") { hex_ = "41 8A"; }
+	}
+
+	if (reg == 0) { /* rax */
+		to = "rax";
+		if (datatype == 3) { to = "al"; }
+	} else if (reg == 1) { /* rcx */
+		c |= 8;
+		to = "rcx";
+		if (datatype == 3) { to = "cl"; }
+	} else if (reg == 2) { /* rdx */
+		c |= 0x10;
+		to = "rdx";
+		if (datatype == 3) { to = "dl"; }
+	} else if (reg == 6) { /* rsi */
+		c |= 0x30;
+		to = "rsi";
+		if (datatype == 3) { to = "sil"; }
+	} else if (reg == 7) { /* rdi */
+		c |= 0x38;
+		to = "rdi";
+		if (datatype == 3) { to = "dil"; }
+	} else if (reg == 8) { /* r8 */
+		to = "r8";
+		if (datatype == 3) { to = "r8b"; }
+		if (asm_ == "mov" || asm_ == "cp") {
+			if (datatype < 2) { hex_ = "4C 8B"; }
+			else if (datatype == 2) { hex_ = "4D 8B"; }
+			else { hex_ = "45 8A"; }
+		}
+	} else if (reg == 9) { /* r9 */
+		c |= 8;
+		to = "r9";
+		if (datatype == 3) { to = "r9b"; }
+		if (asm_ == "mov" || asm_ == "cp") {
+			if (datatype < 2) { hex_ = "4C 8B"; }
+			else if (datatype == 2) { hex_ = "4D 8B"; }
+			else { hex_ = "45 8A"; }
+		}
+	}
+	
+	strcat(a, asm_);
+	strcat(h, hex_);
+	a.push(' ');
+	strcat(a, to);
+	a.push(',');
+	a.push('[');
+	strcat(a, from);
+	a.push('+');
+	h.push(' ');
+
+	if (n >= -0x80 && n <= 0x7F) {
+		a.push('b');
+		printhex(h, c | 0x40, 2, 1);
+		strcat(h, " 111");
+	} else {
+		a.push('d');
+		printhex(h, c | 0x80, 2, 1);
+		strcat(h, " 114");
+	}
+	a.push(']');
+
+	asm_add(list, a, h, param, n, 0, 0, 0);
+	return;
+}

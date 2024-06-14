@@ -1,0 +1,8 @@
+/* monitor: input new command; T16.469-T17.178; $DVS:time$ */
+
+#include "monitor.dpvmake"
+
+(volatile stateful mondata data, int status) -> () {
+	input(data.command, data, 0x10000, -1);
+	return;
+}

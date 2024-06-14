@@ -1,0 +1,18 @@
+/* view next entry command, T18.320-T18.334; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandNext {
+	if (data.pos + 144 <= data.file.isize)
+		data.pos += 144;
+
+	return "view";
+}
+
+teCommand cmdNext = {
+	"next",
+        "view next database entry",
+	commandNext
+};
+
+

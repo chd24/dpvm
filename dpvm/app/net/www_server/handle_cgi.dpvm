@@ -1,0 +1,47 @@
+/* www server: handle cgi; T15.557-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(volatile stateful www_data arg, int status) -> () write_cgi {
+	if (status <= 0)
+		return;
+
+	/* subsequent calls */
+	input(read_file, arg, 0x100000, TIMEOUT_WEB);
+	return;
+}
+
+(const www_data arg, int status) -> () {
+	www_data data;
+	objcopyto(data, arg);
+	arg = data;
+	
+	char empty[];
+	arg.content = empty;
+
+    if (status < 0) {
+        send_headers(arg, "", 540 - status, 0, 0);
+        return;
+    }
+
+	/* thread reading from cgi output */
+	if (status == 1) {
+		input(read_cgi, arg, 0x100000, TIMEOUT_CGI);
+		return;
+	}
+
+	/* thread writing to cgi input */
+	arg.read_callback = write_cgi;
+	arg.length = 0;			/* >= 0 for not chunking */
+
+	char request[] = arg.request;
+	char content[];
+	substrcat(content, request, strstr(request, "\r\n\r\n") + 4, request.csize);
+	if (content.csize)
+		output(write_cgi, arg, content);
+	else
+		input(read_file, arg, 0x100000, TIMEOUT_WEB);
+
+	return;	
+}

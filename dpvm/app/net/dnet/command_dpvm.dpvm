@@ -1,0 +1,67 @@
+/* dnet node, dpvm command; T17.591-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+int WAIT_TIME = 1000000000; /* 1 sec: time to wait for command output */
+
+(const dnet_context ctx, const char text[]) -> () out_handler {
+	dnet_stream s = ctx.streams[0];
+
+	if (s.thread_id < DNET_THREAD_ID_TMP) {
+		dnet_addr addr;
+		addr.version = ctx.data.version;
+		addr.task_id = ctx.data.task_id;
+		addr.thread_id = s.thread_id;
+		addr.service = DNET_SERVICE_CONN_OUT;
+
+		dnet_mess mess;
+		mess.request = DNET_REQUEST_SEND_PACKET;
+		mess.mess = text;
+
+		msendp("", "", addr, mess);
+	} else {
+		char packet[];
+		strcat(packet, s.packet);
+		strcat(packet, text);
+
+                send_packet(context_copy(ctx), packet);
+	}
+	return;
+}
+
+type dpvm_data = {
+        const dnet_context ctx;
+        const char cmd[];
+};
+
+(const dpvm_data d, const int values[]) -> () start {
+        monitor_command(d.ctx, out_handler, d.cmd);
+	return;
+}
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) dpvm_func {
+	dpvm_data d;
+	d.ctx = context_copy(ctx);
+	d.cmd = args[0];
+
+	const int vars[] = {0};
+	getsysp(start, d, vars);
+
+	if (ctx.conns[0].flags & DNET_CONN_CONTROL) {
+		int values[];
+		values.ipush(ctx.last_time + WAIT_TIME);
+		setsysp("", "", vars, values);
+	}
+
+	return ("", 0);
+}
+
+dnet_command dpvm_command = {
+	"[dpvm]",
+	"execute dpvm monitor command A, run 'dpvm help' for help",
+	dpvm_func,
+	1,
+	1		
+};

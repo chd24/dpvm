@@ -1,0 +1,47 @@
+/* monitor: read file for saving/compilation; T16.469-T19.547; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+#include "monitor.dpvmake"
+
+(volatile stateful mondata data, const stateful char text[], int status) -> () {
+	int t;
+
+	if (status < 0) {
+		char err[];
+		strcat(err, "Error reading file '");
+		strcat(err, data.name);
+		strcat(err, "'.");
+		out_result(data, err);
+		return;
+	}
+
+	if (status == 0) {
+		if (!data.text.csize) {
+			char err[];
+			strcat(err, "Empty file '");
+			strcat(err, data.name);
+			strcat(err, "'.");
+			out_result(data, err);
+			return;
+		}
+
+		if (!data.mode) { /* save file as object */
+			any resobjs;
+			resobjs.push(data.text);
+			msave_p2p(save_object, data, resobjs);
+			return;
+		}
+
+		int hashes[] = text2hashes(data.text);
+
+                mload_p2p(compile, data, hashes, MLOAD_TIMEOUT);
+		return;
+	}
+
+	strcat(data.text, text);
+
+	read(code, data, data.name, data.text.csize, 0x100000);
+	return;
+}

@@ -1,0 +1,7 @@
+/* dpvm byte code checker, main; T16.013-T18.012; $DVS:time$ */
+
+#include "checker.dpvmake"
+
+(const stateful any func) -> (volatile any funcs[], volatile checker_data data, char error[], int flags) {
+    return checker_internal(func, 0);
+}

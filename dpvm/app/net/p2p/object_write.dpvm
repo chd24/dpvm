@@ -1,0 +1,394 @@
+/* p2p serialize, save and broadcast objects; T16.963-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "p2p.dpvmake"
+#include "mailbox.dpvmh"
+
+type extobj = {
+        const any obj;
+        volatile int pred[];
+        volatile int succ[];
+	int generation;
+};
+
+int POOL_EXP = 8;
+int POOL_SIZE = 256;
+
+type writer = {
+        volatile extobj pool[][POOL_SIZE];
+        volatile p2pdata data;
+        volatile any objs;
+        volatile int indexes[];
+	int generation;
+};
+
+(volatile stateful int hashes[], const stateful any obj) -> () hash_add {
+	int a;
+	int b;
+	int c;
+	int d;
+	(a, b, c, d) = getfullhash(obj);
+	hashes.ipush(a);
+	hashes.ipush(b);
+	hashes.ipush(c);
+	hashes.ipush(d);
+	return;
+}
+
+(const stateful writer wr, const char text[]) -> () dump_writer {
+        if (wr.data.log_level < 10)
+		return;
+
+	char out[];
+
+	strcat(out, "Writer pool ");
+	strcat(out, text);
+	strcat(out, ", generation = ");
+	printint(out, wr.generation, 1);
+	strcat(out, ":\r\n");
+
+	int i;
+	for (i = 0; i < POOL_SIZE; i = i + 1) {
+		extobj pool[] = wr.pool[i];
+		int j;
+		for (j = 0; j < pool.lsize; j = j + 1) {
+			extobj ext = pool[j];
+			int k;
+
+			strcat(out, "  - index ");
+			printhex(out, j << POOL_EXP | i, 3, 0);
+			strcat(out, ": generation = ");
+			if (ext.generation < 0)
+				strcat(out, "-1");
+			else
+				printint(out, ext.generation, 2);
+
+			strcat(out, ", pred = {");
+			for (k = 0; k < ext.pred.isize; k = k + 1) {
+				printhex(out, ext.pred[k], 3, 0);
+				if (k < ext.pred.isize - 1)
+					strcat(out, ", ");
+			}
+
+			strcat(out, "}, succ = {");
+			for (k = 0; k < ext.succ.isize; k = k + 1) {
+				printhex(out, ext.succ[k], 3, 0);
+				if (k < ext.succ.isize - 1)
+					strcat(out, ", ");
+			}
+
+			strcat(out, "}, object = ");
+			printobjname(out, ext.obj);
+			strcat(out, "\r\n");
+		}
+	}
+
+        write_log(wr.data, out, 10);
+	return;
+}
+
+(volatile stateful writer wr, const any parent, const any obj) -> (int index) obj_add {
+	dump_writer(wr, "before obj_add");
+
+	if (wr.generation > 0 && obj == parent)
+		return -1;
+
+	int oh = obj & (POOL_SIZE - 1);
+	extobj opool[] = wr.pool[oh];
+
+	int i;
+	int found;
+	int op;
+	int index = -1;
+
+	for (i = 0; i < opool.lsize; i = i + 1)
+		if (opool[i].obj == obj) {
+			if (opool[i].generation < 0)
+				return -1;
+			op = i;
+			found = 1;
+			i = opool.lsize - 1;
+		}
+
+	if (!found) {
+		extobj ext;
+		ext.obj = obj;
+		ext.generation = wr.generation;
+		opool.lpush(ext);
+		op = i;
+		index = oh | op << POOL_EXP;
+	}
+
+	if (wr.generation) {
+		int ph = parent & (POOL_SIZE - 1);
+		extobj ppool[] = wr.pool[ph];
+		int pp;
+		for (pp = 0; ppool[pp].obj != parent; pp += 1);
+
+		int on = oh | op << POOL_EXP;
+		int pn = ph | pp << POOL_EXP;
+
+		extobj oext = opool[op];
+
+		for (i = 0; i < oext.pred.isize; i += 1)
+			if (oext.pred[i] == pn) {
+				dump_writer(wr, "after obj_add");
+				return index;
+			}
+
+		extobj pext = ppool[pp];
+
+		oext.pred.ipush(pn);
+		pext.succ.ipush(on);
+	}
+
+	dump_writer(wr, "after obj_add");
+
+	return index;
+}
+
+(volatile stateful writer wr, int index) -> () obj_del {
+	dump_writer(wr, "before obj_del");
+
+	extobj ext = wr.pool[index & (POOL_SIZE - 1)][index >> POOL_EXP];
+	int pred[] = ext.pred;
+	int i;
+	for (i = 0; i < pred.isize; i += 1) {
+		int p = pred[i];
+		extobj pexp = wr.pool[p & (POOL_SIZE - 1)][p >> POOL_EXP];
+		int succ[] = pexp.succ;
+		int j;
+		for (j = 0; j < succ.isize; j += 1)
+			if (succ[j] == index) {
+				succ[j] = succ[succ.isize - 1];
+				succ.ipop(1);
+				j = succ.isize - 1;
+			}
+	}
+
+	pred.ipop(pred.isize);
+	ext.generation = -1;
+
+	dump_writer(wr, "after obj_del");
+	return;
+}
+
+(volatile stateful writer wr, const any objs) -> () objs_save {
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+	addr.service = P2P_ADDRMAN;
+	addr.task_id = wr.data.task_id;
+
+        char hashes[];
+
+	int done;
+	int i;
+	do {
+		done = 0;
+		for (i = 0; i < POOL_SIZE; i = i + 1) {
+			extobj pool[] = wr.pool[i];
+			int j;
+			for (j = 0; j < pool.lsize; j = j + 1) {
+				extobj ext = pool[j];
+				if (ext.generation >= 0 & !ext.succ.isize) {
+					p2pmess mess;
+                                        mess.task = P2P_BROADOBJS;
+                                        char data[];
+                                        serialize(data, ext.obj);
+                                        mess.data = data;
+
+					msendp("", "", addr, mess);
+                                        substrcat(hashes, mess.data, 0, 32);
+					obj_del(wr, i | j << POOL_EXP);
+					done = 1;
+
+                                        if (wr.data.log_level >= 9) {
+                                            char m[];
+                                            strcat(m, "Serialized and broadcasted object ");
+                                            printobjname(m, ext.obj);
+                                            write_log(wr.data, m, 9);
+                                        }
+				}
+			}
+		}
+	} while (done);
+
+        if (hashes.csize) {
+            p2paddr addr1;
+            addr1.module = P2P_MODULE;
+            addr1.service = P2P_READOBJ;
+            addr1.task_id = wr.data.task_id;
+
+            p2pmess mess;
+            mess.data = hashes;
+            mess.task = P2P_STOCKOBJS;
+
+            msendp("", "", addr1, mess);
+        }
+
+	mrecv(wr.data.func, wr, wr.data.mboxaddr, -1);
+	return;
+}
+
+(volatile stateful writer wr, const any objs) -> () objs_load {
+	any altobjs = wr.objs;
+	int indexes[] = wr.indexes;
+	int i;
+	for (i = 0; i < objs.lsize; i += 1)
+		if (objs.l[i] == altobjs.l[i])
+			obj_del(wr, indexes[i]);
+
+	int gen = wr.generation;
+	wr.generation = gen + 1;
+
+	altobjs.lpop(altobjs.lsize);
+	indexes.ipop(indexes.isize);
+	int hashes[];
+
+	for (i = 0; i < POOL_SIZE; i += 1) {
+		extobj pool[] = wr.pool[i];
+		int j;
+		for (j = 0; j < pool.lsize; j += 1) {
+			extobj ext = pool[j];
+			if (ext.generation == gen) {
+				any obj = ext.obj;
+
+				int index = obj_add(wr, obj, obj.type);
+				if (index >= 0) {
+					altobjs.lpush(obj.type);
+					indexes.ipush(index);
+					hash_add(hashes, obj.type);
+				}
+
+				int k;
+				for (k = 0; k < obj.lsize; k = k + 1) {
+					index = obj_add(wr, obj, obj.l[k]);
+					if (index >= 0) {
+						altobjs.lpush(obj.l[k]);
+						indexes.ipush(index);
+						hash_add(hashes, obj.l[k]);
+					}
+				}
+			}
+		}
+	}
+
+	if (hashes.isize) {
+		mload(code, wr, hashes);
+		return;
+	}
+
+	any objsave;
+	
+	for (i = 0; i < POOL_SIZE; i += 1) {
+		extobj pool[] = wr.pool[i];
+		int j;
+		for (j = 0; j < pool.lsize; j += 1) {
+			extobj ext = pool[j];
+			if (!ext.pred.isize)
+				objsave.lpush(ext.obj);
+		}
+	}
+
+	msave(objs_save, wr, objsave);
+	return;
+}
+
+(volatile stateful writer wr, any objs, int status) -> () read_mbox {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received a mail in object_write, service stopped");
+		write_log(wr.data, m, 2);
+		return;
+	}
+
+	int i;
+	for (i = 0; i < POOL_SIZE; i += 1)
+		wr.pool[i].lpop(wr.pool[i].lsize);
+	wr.objs.lpop(wr.objs.lsize);
+	wr.indexes.ipop(wr.indexes.isize);
+	wr.generation = 0;
+
+	any altobjs = wr.objs;
+	int indexes[] = wr.indexes;
+	int hashes[];
+
+	for (i = 0; i < objs.lsize; i += 1) {
+		p2pmess mess;
+		if (mess.type == objs.l[i].type) {
+			objcopyto(mess, objs.l[i]);
+
+                        if (mess.task == P2P_BROADOBJS) {
+                            int j;
+                            for (j = 0; j < mess.obj.lsize; j += 1) {
+                                    any obj = mess.obj.l[j];
+                                    if (obj != wind_speeded_hogwash) {
+                                            int index = obj_add(wr, "", obj);
+                                            if (index >= 0) {
+                                                    altobjs.lpush(obj);
+                                                    indexes.ipush(index);
+                                                    hash_add(hashes, obj);
+                                            }
+                                    }
+                            }
+                        } else if (mess.task == P2P_REQOBJS) {
+                            p2paddr addr;
+                            addr.module = P2P_MODULE;
+                            addr.service = P2P_ADDRMAN;
+                            addr.task_id = wr.data.task_id;
+
+                            msendp("", "", addr, mess);
+                            if (wr.data.log_level >= 9) {
+                                char m[];
+                                strcat(m, "Broadcasted request for objects: ");
+                                int j;
+                                for (j = 0; j <= mess.data.csize - 32; j += 32) {
+                                    int k;
+                                    int h;
+                                    for (k = 0; k < 6; k += 1)
+                                        h |= mess.data[j + k] << (k << 3);
+                                    h &= (1 << 47) - 1;
+                                    printobjname(m, h);
+                                    if (j <= mess.data.csize - 64)
+                                        strcat(m, ", ");
+                                }
+                                write_log(wr.data, m, 9);
+                            }
+                        }
+		} else {
+			char m[];
+			strcat(m, "Dropped mailbox message of illegal format");
+			write_log(wr.data, m, 5);
+		}
+	}
+
+	if (!hashes.isize) {
+		mrecv(wr.data.func, wr, wr.data.mboxaddr, -1);
+		return;
+	}
+	
+	mload(objs_load, wr, hashes);
+	return;
+}
+
+(const stateful p2pdata d, const int values[]) -> () {
+	p2pdata data;
+	objcopyto(data, d);
+
+	data.func = read_mbox;
+	data.thread_id = -4;
+
+	p2paddr addr;
+	addr.module = P2P_MODULE;
+        addr.service = P2P_BROADCAST;
+	data.mboxaddr = addr;
+
+	writer wr;
+	wr.data = data; 
+
+	mrecv(data.func, wr, data.mboxaddr, -1);
+	return;
+}

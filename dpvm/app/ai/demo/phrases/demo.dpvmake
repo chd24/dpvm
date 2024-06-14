@@ -1,0 +1,13 @@
+/* aiPhrases class, makefile for demos, T18.421-T18.441; $DVS:time$ */
+
+#include "../../phrases.dpvmake"
+
+/*@ "vocabularyCreate.dpvm": alias for aiVocabularyCreate() */
+() -> (volatile aiVocabulary obj)
+	vocabularyCreate = megatons_curlers_dews;
+/* @*/
+
+/*@ "topPhrases.dpvm": parse input file, collect phrases from it and print top phrases by enthropy index */
+(const char inputFile[], const char codeTable[], int nPhrases) -> ()
+	topPhrases = pertains_newspapers_fisher;
+/* @*/                                                                                                                                                                                                                                                                                                                 

@@ -1,0 +1,471 @@
+/* assemble schema; T16.576-T17.992; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "graphs.dpvmake"
+
+int startreg		= 0x4000000000000000;
+int nregs		= 14;
+int nosaveregs		= 4;
+int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
+
+(volatile stateful asm_instr list[], const stateful char mnem[], int opcode,
+		int is32, int rd, int rs, int d, int s, int value) -> () binop {
+	char a[];
+	char h[];
+
+	int prefix = 0x40;
+	int modrm = 0xC0;
+	int disp;
+	int vbytes;
+	int opcodeadd;
+
+	strcat(a, mnem);
+	a.push(' ');
+
+	if (rd) 
+                a.push('r'), modrm |= d & 7,
+                prefix |= (d & 8) >> 3, d = 0;
+	else {
+		strcat(a, "[rsi");
+		if (!d) 
+			modrm = 6;
+		else if (d >= -0x80 & d < 0x80) 
+			a.push('+'), a.push('b'), modrm = 0x46, disp = 1;
+		else
+			a.push('+'), a.push('d'), modrm = 0x86, disp = 4;
+		a.push(']');
+		if (is32 != -1) {
+                        if (mnem == "mov" || mnem == "mul" || mnem == "setcc" || mnem == "xchg") is32 = 0;
+			else code(list, "mov", 0xC7, -1, 0, -1, d + 4, 0, 0);
+		}
+	}
+
+	if (rs & 2)
+                modrm |= (s & 7) << 3, s = 0;
+	else if (rs & 1) 
+                a.push(','), a.push('r'), modrm |= (s & 7) << 3,
+                prefix |= (s & 8) >> 1, s = 0;
+	else {
+		opcodeadd = 2;
+		modrm = (modrm & 7) << 3;
+		prefix = prefix & ~1 | (prefix & 1) << 2;
+		strcat(a, ",[rsi");
+		if (!s) 
+			modrm = modrm | 6;
+		else if (s >= -0x80 & s < 0x80) 
+                        a.push('+'), a.push('b'), modrm |= 0x46, disp = 1;
+		else
+                        a.push('+'), a.push('d'), modrm |= 0x86, disp = 4;
+		a.push(']');
+	}
+
+	if (rs & 4) {
+		a.push(',');
+		if (mnem != "mov" & !((value & ~0x7f) + (value & 0x80))) 
+			vbytes = 1, opcodeadd = 2, a.push('b');
+		else
+			vbytes = 4, a.push('d');
+	}
+
+        if (opcode >= 0x100 && mnem != "setcc") {
+		if (!opcodeadd) 
+			prefix = prefix & 0xfa | (prefix & 1) << 2 | (prefix & 4) >> 2,
+			modrm = modrm & 0xC0 | (modrm & 7) << 3 | (modrm & 0x38) >> 3;
+		else opcodeadd = 0;
+	}
+
+        prefix |= !is32 << 3;
+	if (prefix != 0x40)
+		printhex(h, prefix, 2, 1),
+		h.push(' ');
+        opcode += opcodeadd;
+	printhex(h, 0x101 + (opcode >= 0x100), 2, 1);
+	h.push(' ');
+	printhex(h, modrm, 2, 1);
+	if (disp) h.push(' '), printhex(h, 0x110 | disp, 3, 1);
+	if (vbytes) h.push(' '), printhex(h, 0x120 | vbytes, 3, 1);
+
+	asm_add(list, a, h, opcode, s | d, value, 0, 0);
+	return;
+}
+
+(volatile stateful asm_instr list[], volatile stateful schema s, int offset, int mmreg) 
+		-> (int mmreg) premm {
+	if (mmreg >= 0) return mmreg;
+	if (s.nregs < nregs) {
+		int r = regs[s.nregs];
+		if (s.nregs < nosaveregs);
+		else if (r >= 8)
+			asm_add(list, "push r", "41 111", 0, 0x50 | r & 7, 0, 0, 0);
+		else
+			asm_add(list, "push r", "111", 0, 0x50 | r, 0, 0, 0);
+		s.nregs = s.nregs + 1;
+		return r;
+	}
+	int m = (s.startmem + s.nmems - offset) << 3;
+	int r = regs[nregs];
+	binop(list, "mov", 0x89, 0, 0, 1, m, r, 0);
+	s.nmems += 1;
+	return r;
+}
+
+(volatile stateful asm_instr list[], volatile stateful schema s, int offset, int mmreg) 
+		-> () postmm {
+	if (mmreg == regs[nregs]) {
+		int m = (s.startmem + s.nmems - 1 - offset) << 3;
+		binop(list, "mov", 0x89, 0, 1, 0, mmreg, m, 0);
+	}
+	return;
+}
+
+(volatile stateful asm_instr list[], const stateful any func, volatile stateful schema s) 
+		-> () {
+	int i;
+	int offset = func.type.l[0].i[9];
+	int mmreg = -1;
+
+
+	/* save regs */
+
+	for (i = nosaveregs; i < s.nregs; i = i + 1) {
+		int r = regs[i];
+		if (r >= 8)
+			asm_add(list, "push r", "41 111", 0, 0x50 | r & 7, 0, 0, 0);
+		else
+			asm_add(list, "push r", "111", 0, 0x50 | r, 0, 0, 0);
+	}
+
+
+	/* assembly gates */
+
+	gate g = s.base.next;
+	s.base.depth = -1;
+	while (g.depth >= 0 & (g.flags & flag_input) != 0) g = g.next;
+	for (g = g; g.depth >= 0; g = g.next) {
+
+
+		/* prepare source/destination operands */
+
+		int d0 = g.stackpos0;
+		int d1 = g.stackpos1;
+		int s0 = -1;
+		int s1 = -1;
+
+		if (g.edgesmask & 1) {
+			if (g.flags & flag_in0right) s0 = g.in0.stackpos1;
+			else s0 = g.in0.stackpos0;
+		}
+
+		if (g.edgesmask & 2) {
+			if (g.flags & flag_in1right) s1 = g.in1.stackpos1;
+			else s1 = g.in1.stackpos0;
+		}
+
+		int rd0 = -1;
+		int rd1 = -1;
+		int rs0 = -1;
+		int rs1 = -1;
+
+		if (d0 >= startreg) rd0 = 1, d0 = regs[d0 - startreg];
+		else if (d0 >= 0) rd0 = 0, d0 = (d0 - offset) << 3;
+
+		if (d1 >= startreg) rd1 = 1, d1 = regs[d1 - startreg];
+		else if (d1 >= 0) rd1 = 0, d1 = (d1 - offset) << 3;
+
+		if (s0 >= startreg) rs0 = 1, s0 = regs[s0 - startreg];
+		else if (s0 >= 0) rs0 = 0, s0 = (s0 - offset) << 3;
+
+		if (s1 >= startreg) rs1 = 1, s1 = regs[s1 - startreg];
+		else if (s1 >= 0) rs1 = 0, s1 = (s1 - offset) << 3;
+
+		int is32 = g.flags & flag_32bit;
+		int v = g.value;
+		int vlarge = ((v & ~0x7fffffff) + (v & 0x80000000)) != 0 & !is32;
+		
+
+		/* mov */
+
+		if (!g.op) {
+                        if (rs0 > 0) {
+                            if (rd0 >= 0 && (rd0 != rs0 || d0 != s0))
+                                binop(list, "mov", 0x89, is32, rd0, rs0, d0, s0, 0);
+                            if (rd1 >= 0 && (rd1 != rs0 || d1 != s0) && (rd1 != rd0 || d1 != d0))
+                                binop(list, "mov", 0x89, is32, rd1, rs0, d1, s0, 0);
+                        } else if (rd0 > 0) {
+                            binop(list, "mov", 0x89, is32, rd0, rs0, d0, s0, 0);
+                            if (rd1 >= 0 && (rd1 != rs0 || d1 != s0) && (rd1 != rd0 || d1 != d0))
+                                binop(list, "mov", 0x89, is32, rd1, rd0, d1, d0, 0);
+                        } else if (rd1 > 0) {
+                            binop(list, "mov", 0x89, is32, rd1, rs0, d1, s0, 0);
+                            if (rd0 >= 0 && (rd0 != rs0 || d0 != s0) && (rd0 != rd1 || d0 != d1))
+                                binop(list, "mov", 0x89, is32, rd0, rd1, d0, d1, 0);
+                        } else {
+                            mmreg = premm(list, s, offset, mmreg);
+                            binop(list, "mov", 0x89, is32, 1, rs0, mmreg, s0, 0);
+                            if (rd0 >= 0 && (rd0 != rs0 || d0 != s0))
+				binop(list, "mov", 0x89, is32, rd0, 1, d0, mmreg, 0);
+                            if (rd1 >= 0 && (rd1 != rs0 || d1 != s0) && (rd1 != rd0 || d1 != d0))
+                                binop(list, "mov", 0x89, is32, rd1, 1, d1, mmreg, 0);
+			}
+
+
+		/* const */
+
+		} else if (g.op == op_const) {
+			if (vlarge) {
+				int r;
+				if (rd0 > 0) r = d0;
+				else if (rd1 > 0) r = d1;
+				else 
+					mmreg = premm(list, s, offset, mmreg),
+					r = mmreg;
+				if (r >= 8)
+					asm_add(list, "mov r,q", "49 101 128",
+						0xB8 | r & 7, 0, v, 0, 0);
+				else
+					asm_add(list, "mov r,q", "48 101 128",
+						0xB8 | r, 0, v, 0, 0);
+
+				if (!rd0 | (rd0 > 0 & d0 != r))
+					binop(list, "mov", 0x89, is32, rd0, 1, d0, r, 0);
+				if (!rd1 | (rd1 > 0 & d1 != r))
+					binop(list, "mov", 0x89, is32, rd1, 1, d1, r, 0);
+			} else {
+				v = v | 0x100000000;
+				if (rd0 >= 0)
+					binop(list, "mov", 0xC7, is32, rd0, -1, d0, 0, v);
+				if (rd1 >= 0)
+					binop(list, "mov", 0xC7, is32, rd1, -1, d1, 0, v);
+			}
+
+
+		/* unary */
+
+		} else if (g.op >> 4 == 1) {
+			int ext;
+			int d;
+			int rd;
+			if (g.op == op_not) ext = 2;
+			else if (g.op == op_neg) ext = 3;
+
+			if (!rs0 & (rd0 | d0 != s0)) {
+				rd = 1;
+				if (rd0) d = d0;
+				else mmreg = premm(list, s, offset, mmreg), d = mmreg;
+				binop(list, "mov", 0x89, is32, rd, rs0, d, s0, 0);
+			} else rd = rs0, d = s0;
+	
+			binop(list, "uop", 0xF7, is32, rd, 2, d, ext, 0);
+			
+			if (rd != rd0 | d != d0)
+				binop(list, "mov", 0x89, is32, rd0, rd, d0, d, 0);
+
+
+		/* binary */
+
+                } else if (g.op >> 4 == 2 || g.op >> 4 == 3) {
+			int op;
+			int cop;
+			int ext;
+			if (g.op == op_add) op = 0x01, cop = 0x81, ext = 0;
+			else if (g.op == op_sub) op = 0x29, cop = 0x81, ext = 5;
+			else if (g.op == op_mul) op = 0xAF0F, cop = 0x69;
+                        else if (g.op >> 4 == 3) op = 0x39, cop = 0x81, ext = 7;
+                        else if (g.op == op_and) op = 0x21, cop = 0x81, ext = 4;
+			else if (g.op == op_or) op = 0x09, cop = 0x81, ext = 1;
+			else if (g.op == op_xor) op = 0x31, cop = 0x81, ext = 6;
+			else if (g.op == op_shl) cop = 0xBF, ext = 4, v = v & 0x7f, vlarge = 0;
+			else if (g.op == op_shr) cop = 0xBF, ext = 5, v = v & 0x7f, vlarge = 0;
+			else if (g.op == op_rol) cop = 0xBF, ext = 0, v = v & 0x7f, vlarge = 0;
+			else if (g.op == op_ror) cop = 0xBF, ext = 1, v = v & 0x7f, vlarge = 0;
+
+			if ((rs0 < 0 | rs1 < 0) & vlarge) {
+				int r;
+				if (rd0 & rs0 <= 0 & rs1 <= 0) r = d0;
+				else 
+					mmreg = premm(list, s, offset, mmreg),
+					r = mmreg;
+				if (r >= 8)
+					asm_add(list, "mov r,q", "49 101 128",
+						0xB8 | r & 7, 0, v, 0, 0);
+				else
+					asm_add(list, "mov r,q", "48 101 128",
+						0xB8 | r, 0, v, 0, 0);
+				if (rs0 < 0) rs0 = 1, s0 = r;
+				else rs1 = 1, s1 = r;
+				v = 0;
+			}
+
+			int d;
+			int rd;
+                        if (rs0 >= 0 & rs1 >= 0) {
+				if (!rs0 & !rs1) {
+					int r;
+					if (rd0) r = d0;
+					else
+						mmreg = premm(list, s, offset, mmreg),
+						r = mmreg;
+					if (!rd0 & d0 == s0)
+						binop(list, "mov", 0x89, is32, 1, rs1, r, s1, 0),
+						rs1 = 1, s1 = r;
+					else
+						binop(list, "mov", 0x89, is32, 1, rs0, r, s0, 0),
+						rs0 = 1, s0 = r;
+				}
+                                if (g.op == op_sub || rd0 == rs0 && d0 == s0 && (g.op != op_mul || rd0))
+					binop(list, "bop", op, is32, rs0, rs1, s0, s1, 0),
+					rd = rs0, d = s0;
+                                else {
+					binop(list, "bop", op, is32, rs1, rs0, s1, s0, 0),
+					rd = rs1, d = s1;
+                                        if (g.op >> 4 == 3) {
+                                            if (g.op == op_eq) g.op = op_neq;
+                                            else if (g.op == op_lt) g.op = op_geq;
+                                            else if (g.op == op_gt) g.op = op_leq;
+                                            else if (g.op == op_neq) g.op = op_eq;
+                                            else if (g.op == op_leq) g.op = op_gt;
+                                            else if (g.op == op_geq) g.op = op_lt;
+                                        }
+                                }
+			} else if (rs0 >= 0) {
+				if (g.op == op_mul) rs1 = -4 | rs0, ext = s0;
+				if (rs0 | (rs0 == rd0 & s0 == d0)) {
+					if (!rs0 & g.op == op_mul)
+						mmreg = premm(list, s, offset, mmreg),
+						rs0 = 1, s0 = mmreg;
+					binop(list, "bop", cop, is32, rs0, rs1, s0, ext, v);
+					rd = rs0, d = s0;
+				} else {
+					rd = 1;
+					if (rd0) d = d0;
+					else mmreg = premm(list, s, offset, mmreg), d = mmreg;
+					if (g.op != op_mul)
+						binop(list, "mov", 0x89, is32, rd, rs0, d, s0, 0);
+					binop(list, "bop", cop, is32, rd, rs1, d, ext, v);
+				} 
+			} else {
+				if (!rs1 & (rd0 | d0 != s1)) {
+					rd = 1;
+					if (rd0) d = d0;
+					else mmreg = premm(list, s, offset, mmreg), d = mmreg;
+					binop(list, "mov", 0x89, is32, rd, rs1, d, s1, 0);
+				} else rd = rs1, d = s1;
+				binop(list, "bop", cop, is32, rd, rs0, d, ext, v);
+				binop(list, "uop", 0xF7, is32, rd, 2, d, 1, 0);
+			}
+
+                        if (g.op >> 4 == 3) {
+                                binop(list, "mov", 0xC7, is32, rd0, -1, d0, 0, 0x100000000);
+                                if (g.op == op_eq) op = 0x940f;
+                                else if (g.op == op_lt) op = 0x9c0f;
+                                else if (g.op == op_gt) op = 0x9f0f;
+                                else if (g.op == op_neq) op = 0x950f;
+                                else if (g.op == op_leq) op = 0x9e0f;
+                                else if (g.op == op_geq) op = 0x9d0f;
+                                binop(list, "setcc", op, 0, rd0, 2, d0, 0, 0);
+                        } else if (d != d0 | rd != rd0)
+				binop(list, "mov", 0x89, is32, rd0, rd, d0, d, 0);
+
+
+                /* full multiplication */
+
+                } else if (g.op >> 4 == 4) {
+                        int outrax = (rd0 > 0 && !d0) || (rd1 > 0 && !d1);
+                        int outrdx = (rd0 > 0 && d0 == 2) || (rd1 > 0 && d1 == 2);
+
+                        int rswaprax = 1;
+                        int swaprax = 0;
+                        int rswaprdx = 1;
+                        int swaprdx = 2;
+
+                        if (outrax && outrdx)
+                            ;
+                        else if (outrax) {
+                            if (rd1 > 0 && !d1)
+                                rswaprdx = rd0, swaprdx = d0;
+                            else
+                                rswaprdx = rd1, swaprdx = d1;
+                        } else if (outrdx) {
+                            if (rd1 > 0 && d1 == 2)
+                                rswaprax = rd0, swaprax = d0;
+                            else
+                                rswaprax = rd1, swaprax = d1;
+                        } else {
+                            rswaprax = rd0, swaprax = d0;
+                            rswaprdx = rd1, swaprdx = d1;
+                        }
+
+                        if (rswaprax <= 0 || swaprax != 0) {
+                            binop(list, "xchg", 0x87, 0, rswaprax, 1, swaprax, 0, 0);
+                            if (rs0 == rswaprax && s0 == swaprax)
+                                rs0 = 1, s0 = 0;
+                            else if (rs0 == 1 && s0 == 0)
+                                rs0 = rswaprax, s0 = swaprax;
+
+                            if (rs1 == rswaprax && s1 == swaprax)
+                                rs1 = 1, s1 = 0;
+                            else if (rs1 == 1 && s1 == 0)
+                                rs1 = rswaprax, s1 = swaprax;
+                        }
+
+                        if (rswaprdx <= 0 || swaprdx != 2) {
+                            binop(list, "xchg", 0x87, 0, rswaprdx, 1, swaprdx, 2, 0);
+                            if (rs0 == rswaprdx && s0 == swaprdx)
+                                rs0 = 1, s0 = 2;
+                            else if (rs0 == 1 && s0 == 2)
+                                rs0 = rswaprdx, s0 = swaprdx;
+
+                            if (rs1 == rswaprdx && s1 == swaprdx)
+                                rs1 = 1, s1 = 2;
+                            else if (rs1 == 1 && s1 == 2)
+                                rs1 = rswaprdx, s1 = swaprdx;
+                        }
+
+                        int rsx;
+                        int sx;
+                        if (rs1 < 0) {
+                            if (rs0 > 0 && !s0)
+                                asm_add(list, "mov r,q", "48 101 128", 0xBA, 0, v, 0, 0),
+                                rsx = 1, sx = 2;
+                            else
+                                asm_add(list, "mov r,q", "48 101 128", 0xB8, 0, v, 0, 0),
+                                rsx = rs0, sx = s0;
+                        } else if (rs0 > 0 && !s0)
+                            rsx = rs1, sx = s1;
+                        else if (rs1 > 0 && !s1)
+                            rsx = rs0, sx = s0;
+                        else if (rs0 > 0)
+                            binop(list, "mov", 0x89, 0, 1, rs0, 0, s0, 0),
+                            rsx = rs1, sx = s1;
+                        else
+                            binop(list, "mov", 0x89, 0, 1, rs1, 0, s1, 0),
+                            rsx = rs0, sx = s0;
+
+                        binop(list, "mul", 0xF7, 0, rsx, 2, sx, 4, 0);
+
+                        if (rswaprax != rd0 || swaprax != d0)
+                            binop(list, "xchg", 0x87, 0, 1, 1, 0, 2, 0);
+
+                        if (rswaprax <= 0 || swaprax != 0)
+                            binop(list, "xchg", 0x87, 0, rswaprax, 1, swaprax, 0, 0);
+
+                        if (rswaprdx <= 0 || swaprdx != 2)
+                            binop(list, "xchg", 0x87, 0, rswaprdx, 1, swaprdx, 2, 0);
+                 }
+        }
+
+
+	/* restore regs */
+
+	postmm(list, s, offset, mmreg);
+
+	for (i = s.nregs - 1; i >= nosaveregs; i = i - 1) {
+		int r = regs[i];
+		if (r >= 8)
+			asm_add(list, "pop r", "41 111", 0, 0x58 | r & 7, 0, 0, 0);
+		else
+			asm_add(list, "pop r", "111", 0, 0x58 | r, 0, 0, 0);
+	}
+
+	return;
+}

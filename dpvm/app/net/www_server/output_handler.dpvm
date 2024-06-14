@@ -1,0 +1,53 @@
+/* www server: output handler; T15.543-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(volatile stateful www_data arg, int status) -> () {
+	int fin = status <= 0;
+	if (fin) status = 0;
+
+	int len = arg.length; 
+	int pos = arg.pos;
+
+	if (len < 0) {
+		int t = pos < 0; if (t) status = status + pos;
+		if (status >= 5) 	status = status - 5;
+		if (status >= 0x10) 	status = status - 1;
+		if (status >= 0x100)	status = status - 1;
+		if (status >= 0x1000) 	status = status - 1;
+		if (status >= 0x10000) 	status = status - 1;
+		if (status >= 0x100000) status = status - 1;
+				 if (t) status = status - pos;
+
+		if (status <= 0) {
+			len = status + pos;
+			if (len < 0) {
+				len = 0;
+				if (!arg.close)
+					fin = 1;
+			}
+		}
+	}
+	pos = pos + status;
+	arg.length = len;
+	arg.pos = pos;
+
+	/* finish; write log */
+	if (fin | (arg.status != 200 & arg.status != 206) | arg.reqtype == REQ_HEAD) {
+		const int list[] = {0};
+		getsys(write_log, arg, list);
+		return;
+	}
+
+	arg.read_callback = code;
+
+	if (arg.cgi)
+		/* read output of cgi program */
+		input(read_file, arg, 0x100000, TIMEOUT_CGI);
+	else
+		/* read new piece of file */
+		read(read_file, arg, arg.path, pos, 0x100000);
+
+	return;
+}

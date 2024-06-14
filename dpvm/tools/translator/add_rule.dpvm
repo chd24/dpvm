@@ -1,0 +1,16 @@
+/* add rule to list; T17.662-T17.662; $DVS:time$ */
+
+#include "translator_utils.dpvmake"
+
+(volatile stateful asm_instr list[][], const stateful asm_instr rule[]) -> () {
+	list.lpush(rule);
+
+	int i;
+	for (i = list.lsize - 2; i >= 0 && cmp_rules(list[i], list[i + 1]) > 0; i -= 1)
+		(list[i], list[i + 1]) = (list[i + 1], list[i]);
+
+	if (i >= 0 && !cmp_rules(list[i], list[i + 1]))
+		output("", "", "!!! Equal rules\r\n");
+	
+	return;
+}

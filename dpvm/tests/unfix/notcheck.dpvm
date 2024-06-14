@@ -1,0 +1,25 @@
+/* test for 'unfix' bytecode; should not compiled with fail on check stage; T19.574-T19.575; $DVS:time$ */
+
+(const char text[]) -> (volatile char out[]) unfixTest = {
+	char out[];
+
+	out.cpush('[');
+	int i;
+	for (i = 0; i < text.csize; i += 1)
+		out.cpush(text[i]);
+	out.cpush(']');
+	out.cpush('\r');
+	out.cpush('\n');
+
+	outputp("", "", out);
+
+	char outCopy[] = out;
+
+	asm { unfix };
+
+	out.cpop(2);
+	out[0] = '(';
+	out[out.csize - 1] = ')';
+
+	return out;
+};

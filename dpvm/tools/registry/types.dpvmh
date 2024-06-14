@@ -1,0 +1,25 @@
+/* registry function types for internal usage, header, T18.317-T19.646; $DVS:time$ */
+
+#include "consts.dpvmh"
+
+type funcType = {
+        const char name[];
+	int pos;
+	int flag;
+};
+
+funcType allFuncTypes[] = {
+        { "checker",		0, REGISTRY_CHECKER	},
+        { "compiler",		1, REGISTRY_COMPILER	},
+        { "interpreter",	2, REGISTRY_INTERPRETER },
+        { "maker",		3, REGISTRY_MAKER	},
+        { "monitor",		4, REGISTRY_MONITOR	},
+        { "translator",		5, REGISTRY_TRANSLATOR	},
+        { "debugger",		6, REGISTRY_DEBUGGER	},
+
+	{ "logLevel",		0, REGISTRY_INT		},
+	{ "taskFlags",		1, REGISTRY_INT		},
+	{ "taskMemory",		2, REGISTRY_INT		},
+	{ "timeZone",		3, REGISTRY_INT		},
+	{ "totalMemory",	4, REGISTRY_INT		}
+};

@@ -1,0 +1,65 @@
+/* dpvm byte code translator to x86-64 System V (amd64); T16.070-T20.132; $DVS:time$ */
+
+/* 
+	rdi = links stack end
+ 	rsi = ints stack end
+	r11 = floats stack end
+	r10 = chars stack end
+	r8  = thread object
+*/
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../checker/checker.dpvmake"
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[]) -> (int res) {
+	asm_instr endlist[] = new_rule();
+	int i;
+
+	as(list, "mov r10,rcx", "49 89 CA", 0, 0, 0, 0, 0);
+	as(list, "mov r11,rdx", "49 89 D3", 0, 0, 0, 0, 0);
+
+	for (i = 0; i < data.code_map.csize; i += 1) {
+		if (data.code_map[i] != 0) {
+			int r = 0, c = data.func.c[i], d = (c >> 2) - 32;
+
+			if (c == 1 && isIfElse(data.func, data.jumps_map, i + 1))
+				amd64_jumps(data, list, endlist, i + 2, DPVM_CODE_JF);
+			else if (c <= DPVM_CODE_NUM_MAX)
+				as(list, "mov rax,d", "48 C7 C0 124", 0, 0, c, 0, 0),
+				amd64_store(data, list, 1, 0, i, 0);
+			else if (0x000003 >> d & 1)
+				(r, i) = amd64_info(data, list, endlist, i, c);
+			else if (0x00000C >> d & 1)
+				r = amd64_funcs(data, list, endlist, i, c);
+			else if (0x000030 >> d & 1)
+				amd64_jumps(data, list, endlist, i, c);
+			else if (0x000F00 >> d & 1)
+				r = amd64_stack(data, list, endlist, i, c);
+			else if (0x003000 >> d & 1)
+				r = amd64_getset(data, list, endlist, i, c);
+			else if (0x00C000 >> d & 1)
+				r = amd64_pushpop(data, list, endlist, i, c);
+			else if (0x0D0040 >> d & 1)
+				i = amd64_imath(data, list, endlist, i, c);
+			else if (0xF20080 >> d & 1)
+				r = amd64_fmath(data, list, endlist, i, c);
+			else if (0xFF000000 >> d & 1)
+				r = amd64_io(data, list, endlist, i, c);
+
+			if (r)
+				return i << 8 | c;
+		}
+	}
+
+	for (i = endlist[0].next; i; i = endlist[i].next)
+		as(list, endlist[i].mnem, endlist[i].hex, endlist[i].param0,
+			endlist[i].param1, endlist[i].param2, endlist[i].param3, 0);
+		
+	return 0;
+}

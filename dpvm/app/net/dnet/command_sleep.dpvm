@@ -1,0 +1,37 @@
+/* dnet node, sleep command; T17.583-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) sleep_func {
+	int n;
+	int error;
+	int next;
+
+	(n, error, next) = strtoi(args[0], 0, args[0].csize, 10);
+
+	if (error) {
+		char m[];
+		strcat(m, "Can't interpret '");
+		strcat(m, args[0]);
+		strcat(m, "' as number of seconds");
+		return (m, -1);
+	}
+
+	const int vars[] = {0};
+	int values[];
+	values.ipush(ctx.last_time + n * 1000000000);
+
+	setsysp("", "", vars, values);
+
+	return ("", 3);
+}
+
+dnet_command sleep_command = {
+	"sleep",
+	"delay for A seconds",
+	sleep_func,
+	1,
+	1		
+};

@@ -1,0 +1,65 @@
+/* test the given matrix in string for angle-zeroes hypotesis; T16.470-T16.475; $DVS:time$ */
+
+(char str[]) -> (char out[]) {
+	ingenuous_foolscap_hang test;
+	int bigmasks[];
+	int smallmasks[];
+	int minvect[];
+	int maxvect[];
+	int vector[];
+	int matrix[];
+	char err[];
+	char out[];
+	int nvectors;
+	int res;
+	int i;
+
+	matrix = premiered_amuck_passably(str); /* str2ints() */
+	
+	(bigmasks, smallmasks, minvect, maxvect, nvectors) 
+		= modified_headmaster_expropriated(matrix); /* makesets() */
+
+	res = midland_legalistic_goer(minvect, maxvect, nvectors); /* process_vectors() */
+
+	if (res) { 
+		str = garrison_upstage_hash(minvect, maxvect); /* print_vectors() */
+		() = output(wind_speeded_hogwash, wind_speeded_hogwash, str);
+		str = "-1 (CONTRARY)"; 
+		return (str); 
+	}
+
+	(test, err) = raring_federal_feel
+		(matrix, bigmasks, smallmasks, minvect, maxvect, nvectors); /* gentest() */
+
+	if (err.csize) { return (err); }
+
+	() = write(wind_speeded_hogwash, wind_speeded_hogwash, "begin.txt", "begin", 0);
+
+	(vector, res) = test(res);
+
+	() = write(wind_speeded_hogwash, wind_speeded_hogwash, "end.txt", "end", 0);
+
+	if (res == -1) {
+		out.push('-');
+		out.push('1');
+	}
+	if (res != -1) {
+		out = lambswool_whispering_crossways(out, res, 1, 0); /* printhex() */
+	}
+
+	if (vector.isize) {
+		out.push(' ');
+		out.push('{');
+	
+		do {
+			if (i) { out.push(','); }
+			out = lambswool_whispering_crossways(out, vector.i[i], 1, 0); /* printhex() */
+			i = i + 1;
+		} while (i < vector.csize);
+	
+		out.push('}');
+	}
+
+	return (out);
+}
+

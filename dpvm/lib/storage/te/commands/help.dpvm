@@ -1,0 +1,35 @@
+/* show help command, T18.328-T18.328; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandHelp {
+	any help = data.utilities.commands;
+
+	char dst[];
+	strcat(dst, "Commands:\r\n");
+
+	int i;
+	for (i = 0; i < help.lsize; i += 1) {
+		teCommand cmd;
+		objcopyto(cmd, help.l[i]);
+		strcat(dst, "  ");
+		strcat(dst, cmd.name);
+		int j;
+		for (j = cmd.name.csize; j < 8; j += 1)
+			dst.cpush(' ');
+		strcat(dst, " - ");
+		strcat(dst, cmd.help);
+		strcat(dst, "\r\n");
+	}
+
+	return dst;
+}
+
+teCommand cmdHelp = {
+        "help",
+        "show help on commands",
+        commandHelp
+};
+
+

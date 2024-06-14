@@ -1,0 +1,34 @@
+/* te internal structures, header, T18.319-T18.334; $DVS:time$ */
+
+#include "../../algorithms/hashtable/hash.dpvmake"
+#include "te.dpvmh"
+
+type teAddr = {
+        const char extVersion[];
+	const char filename[];
+};
+
+type teData = {
+        const char filename[];
+	const any command;
+	const teUtilities utilities;
+        const teContext ctx;
+	const teAddr addr;
+	const int emptyField[];
+        volatile int file[];
+        volatile int prevIndexes[];
+        volatile int nextIndexes[];
+        volatile hashData hash;
+        volatile int history[];
+        int extension;
+	int pos;
+};
+
+int TE_EXT_T5_337	= 1;
+int TE_EXT_T18_319	= 2;
+
+type teCommand = {
+        const char name[];
+	const char help[];
+        const (volatile stateful teData data) -> (const char result[]) command;
+};

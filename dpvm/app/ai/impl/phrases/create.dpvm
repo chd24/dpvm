@@ -1,0 +1,21 @@
+/* aiPhrases class, constructor, T18.421-T18.434; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "phrases.dpvmake"
+
+() -> (volatile aiPhrases obj) aiPhrasesCreate = {
+	aiPhrasesImpl impl;
+	aiPhrases obj;
+
+	impl.methods = aiPhrasesMethodsImpl;
+
+	int i;
+	for (i = 0; i < AIP_N_SHARDS; i += 1) {
+		aiPhrasesShard s;
+		impl.data.shards.lpush(s);
+	}
+
+	objcopyto(obj, impl);
+
+        return obj;
+};

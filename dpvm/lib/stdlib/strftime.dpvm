@@ -1,0 +1,81 @@
+/* print formatted time; T15.548-T16.636; $DVS:time$ */
+
+#include "stdlib.dpvmake"
+	
+(volatile stateful char dst[], const stateful char format[], int time, int offset) -> () {
+	char str[];
+	int year;
+	int month;
+	int day;
+	int weekday;
+	int hour;
+	int min;
+	int sec;
+	int nanosec;
+	int t;
+	int z;
+	int i;
+	int size;
+	int inperc;
+	int ninperc;
+	int len;
+	char c;
+
+	(year, month, day, weekday, hour, min, sec, nanosec) = parse_time(time, offset);
+
+	size = format.csize;
+	i = 0;
+	inperc = 0;
+
+	do {
+		t = i != size;
+		if (t) {
+			c = format[i];
+			z = c;
+			ninperc = inperc == 0;
+			if (inperc) {
+				inperc = 0;
+				t = 'a'; t = z == t; if (t) {
+					str = "SunMonTueWedThuFriSat";
+					t = weekday * 3; c = str[t]; dst.push(c);
+					t = t + 1;       c = str[t]; dst.push(c);
+					t = t + 1;       c = str[t]; dst.push(c);
+				}
+				t = 'b'; t = z == t; if (t) {
+					str = "JanFebMarAprMayJunJulAugSepOctNovDec";
+					t = month - 1;
+					t = t * 3; c = str[t]; dst.push(c);
+					t = t + 1; c = str[t]; dst.push(c);
+					t = t + 1; c = str[t]; dst.push(c);
+				}
+				t = 'd'; t = z == t; 
+				if (t) printint(dst, day, 2);
+				t = 'H'; t = z == t; 
+				if (t) printint(dst, hour, 2);
+				t = 'i'; t = z == t; 
+				if (t) {
+					t = nanosec / 100;
+					t = t / 10;
+					printint(dst, t, 6); 
+				}
+				t = 'm'; t = z == t; 
+				if (t) printint(dst, month, 2);
+				t = 'M'; t = z == t;
+				if (t) printint(dst, min, 2);
+				t = 'S'; t = z == t; 
+				if (t) printint(dst, sec, 2);
+				t = 'Y'; t = z == t; 
+				if (t) printint(dst, year, 4);
+				t = '%'; t = z == t; if (t) { dst.push('%'); }
+			}
+			if (ninperc) {
+				t = '%'; t = z == t; if (t) { inperc = 1; }
+				t = '%'; t = z != t; if (t) { dst.push(c); }
+			}
+			i = i + 1;
+			t = 1;
+		}
+	} while (t);
+
+	return;
+}

@@ -1,0 +1,103 @@
+/* aiAlphabet class, parseFile demo, T18.386-T18.413; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../alphabet.dpvmake"
+
+type parserData = {
+	volatile char input[];
+	const char inputFile[];
+	const char outputFile[];
+	const char codeTable[];
+};
+
+(volatile parserData data, const char text[], int status) -> () inputRead = {
+	if (status < 0 || status + data.input.csize == 0) {
+		outputp("", "", "Error reading input file.\r\n");
+		return;
+	}
+
+	if (status)
+		strcat(data.input, text);
+
+	if (status == 0x100000) {
+		read(code, data, data.inputFile, data.input.csize, 0x100000);
+		return;
+	}
+
+	aiAlphabet aiA = aiAlphabetCreate();
+	char err[];
+	char indexes[];
+	(indexes, err) = aiA.methods.parseText(aiA, data.codeTable, data.input);
+	if (err.csize) {
+		outputp("", "", err);
+		outputp("", "", "\r\n");
+		return;
+	}
+
+	char defCodeTable[];
+	(defCodeTable, err) = aiA.methods.getDefaultCodeTable(aiA, data.codeTable);
+	if (err.csize) {
+		outputp("", "", err);
+		outputp("", "", "\r\n");
+		return;
+	}
+
+	char restored[];
+	(restored, err) = aiA.methods.restoreText(aiA, defCodeTable, indexes);
+	if (err.csize) {
+		outputp("", "", err);
+		outputp("", "", "\r\n");
+		return;
+	}
+
+	writep("", "", data.outputFile, restored, 0);
+
+	outputp("", "", "Result saved.\r\n");
+
+	int stats[];
+	char letters[][];
+
+	(stats, err) = aiA.methods.getStatistics(aiA, data.codeTable);
+	if (err.csize) {
+		outputp("", "", err);
+		outputp("", "", "\r\n");
+		return;
+	}
+
+	(letters, err) = aiA.methods.getLetters(aiA, defCodeTable, AI_ALPHABET_BIG);
+	if (err.csize) {
+		outputp("", "", err);
+		outputp("", "", "\r\n");
+		return;
+	}
+
+	int sum, i;
+	for (i = 0; i < letters.lsize; i += 1)
+		sum += stats[i];
+
+	char res[];
+	strcat(res, "Alphabet statistics:\r\n");
+
+	for (i = 0; i < letters.lsize; i += 1) {
+		strcat(res, letters[i]);
+		strcat(res, ":");
+		printfloat(res, 2, stats[i]*100.0/sum);
+		strcat(res, "% ");
+	}
+
+	strcat(res, "\r\n");
+	outputp("", "", res);
+
+	return;
+};
+
+(const char inputFile[], const char outputFile[], const char codeTable[]) -> () parseFile = {
+	parserData data;
+
+	data.inputFile = inputFile;
+	data.outputFile = outputFile;
+	data.codeTable = codeTable;
+
+	read(inputRead, data, inputFile, 0, 0x100000);
+	return;
+};

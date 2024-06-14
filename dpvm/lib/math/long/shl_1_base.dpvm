@@ -1,0 +1,19 @@
+/* compute n := 2 * n + bit where n is char[] long number by module base; T18.399-T18.399; $DVS:time$ */
+
+(volatile stateful char number[], int base, int bit) -> () shl_1_base = {
+	int i;
+	int size = number.csize;
+
+	for (i = 0; i < size; i += 1) {
+		int n = number[i];
+		n += n + bit;
+		if (n >= base) n -= base, bit = 1;
+		else bit = 0;
+		number[i] = n;
+	}
+
+	if (bit)
+		number.cpush(bit);
+
+	return;
+};

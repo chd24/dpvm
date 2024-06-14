@@ -1,0 +1,32 @@
+/* convert path extension to mime type; T15.543-T18.584; $DVS:time$ */
+	
+(const blip_crazed_electrolytic mime, const stateful char path[]) -> (const char res[]) {
+	int i = path.csize;
+	int n = 0;
+	int t;
+	do {
+		i = i - 1;
+		t = 0;
+		if (i >= 0) {
+			if (path[i] != '.') {
+				n = n << 8 | path[i];
+				if (!(n >> 56)) t = i;
+			}
+		}
+	} while (t);
+	
+	int min = 0;
+	int max = mime.isize - 1;
+	do {
+		int mid = (min + max) >> 1;
+		int z = mime.i[mid];
+		if (z == n)
+			return mime.l[mid];
+		else if (z > n)
+			max = mid - 1;
+		else
+			min = mid + 1;
+	} while (max >= min);
+
+	return "application/octet-stream";
+}

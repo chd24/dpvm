@@ -1,0 +1,81 @@
+/* create new entry command, T18.325-T18.334; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../internal.dpvmh"
+
+(volatile stateful teData data, const int values[]) -> () getValues {
+	any seed;
+	seed.lpush(data);
+	seed.lpush(values);
+	data.utilities.teEntryCorrect(data.ctx, data.file, seed, data.pos, values[0], 1, data.extension);
+
+	if (!data.pos) {
+		data.utilities.teEntryCorrect(data.ctx, data.file, seed, 144, values[0], 1, data.extension);
+
+		int sector0[];
+		copyints(sector0, data.file, 144 + 16, 144 + 144);
+
+		teContext ctx2;
+		objcopyto(ctx2, data.ctx);
+		data.utilities.teContextInit(ctx2, "", sector0);
+		data.ctx = ctx2;
+
+		data.utilities.teEntryCorrect(data.ctx, data.file, "", 144, values[0], 0, data.extension);
+	}
+
+	int index = data.pos / 36;
+
+	data.prevIndexes.ipush(index);
+	data.nextIndexes.ipush(index);
+	data.prevIndexes.ipush(index + 1);
+	data.nextIndexes.ipush(index + 1);
+	data.prevIndexes.ipush(index + 2);
+	data.nextIndexes.ipush(index + 2);
+	data.prevIndexes.ipush(index + 3);
+	data.nextIndexes.ipush(index + 3);
+
+	if (!data.pos) {
+		index += 4;
+
+		data.prevIndexes.ipush(index);
+		data.nextIndexes.ipush(index);
+		data.prevIndexes.ipush(index + 1);
+		data.nextIndexes.ipush(index + 1);
+		data.prevIndexes.ipush(index + 2);
+		data.nextIndexes.ipush(index + 2);
+		data.prevIndexes.ipush(index + 3);
+		data.nextIndexes.ipush(index + 3);
+	}
+
+	output(data.command, data, "Entry created, type 'edit' to enter data.\r\n");
+	return;
+}
+
+(volatile stateful teData data) -> (const char result[]) commandNew {
+	data.pos = data.file.isize;
+
+	int size = 144;
+	if (!data.pos)
+		size += 144;
+
+	while (size)
+		data.file.ipush(0xffffffff),
+		size -= 1;
+
+	int vars[];
+	int i;
+	for (i = 0; i < 0x400; i += 1)
+		if (i >> 8 != 1)
+			vars.ipush(i);
+
+	getsys(getValues, data, vars);
+	return "";
+}
+
+teCommand cmdNew = {
+        "new",
+        "create new database entry",
+        commandNew
+};
+
+

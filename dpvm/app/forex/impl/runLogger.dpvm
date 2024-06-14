@@ -1,0 +1,148 @@
+/* forex log writer; T19.772-T19.772; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "forex.dpvmake"
+
+type logger = {
+	const registryData registry;	/* system registry */
+	const char logFile[];
+	const forexAddress addr;
+	const any func;
+        const any objs;
+        int taskId;
+        int threadId;
+};
+
+int KILL_DELAY = 1000000000; /* 1 sec */
+
+(volatile stateful logger log, const int values[]) -> () kill = {
+	/* kill this task */
+	const int vars1[] = {0x200};
+	const int values1[] = {-1};
+	setsys("", "", vars1, values1);
+	return;
+};
+
+(volatile stateful logger log, const forexMessage mess, const int values[]) -> () logOne = {
+	char out[];
+
+	strftime(out, "%Y-%m-%d %H:%M:%S", values[0], log.registry.timeZone);
+
+	out.push('.');
+	printint(out, values[0] / 1000000 % 1000, 3);
+	out.push(' ');
+	out.push('[');
+	printhex(out, log.taskId, 4, 0);
+	out.push(':');
+	printhex(out, mess.threadId, 1, 0);
+	out.push(':');
+	substrcat(out, "NONEFATACRITINTEERROWARNMESSINFODBUGTRAC", mess.level << 2, (mess.level + 1) << 2);
+	out.push(']');
+	out.push(' ');
+	out.push(' ');
+	strcat(out, mess.message);
+	if (out[out.csize - 1] != '\n') {
+		out.push('\r');
+		out.push('\n');
+	}
+
+	writep("", "", log.logFile, out, -1);
+
+	if (mess.level == 1) { /* kill task on fatal error */
+		const int vars1[] = {0};
+		int values1[];
+		values1.ipush(values[0] + KILL_DELAY);
+		setsys(kill, log, vars1, values1);
+	}
+	return;
+};
+
+(volatile stateful logger log, const int values[]) -> () logAll = {
+	int i;
+
+	for (i = 0; i < log.objs.lsize; i += 1) {
+		forexMessage arr[];
+		if (forexMessage != log.objs.l[i].type) {
+			forexMessage mess;
+			mess.message = "Dropped mailbox message of illegal format";
+			mess.level = 2;
+			mess.messageId = FOREX_MESS_LOG;
+			mess.threadId = log.threadId;
+			arr.lpush(mess);
+		} else
+			pushObject(log.objs.l[i], arr);
+
+		if (arr[0].messageId == FOREX_MESS_LOG)
+			logOne(log, arr[0], values);
+	}
+
+	mrecv(log.func, log, log.addr, -1);
+	return;
+};
+
+(volatile stateful logger log, const any objs, int status) -> () readMbox {
+	if (status) {
+		any objs1;
+		forexMessage mess;
+                char m[];
+                strcat(m, "Error ");
+                printint(m, status, 1);
+                strcat(m, " when received mail in logger");
+                mess.message = m;
+		mess.level = 2;
+		mess.threadId = log.threadId;
+		mess.messageId = FOREX_MESS_LOG;
+		objs1.lpush(mess);
+		objs = objs1;
+	}
+
+	log.objs = objs;
+
+	int vars[];
+	vars.ipush(0);
+	getsys(logAll, log, vars);
+	return;
+};
+
+(const stateful logger log0, const any objs, int status) -> () readMbox0 = {
+	logger log;
+	objcopyto(log, log0);
+	readMbox(log, objs, status);
+	return;
+};
+
+(volatile stateful any forexObj, const char logFile[], int taskId) -> (const char error[]) runLogger = {
+	forexImpl impl;
+	char err[] = convertObjToImpl(impl, forexObj, "runLogger");
+	if (err.csize) return err;
+
+	if (!impl.data.registrySet)
+		return mkError("registry is not set", "runLogger");
+
+	impl.data.taskId = taskId;
+	impl.data.loggerRun = 1;
+
+	forexAddress addr;
+	addr.version = impl.methods.version;
+	addr.taskId = impl.data.taskId;
+	addr.serviceId = FOREX_ADDR_LOGGER;
+
+	logger log = {impl.data.registry, logFile, addr, readMbox, "", taskId, 1};
+	mrecvp("", "", addr, 0);
+	mrecvp(readMbox0, log, addr, -1);
+
+	/* set up handler */
+
+	forexImpl impl1;
+	impl1.methods = impl.methods;
+	impl1.data.registry = impl.data.registry;
+	impl1.data.registrySet = impl.data.registrySet;
+	impl1.data.loggerRun = impl.data.loggerRun;
+	impl1.data.taskId = impl.data.taskId;
+
+	const int hvars[] = {0x100, 0x101, 0x102, 0x103, 0};
+	getsysp(handler, impl1, hvars);
+
+	return "";
+};

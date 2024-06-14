@@ -1,0 +1,7 @@
+/* return version of io_handle */
+	
+char version[] = "io_handle version 0.1.0, T17.155-T17.156"; /* $DVS:time$ */
+
+() -> (const char version[]) {
+	return version;
+}

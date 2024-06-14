@@ -1,0 +1,10 @@
+/* www server: list of dpvm-internal cgi modules; T18.742-T18.762; $DVS:time$ */
+
+#include "modules.dpvmake"
+
+cgiModule cgiModules[] = {
+    blogCgiModule,
+    gentejsCgiModule,
+    logCgiModule,
+    testCgiModule
+};

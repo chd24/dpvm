@@ -1,0 +1,21 @@
+/* split string into parts not contained delimiter characters; T18.778-T18.778; $DVS:time$ */
+
+#include "stdlib.dpvmake"
+
+(const stateful char string[], const stateful char delimiters[]) -> (volatile char parts[][]) splitString = {
+    char parts[][];
+    int begin, end = string.csize, pos;
+
+    for (pos = 0; pos <= end; pos += 1) {
+        if (pos == end || strchr(delimiters, string[pos]) >= 0) {
+            if (begin < pos) {
+                char part[];
+                substrcat(part, string, begin, pos);
+                parts.lpush(part);
+            }
+            begin = pos + 1;
+        }
+    }
+
+    return parts;
+};

@@ -1,0 +1,38 @@
+/* words2ints; T15.413-T15.440; $DVS:time$ */
+
+(const stateful char words[]) -> (volatile int ints[]) {
+    asm {
+0 0
+0 lload
+0 lload info lpops
+7 istore
+7 ipopn
+code info 1 lget 4 lget ipops 0 new
+1 lstore
+0 0
+lb
+	0 lload 1 iload cget
+	ctoi
+	0 iload 33 lt
+	jnzf
+		1 iload 8 shl
+		add
+		0 istore
+		32
+	lf
+	10 eq
+	jzf
+		8 shl
+		3 iload add
+		3 iload 1 add 3 istore
+		1 lload ipush
+		0
+	lf
+	1 iload 1 add 1 istore
+	1 iload 3 iload eq
+jzb
+4 ipopn
+lpops
+ret
+    }
+}

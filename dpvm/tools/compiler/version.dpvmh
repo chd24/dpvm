@@ -1,0 +1,54 @@
+/* version of compiler */
+	
+char version[] = "DPVM compiler 1.0.3 T15.418-T20.171"; /* $DVS:time$
+
+history:
+
+T20.171 ver 1.0.3: - added support for long object names
+
+T20.144 ver 1.0.2: - fixed bug in non-constant type cast within expression
+		     fixed bug with >> and << operators where left operand is char
+
+T20.141 ver 1.0.1: - fixed bug with A ? B : C operator if B and C have link type
+
+T20.118 ver 1.0.0: - implemented in-expression declarations in a form (type) initializer
+
+T20.111 ver 0.9.8: - implemented ?:, ++, -- (postfix) operators
+
+T20.092 ver 0.9.7: - correct implementaion of comparison operators (= > < != <= >=) between objects using full hash
+
+T19.742 ver 0.9.6: - any included file now will be included once
+
+T19.662 ver 0.9.5: - fixing bugs
+
+T19.602 ver 0.9.4: - fixing bugs
+
+T19.594 ver 0.9.3: - embedded functions (function in function) can be used in parallel [ ... ] block
+
+T19.574 ver 0.9.2: - added 'unfix' bytecode
+
+T18.748 ver 0.9.1: - fixed bug with {} construct
+
+T18.734 ver 0.9.0: - implemented of composed variable object [(type)]{ expr, ..., expr }
+
+T18.397 ver 0.8.7: - error message enhancement in constant declaration with initializer
+
+T18.380 ver 0.8.6: - named types can be used as constant objects now
+
+T18.378 ver 0.8.5: - declarations of saveral variables with common base type allowed;
+                   - '=' can be used between function name and body
+
+T18.375 ver 0.8.4: - getdecl() splitted into getdecltype() and getdeclname()
+
+T18.361 ver 0.8.3: - fixed crash bug in getconstexpr()
+
+T18.350 ver 0.8.2: - added lexems[] array, and getLexem(), getConstString() methods
+		     to compilerClass
+
+T18.346 ver 0.8.1: - added getMultiExprType() method to compilerClass
+
+T18.344 ver 0.8.0: - integration with registry;
+                   - compilerObj.dpvmake introduced as top-level project of compiler
+
+*/
+

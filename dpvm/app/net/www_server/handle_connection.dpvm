@@ -1,0 +1,19 @@
+/* www server: handle connection; T15.543-T18.884; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(const www_data arg, int port, int ipaddr0, int ipaddr1) -> () {
+	www_data data;
+
+	objcopyto(data, arg);
+
+	data.port = port;		/* port    */
+	data.ipaddr0 = ipaddr0;		/* ipaddr0 */
+	data.ipaddr1 = ipaddr1;		/* ipaddr1 */
+
+	const int list[] = {0};
+	getsys(get_time, data, list);
+
+	return;
+}

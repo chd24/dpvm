@@ -1,0 +1,203 @@
+/* dnet mediator service; T17.566-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "dnet.dpvmake"
+
+int SEND_INFO_TIMEOUT	=  5000000000; /*  5 sec */
+int SEND_UPDATE_TIMEOUT = 30000000000; /* 30 sec */
+
+type mediator = {
+        volatile dnet_context ctx;
+        const any func;
+        const any objs;
+        volatile char keys[];
+	int last_sent_info;
+	int last_sent_update;
+};
+
+(volatile stateful mediator med, const stateful int values[]) -> () process_messages {
+	int i;
+	int change;
+
+	if (values[0] > med.ctx.last_time)
+		med.ctx.last_time = values[0];
+
+	int old_nconns = med.ctx.conns.lsize;
+
+	for (i = 0; i < med.objs.lsize; i += 1) {
+		dnet_mess mess;
+		if (mess.type != med.objs.l[i].type) {
+			write_log(med.ctx, "Dropped mailbox message of illegal format in mediator", 5);
+		} else {
+			objcopyto(mess, med.objs.l[i]);
+
+			if (mess.request == DNET_REQUEST_MERGE_CONTEXT) {
+				change |= context_merge(med.ctx, mess.ctx);
+			}
+		}
+	}
+	
+	if (change || med.ctx.last_time - med.last_sent_info >= SEND_INFO_TIMEOUT) {
+		for (i = 1; i < med.ctx.conns.lsize; i += 1)
+		    if (!(med.ctx.conns[i].flags & DNET_CONN_FINISHED)) {
+			dnet_addr addr;
+			addr.version = med.ctx.data.version;
+			addr.task_id = med.ctx.data.task_id;
+			addr.thread_id = med.ctx.conns[i].thread_id;
+			addr.service = DNET_SERVICE_CONN_IN;
+	
+			dnet_mess mess;
+			mess.request = DNET_REQUEST_MERGE_CONTEXT;
+			mess.thread_id = med.ctx.conns[0].thread_id;
+			mess.ctx = context_copy(med.ctx);
+	
+			msendp("", "", addr, mess);
+		}
+
+		med.last_sent_info = med.ctx.last_time;
+	}
+
+	int nconns = med.ctx.conns.lsize;
+	int nhosts = med.ctx.hosts.lsize;
+
+	if (change || nconns != old_nconns) for (i = 0; i < nhosts; i += 1) {
+		dnet_host h = med.ctx.hosts[i];
+		if ((h.flags & DNET_HOST_CHANGED || nconns != old_nconns) && h.key.csize) {
+			char p[];
+			p.cpush(DNET_PACKET_EXCHANGE);
+			p.cpush(1);
+			p.cpush(0); p.cpush(0);
+			p.cpush(0); p.cpush(0); p.cpush(0); p.cpush(0);
+			strcat(p, h.key);
+			int t = (med.ctx.last_time - h.last_time) / 1000000000;
+			if (t < 0) t = 0;
+			p.cpush(t); t >>= 8;
+			p.cpush(t); t >>= 8;
+			p.cpush(t); t >>= 8;
+			p.cpush(t);
+			strcat(p, h.name);
+			p.cpush(0);
+			strcat(p, h.version);
+
+			int j;
+			int start;
+			if (h.flags & DNET_HOST_CHANGED)
+				h.flags &= ~DNET_HOST_CHANGED;
+			else
+				start = old_nconns;
+
+			for (j = start; j < nconns; j += 1) {
+				dnet_connection c = med.ctx.conns[j];
+				if (c.thread_id >= 0 && !(c.flags & DNET_CONN_FINISHED)) {
+					dnet_addr addr;
+					addr.version = med.ctx.data.version;
+					addr.task_id = med.ctx.data.task_id;
+					addr.thread_id = c.thread_id;
+					addr.service = DNET_SERVICE_CONN_OUT;
+	
+					dnet_mess mess;
+					mess.request = DNET_REQUEST_SEND_PACKET;
+					mess.thread_id = med.ctx.conns[0].thread_id;
+					mess.mess = p;
+		
+					msendp("", "", addr, mess);
+				}
+			}
+		}
+
+		if (h.flags & DNET_HOST_TRUST_CHANGED && h.key.csize) {
+			if (h.flags & DNET_HOST_TRUSTED) {
+				char keys[] = med.keys;
+				int j;
+				int found;
+				for (j = 0; j < keys.csize; j += 0x400) {
+					char key[];
+					substrcat(key, keys, j, j + 0x400);
+					if (key == h.key) {
+						found = 1;
+						j = keys.csize;
+					}
+				}
+				if (!found) {
+					strcat(keys, h.key);
+					writep("", "", 
+						med.ctx.data.filenames[DNET_FILE_KEYS],
+						h.key, -1);
+				}
+			}
+			h.flags &= ~DNET_HOST_TRUST_CHANGED;
+		}
+	}
+
+	if (med.ctx.last_time - med.last_sent_update >= SEND_UPDATE_TIMEOUT) {
+		int d[];
+		d.ipush(DNET_PACKET_UPDATE | 0x100);
+		for (i = 0; i < nhosts; i += 1) {
+			dnet_host h = med.ctx.hosts[i];
+			int t = (med.ctx.last_time - h.last_time) / 1000000000;
+			if (t < 0) t = 0;
+			d.ipush(t << 32 | h.crc);
+		}
+		char p[] = ints2chars(d, 0, d.isize);
+
+		for (i = 0; i < nconns; i += 1) {
+			dnet_connection c = med.ctx.conns[i];
+			if (c.thread_id >= 0 && !(c.flags & DNET_CONN_FINISHED)) {
+				dnet_addr addr;
+				addr.version = med.ctx.data.version;
+				addr.task_id = med.ctx.data.task_id;
+				addr.thread_id = c.thread_id;
+				addr.service = DNET_SERVICE_CONN_OUT;
+	
+				dnet_mess mess;
+				mess.request = DNET_REQUEST_SEND_PACKET;
+				mess.thread_id = med.ctx.conns[0].thread_id;
+				mess.mess = p;
+		
+				msendp("", "", addr, mess);
+			}
+		}
+
+		med.last_sent_update = med.ctx.last_time;
+	}
+
+	dnet_addr addr;
+	addr.version = med.ctx.data.version;
+	addr.task_id = med.ctx.data.task_id;
+	addr.thread_id = med.ctx.conns[0].thread_id;
+	addr.service = DNET_SERVICE_MEDIATOR;
+
+	int diff = SEND_UPDATE_TIMEOUT - (med.ctx.last_time - med.last_sent_update);
+	mrecv(med.func, med, addr, diff);
+	return;	
+}
+
+(volatile stateful mediator med, const any objs, int status) -> () read_mbox {
+	if (status) {
+		char m[];
+		strcat(m, "Error ");
+		printint(m, status, 1);
+		strcat(m, " when received mail in mediator");
+		write_log(med.ctx, m, 4);
+		return;
+	}
+
+	med.objs = objs;
+	
+	const int vars[] = {0};
+	getsys(process_messages, med, vars);
+	return;
+}
+
+(const dnet_data data, const int values[]) -> () {
+	mediator med;
+	
+	med.ctx.data = data;
+	med.ctx.conns[0].thread_id = DNET_THREAD_ID_MEDIATOR;
+	med.func = read_mbox;
+        strcat(med.keys, data.files[DNET_FILE_KEYS]);
+
+	read_mbox(med, "", 0);
+	return;
+}

@@ -1,0 +1,15 @@
+/* trie class, version */
+
+char version[] = "trie class, ver 0.1.1, T18.847-T18.871"; /* $DVS:time$
+
+history:
+
+T18.871 ver 0.1.1 - added 'dir' parameter to callback for method traverseDown
+
+T18.856 ver 0.1.0 - first working version
+
+T18.855 ver 0.0.2 - methods and demo compiled
+
+T18.847 ver 0.0.1 - class development started, template for the class written
+
+*/

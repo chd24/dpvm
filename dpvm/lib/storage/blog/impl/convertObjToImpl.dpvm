@@ -1,0 +1,12 @@
+/* blog class, convertObjToImpl internal method, T18.792-T18.792; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "blog.dpvmake"
+
+(volatile stateful blogImpl impl, const stateful any blogObj, const char func[]) -> (const char error[]) convertObjToImpl = {
+    if (blogObj.type != blogImpl && (blogObj.type != blogClass || blogObj.l[0].type != blogData)) {
+        return mkError("blogObj has illegal type", func);
+    }
+    objcopyto(impl, blogObj);
+    return "";
+};

@@ -1,0 +1,28 @@
+/* quick sort any objects; T19.558-T19.558; $DVS:time$ */
+
+(volatile stateful any array, const (const stateful any left, const stateful any right) -> (int res) compare,
+		int begin, int end) -> () quickSortInts = {
+	if (begin + 1 >= end || begin < 0 || end > array.lsize)
+		return;
+
+	int m = {array, compare, begin, end} % (end - begin) + begin, b = begin, e = end - 1;
+	any M = array.l[m];
+
+	while (b <= e) {
+		while (b <= e && compare(array.l[b], M) <= 0) b += 1;
+		while (b <= e && compare(array.l[e], M) >= 0) e -= 1;
+		if (b < e) (array.l[b], array.l[e]) = (array.l[e], array.l[b]);
+	}
+
+	if (b == begin) {
+		(array.l[m], array.l[b]) = (array.l[b], array.l[m]);
+		b += 1;
+	} else if (b == end) {
+		(array.l[m], array.l[e]) = (array.l[e], array.l[m]);
+		b -= 1;
+	}
+
+	code(array, compare, begin, b);
+	code(array, compare, b, end);
+	return;
+};

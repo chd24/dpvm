@@ -1,0 +1,20 @@
+/* f(x,y) = ((x-y)^2-(x+y))/2 + 1 used as NAND extrapolation; T16.486-T16.486; $DVS:time$
+   inputs, output - vectors (value,dx1,...,dxn) */
+
+(float x[], float y[]) -> (float z[]) {
+	float z[];
+	float d;
+	int i;
+	int n;
+
+	n = x.fsize - 1;
+	d = x.f[0] - y.f[0];
+	z.push((d * d - (x.f[0] + y.f[0])) / 2 + 1);
+	
+	i = 1; do {
+		z.push(d * (x.f[i] - y.f[i]) - (x.f[i] + y.f[i]) / 2);
+		i = i + 1;
+	} while (i <= n);
+
+	return (z);
+}

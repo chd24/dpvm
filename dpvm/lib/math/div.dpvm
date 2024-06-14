@@ -1,0 +1,5 @@
+/* division with extended result; T16.503-T16.503; $DVS:time$ */
+
+(int x, int y) -> (int rem, int div) {
+	asm { div ret }
+}

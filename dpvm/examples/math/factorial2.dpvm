@@ -1,0 +1,12 @@
+/* n! non-recursive; T16.081-T20.069; $DVS:time$ */
+
+(int n) -> (int res) factorial2 = {
+	int res = 1;
+
+	while (n) {
+		res *= n;
+		n -= 1;
+	}
+
+	return res;
+};

@@ -1,0 +1,55 @@
+/* dnet node, incoming packet processing; T17.559-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char packet[]) -> () {
+	dnet_addr addr;
+	addr.version = ctx.data.version;
+	addr.task_id = ctx.data.task_id;
+	addr.service = DNET_SERVICE_CONN_OUT;
+
+	dnet_mess mess;
+	mess.request = DNET_REQUEST_SEND_PACKET;
+	mess.mess = packet;
+
+	if (packet[0] >= DNET_PACKET_COMMAND) {
+		int crc_to = packet[12] | packet[13] << 8 | packet[14] << 16 | packet[15] << 24;
+
+		addr.thread_id = -1;
+
+		int i;
+		int host = -1;
+		for (i = 0; i < ctx.hosts.lsize; i += 1) {
+			if (ctx.hosts[i].crc == crc_to) {
+				int nconn;
+				int mode;
+				(nconn, mode) = route_to_host(ctx, ctx.hosts[i]);
+				if (nconn >= 0)
+					addr.thread_id = ctx.conns[nconn].thread_id;
+				host = i;
+				i = ctx.hosts.lsize;
+			}
+		}
+
+		if (addr.thread_id < 0) {
+			ctx.conns[0].out_dropped += 1;
+			char m[];
+
+			strcat(m, "Can't send packet, ");
+			if (host < 0)
+				strcat(m, "unknown destination host ");
+			else
+				strcat(m, "no route to host ");
+
+			print_hostname(m, ctx, host, crc_to);
+
+			write_log(ctx, m, 8);
+			return;
+		}
+	} else
+		addr.thread_id = ctx.conns[0].thread_id;
+
+	msendp("", "", addr, mess);
+	return;
+}

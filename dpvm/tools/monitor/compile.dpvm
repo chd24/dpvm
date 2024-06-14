@@ -1,0 +1,29 @@
+/* monitor: compile file; T16.469-T19.547; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+#include "monitor.dpvmake"
+
+(volatile stateful mondata data, const any objs) -> () {
+	compsrc file;
+	file.name = data.name;
+	file.file = data.text;
+	file.links = objs;
+
+	compsrc files[];
+	files.lpush(file);
+
+	any res = data.registry.compiler.compile(data.registry, files);
+
+	if (res.type == "".type) {
+		char err[];
+		objcopyto(err, res);
+		out_result(data, err);
+		return;
+	}
+
+	any resobjs;
+	resobjs.push(res);
+	msave_p2p(save_object, data, resobjs);
+	return;
+}

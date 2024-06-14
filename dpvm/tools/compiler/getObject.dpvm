@@ -1,0 +1,121 @@
+/* dpvm compiler: get composed object; T18.729-T20.114; $DVS:time$ */
+
+/* [(type)] { expr, ..., expr }
+
+    status = 0 (success), -1 (not matched this format), -2 (beginning matched, but then error)
+*/
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "compiler.dpvmake"
+#include "lexems.dpvmh"
+
+(volatile stateful compdata data, const Instr instr, const Getexpr getexpr, const type tip)
+		-> (const type res, int status) getObject = {
+	int pos, end, status;
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+	if (status != LEX_FIGURE_L)
+		return (tip, -1);
+
+	data.pos = pos;
+
+	any dst = data.dst;
+	int i, size = dst.lsize;
+	if (size > 0x1000) size = 0x1000;
+
+	for (i = 0; i < size && dst.l[i] != tip; i++);
+
+	if (i >= size) { i = dst.lsize; dst.lpush(tip); }
+
+	dst.cpush(DPVM_CODE_CODE);
+	putint(data, i);
+	dst.cpush(DPVM_CODE_LGET);
+
+	for (i = 0; i < 4; i++)
+		putint(data, code.type.i[i]);
+	for (i = 0; i < 4; i++)
+		putint(data, tip.i[8 + i]);
+	dst.cpush(DPVM_CODE_NEW);
+
+	data.nlinks++;
+	data.ndst += 3;
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+	if (status == LEX_FIGURE_R) {
+		data.pos = pos;
+		return (tip, 0);
+	}
+
+	int n[4];
+	i = 0;
+
+	do {
+		(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+		if (status == LEX_COMMA || status == LEX_FIGURE_R) {
+			data.pos = pos;
+			while (i < 4 && n[i] >= tip.i[8 + i]) i++;
+			if (i < 4) n[i]++;
+			else if (status == LEX_COMMA) {
+				data.mess = "can't assign default field to minimum required field of composed object";
+				return (tip, -2);
+			}
+		} else {
+			type res;
+			(res, status) = getexpr(data, instr);
+			if (status < 0 || status >= 4) {
+				if (status == -1)
+					data.mess = "expression expected in composed object";
+				return (tip, -2);
+			}
+			while (i < 4 && (n[i] >= tip.i[12 + i] || (n[i] >= tip.i[8 + i] && i != status))) i++;
+			if (i >= 4) {
+				data.mess = "can't assign expression to any field of composed object";
+				return (tip, -2);
+			}
+			if (i != status) {
+				status = typecast(data, i, status);
+				if (status < 0)
+					return (tip, status);
+			}
+			if (!i) {
+				any a;
+				int m;
+				if (n[0] + 4 < tip.lsize)
+					m = n[0] + 4;
+				else
+					m = (n[0] & 1) + 2;
+				if (tip.l[m] != a.type && tip.l[m] != res) {
+					data.mess = "type mismatch in assigning field of composed object";
+					return (tip, -2);
+				}
+			}
+
+			dst.cpush(!i);
+			dst.cpush(DPVM_CODE_LLOAD);
+			if (n[i] >= tip.i[8 + i]) {
+				dst.cpush(DPVM_CODE_LPUSH + i);
+			} else {
+				putint(data, n[i]);
+				dst.cpush(DPVM_CODE_LSET + i);
+			}
+
+			n[i]++;
+			data.ndst += 3;
+			if (!i) data.nlinks--;
+			else if (i == 1) data.nints--;
+			else if (i == 2) data.nfloats--;
+			else data.nchars--;
+
+			(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+			if (status != LEX_COMMA && status != LEX_FIGURE_R) {
+				data.mess = ", or } expected in composed object";
+				return (tip, -2);
+			}
+			data.pos = pos;
+		}
+	} while (status == LEX_COMMA);
+
+	return (tip, 0);
+};

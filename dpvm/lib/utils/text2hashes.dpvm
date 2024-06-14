@@ -1,0 +1,68 @@
+/* extract object hashes from text; T16.456-T20.169; $DVS:time$ */
+
+#include "../math/crypto/base58/base58.dpvmake"
+#include "utils.dpvmake"
+
+(const stateful char text[]) -> (volatile int hashes[]) {
+	base58Class base58Objs[];
+	int hashes[], oldtype, badword, badlongname, nletters, nalnums, nunderlines, i, first, size = text.csize;
+
+	for (i = 0; i <= size; i++) {
+		int newtype;
+
+		if (i < text.csize) {
+			int c = text[i];
+			if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')) {
+				badword = 1;
+				newtype = 1;
+				nalnums++;
+
+			} else if (c >= 'a' && c <= 'z') {
+				nletters++;
+				nalnums++;
+				newtype = 1;
+
+			} else if (c == '_') {
+				if (nletters < 3 || nletters > 12) badword = 1;
+				if (nalnums != 11) badlongname = 1;
+				nletters = 0;
+				nalnums = 0;
+				nunderlines++;
+				newtype = 1;
+			}
+		}
+
+		if (!oldtype && newtype)
+			first = i;
+
+		else if (oldtype && !newtype) {
+			if (nletters < 3 || nletters > 12 || nunderlines != 2) badword = 1;
+			if (nalnums != 11 || nunderlines != 3) badlongname = 1;
+
+			if (!badword) {
+				int hash = name2hash(text, first, i);
+				if (hash != -1) {
+					hashes.push(hash);
+					hashes.push(0);
+					hashes.push(0);
+					hashes.push(0);
+				}
+
+			} else if (!badlongname) {
+				if (!base58Objs.lsize)
+					base58Objs.lpush(base58Create());
+				base58Objs[0].methods.decodeHash(hashes, base58Objs[0], text, first, i);
+			}
+
+			badword = 0;
+			badlongname = 0;
+			nletters = 0;
+			nalnums = 0;
+			nunderlines = 0;
+		}
+
+		oldtype = newtype;
+	}
+	
+	return hashes;
+}

@@ -1,0 +1,210 @@
+/* dpvmb class, selfArchiver method implementation, T20.127-T20.155; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/bytecodes.dpvmh"
+#include "dpvmb.dpvmh"
+
+(int hash0, int hash1, int hash2, int hash3, int objSize) -> (any res, int begin, int size) selfExtractor = {
+	any res = code; asm { info ipops 0 new };
+	int header = code.csize - DPVMB_HEAD_SIZE, lastHeader, bits = hash0, nbit, links, nlinks, hash;
+
+	if (objSize) {
+		int h, j, newhash = code.csize + objSize;
+
+		while (newhash & (DPVMB_OBJ_ALIGN - 1))
+			res.cpush(0), newhash++;
+
+		for (h = hash0, j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+		for (h = hash1, j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+		for (h = hash2, j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+		for (h = hash3, j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+
+		while (nbit < DPVMB_HASH_SIZE << 3) {
+			int objsize;
+			if (header < 0)
+				return (res, header, -1);
+			if (header > code.csize - DPVMB_HEAD_SIZE)
+				return (res, header, -2);
+
+			for (j = DPVMB_HEAD_SHORT_HASH - 1; j >= DPVMB_HEAD_OBJ_SIZE; j--)
+				objsize <<= 8, objsize |= code.c[header + j];
+			objsize = ((objsize - 1) | (DPVMB_OBJ_ALIGN - 1)) + 1;
+			nlinks = code.c[header + DPVMB_HEAD_N_LINKS];
+			if (!nlinks && header != objsize + DPVMB_HASH_SIZE)
+				nlinks = 0x100;
+			hash = header - nlinks * DPVMB_LINK_SIZE - DPVMB_HASH_SIZE;
+			if (hash < 0)
+				return (res, header, -3);
+
+			int childHeader;
+			links = hash + DPVMB_HASH_SIZE + nbit * DPVMB_LINK_SIZE;
+			if (links < header) {
+				for (j = DPVMB_LINK_SIZE - 1; j >= 0; j--)
+					childHeader <<= 8, childHeader |= code.c[links + j];
+				if (childHeader) {
+					if (childHeader < 0)
+						return (res, header, -4);
+					childHeader = hash - childHeader * DPVMB_LINK_SIZE;
+				}
+			}
+
+			if ((code.c[hash + (nbit >> 3)] >> (nbit & 7) & 1) == (bits & 1)) {
+				h = childHeader ? (newhash - childHeader) / DPVMB_LINK_SIZE : 0;
+				for (j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+			} else {
+				h = (newhash - header) / DPVMB_LINK_SIZE;
+				for (j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+				if (!childHeader) {
+					nbit++;
+					for (h = objSize, j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+					any verifyObj = code; asm { info ipops 0 new };
+					for (j = code.csize - DPVMB_HEAD_SIZE; j < code.csize; j++)
+						verifyObj.cpush(code.c[j]);
+					for (j = res.csize & (DPVMB_OBJ_ALIGN - 1); j < res.csize; j++)
+						verifyObj.cpush(res.c[j]);
+					for (j = DPVMB_HEAD_SHORT_HASH; j < DPVMB_HEAD_N_LINKS; j++)
+						verifyObj.cpush(0);
+					verifyObj.cpush(nbit);
+					verifyObj.cpush(DPVM_CODE_ILL);
+					h = verifyObj | nbit << 48 | DPVM_CODE_ILL << 56;
+					for (j = 0; j < 8; j++, h >>= 8) res.cpush(h);
+
+					return (res, header, 1);
+				}
+				header = childHeader;
+			}
+
+			nbit++;
+			if (nbit & 0x3f)
+				bits >>= 1;
+			else
+				bits = nbit == 0x40 ? hash1 : nbit == 0x80 ? hash2 : hash3;
+		}
+
+		return (res, header, 0);
+
+	} else {
+		while (nbit <= DPVMB_HASH_SIZE << 3) {
+			int err;
+			lastHeader = header;
+
+			if (!links) {
+				if (header < 0)
+					err = 0x01;
+				else if (header & (DPVMB_LINK_SIZE - 1))
+					err = 0x11;
+				else if (code.c[header + DPVMB_HEAD_MARKER] != DPVM_CODE_ILL)
+					err = code.c[header + DPVMB_HEAD_MARKER] << 8 | 0x21;
+
+				if (!err) {
+					nlinks = code.c[header + DPVMB_HEAD_N_LINKS];
+					if (!nlinks) {
+						int objsize, j;
+						for (j = DPVMB_HEAD_SHORT_HASH - 1; j >= DPVMB_HEAD_OBJ_SIZE; j--)
+							objsize <<= 8, objsize |= code.c[header + j];
+						objsize = ((objsize - 1) | (DPVMB_OBJ_ALIGN - 1)) + 1;
+						if (header != objsize + DPVMB_HASH_SIZE)
+							nlinks = 0x100;
+					}
+					links = header - nlinks * DPVMB_LINK_SIZE;
+					hash = links - DPVMB_HASH_SIZE;
+					if (hash < 0)
+						err = nlinks << 8 | 0x31, links = 0;
+					else
+						nlinks -= nbit,
+						links += nbit * DPVMB_LINK_SIZE;
+				}
+			}
+
+			if (links) {
+				if (nlinks > 0) {
+					if ((code.c[hash + (nbit >> 3)] >> (nbit & 7) & 1) != (bits & 1)) {
+						int offset, j;
+						for (j = DPVMB_LINK_SIZE - 1; j >= 0; j--)
+							offset <<= 8, offset |= code.c[links + j];
+						if (!offset)
+							return (res, header, ~(nbit << 8 | 7));
+						offset *= DPVMB_LINK_SIZE;
+						header = hash - offset;
+						if (header >= hash)
+							err = ~offset & -8 | 2;
+						links = 0;
+					} else {
+						links += DPVMB_LINK_SIZE;
+						nlinks--;
+					}
+					nbit++;
+					if (nbit & 0x3f)
+						bits >>= 1;
+					else
+						bits = nbit == 0x40 ? hash1 : nbit == 0x80 ? hash2 : hash3;
+
+				} else {
+					int h0, h1, h2, h3, j;
+					for (j = 7; j >= 0; j--) {
+						h0 <<= 8, h0 |= code.c[hash + j];
+						h1 <<= 8, h1 |= code.c[hash + j + 8];
+						h2 <<= 8, h2 |= code.c[hash + j + 16];
+						h3 <<= 8, h3 |= code.c[hash + j + 24];
+					}
+					if (h0 == hash0 && h1 == hash1 && h2 == hash2 && h3 == hash3 ||
+							hash0 == h0 << 17 >> 17 && !hash1 && !hash2 && !hash3) {
+						int objsize, aligned;
+						for (j = DPVMB_HEAD_SHORT_HASH - 1; j >= DPVMB_HEAD_OBJ_SIZE; j--)
+							objsize <<= 8, objsize |= code.c[header + j];
+						aligned = ((objsize - 1) | (DPVMB_OBJ_ALIGN - 1)) + 1;
+						if (objsize < 0)
+							err = ~objsize & -8 | 3;
+						else if (hash - aligned > hash)
+							err = ~aligned & -8 | 4;
+						else if (hash - aligned < 0)
+							err = ~aligned & -8 | 5;
+						else
+							return (res, hash - aligned, objsize);
+					} else
+						return (res, header, ~(h0 << 17 >> 9 | (h0 != hash0) << 4 | (h1 != hash1) << 5 |
+								(h2 != hash2) << 6 | (h3 != hash3) << 7));
+				}
+			}
+
+			while (err) {
+				header = (lastHeader - 1) & -DPVMB_LINK_SIZE;
+				while (header >= 0 && code.c[header + DPVMB_HEAD_MARKER] != DPVM_CODE_ILL)
+					header -= DPVMB_LINK_SIZE;
+				if (header < 0)
+					return (res, lastHeader, ~err | 1 << 63);
+				lastHeader = header;
+
+				int objsize, j;
+				for (j = DPVMB_HEAD_SHORT_HASH - 1; j >= DPVMB_HEAD_OBJ_SIZE; j--)
+					objsize <<= 8, objsize |= code.c[header + j];
+				objsize = ((objsize - 1) | (DPVMB_OBJ_ALIGN - 1)) + 1;
+
+				hash = header - code.c[header + DPVMB_HEAD_N_LINKS] * DPVMB_LINK_SIZE - DPVMB_HASH_SIZE;
+				int object = hash - objsize, prevHeader = object - DPVMB_HEAD_SIZE;
+
+				if ((prevHeader >= 0 || !object) && object > prevHeader && hash >= object && header > hash) {
+					any obj = code; asm { info ipops 0 new };
+					if (object)
+						for (j = prevHeader; j < object; j++)
+							obj.cpush(code.c[j]);
+					int headerEnd = header + DPVMB_HEAD_SIZE, shortHash;
+					for (j = hash; j < headerEnd; j++)
+						obj.cpush(code.c[j]);
+					for (j = DPVMB_HEAD_N_LINKS - 1; j >= DPVMB_HEAD_SHORT_HASH; j--) {
+						shortHash <<= 8, shortHash |= code.c[header + j];
+						obj.c[obj.csize - DPVMB_HEAD_SIZE + j] = 0;
+					}
+					if (obj == shortHash) {
+						links = 0;
+						nbit = 0;
+						bits = hash0;
+						err = 0;
+					}
+				}
+			}
+		}
+	}
+
+	return (res, lastHeader, ~(nbit << 4 | 6));
+};

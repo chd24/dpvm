@@ -1,0 +1,170 @@
+/* forex class, readCsvdata method implementation, T19.744-T19.837; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "forex.dpvmake"
+
+int READ_SIZE	= 0x100000;
+int TIME_PERIOD = 900000000000;
+int TIME_DIFF	= 2000000000;
+
+type readData = {
+	volatile stateful forexImpl impl;
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	volatile stateful inputFile fl;
+	const char body[];
+	int inputValuesPerSlot;
+	int pos;
+};
+
+(int diff) -> (const char str[]) timeDiff2str = {
+	char err[];
+	if (diff < 0) {
+		err.cpush('-');
+		diff = -diff;
+	} else {
+		err.cpush(' ');
+	}
+	diff /= 60000000000;
+	printf(err, "%2d:%02d", {diff / 60, diff % 60});
+	return err;
+};
+
+(volatile stateful readData d, const char err[]) -> () finish = {
+	char mess[];
+	printf(mess, "Read %d bytes, %d lines, produced %d values, min time gap %s, max time gap %s.\r\n",
+		{timeDiff2str(d.fl.minTimeGap), timeDiff2str(d.fl.maxTimeGap), d.fl.bytes, d.fl.line, d.fl.values});
+	logOutput(d.impl, mess, 6);
+	d.callback(d.data, err);
+	return;
+};
+
+(volatile stateful readData d, const char mess[], const char str[], int begin, int end) -> () printMess = {
+	char err[];
+	printf(err, "%s in line %6d pos %07x: ", {mess, d.fl.line, d.fl.pos - d.body.csize + d.pos});
+	substrcat(err, str, begin, end);
+	if (err[err.csize - 1] != '\n')
+		strcat(err, "\r\n");
+	logOutput(d.impl, err, 7);
+	return;
+};
+
+(volatile stateful readData d, const char str[], int begin, int end) -> () processLine = {
+	if (begin == end)
+		return;
+	any res;
+	int n = scanf(res, "%d,%f,%f,%f,%f,%f,%d", str, begin, end);
+	if (n < 1) {
+		printMess(d, "UNFORMAT LINE  ", str, begin, end);
+	} else {
+		int time = res.i[0] * 1000000000;
+		int diff = time - d.impl.data.lastFileTime;
+		if (d.impl.data.lastFileTime && (diff <= TIME_PERIOD - TIME_DIFF || diff >= TIME_PERIOD + TIME_DIFF)) {
+			const int step = 3600000000000;
+			if (diff < 0 || diff > 2 * step) {
+				char err[];
+				printf(err, "TIME GAP %s", {timeDiff2str(diff)});
+				printMess(d, err, str, begin, end);
+			}
+			if (diff < d.fl.minTimeGap)
+				d.fl.minTimeGap = diff;
+			if (diff > d.fl.maxTimeGap)
+				d.fl.maxTimeGap = diff;
+		}
+		d.impl.data.lastFileTime = time;
+
+		if (n >= 1 + d.inputValuesPerSlot) {
+			diff = time - d.impl.data.lastTime;
+			float value = res.f[0];
+			if (d.impl.data.lastTime && (diff <= TIME_PERIOD - TIME_DIFF || diff >= TIME_PERIOD + TIME_DIFF)) {
+				if (diff >= 2 * (TIME_PERIOD - TIME_DIFF)) {
+					float oldvalue = d.impl.data.inputData.f[d.impl.data.inputData.fsize - 1];
+					int dist = diff / (TIME_PERIOD - TIME_DIFF), i;
+					for (i = 1; i < dist; i += 1) {
+						int newvalue = oldvalue + (value - oldvalue) * i / dist, j;
+						for (j = 0; j < d.inputValuesPerSlot; j += 1)
+							d.impl.data.inputData.fpush(newvalue);
+						d.fl.values += 1;
+					}
+				}
+			}
+			if (!d.impl.data.firstTime)
+				d.impl.data.firstTime = time;
+			d.impl.data.lastTime = time;
+			int j;
+			for (j = 0; j < d.inputValuesPerSlot; j += 1)
+				d.impl.data.inputData.fpush(res.f[j]);
+			d.impl.data.inputDataEnd = d.impl.data.inputData.fsize;
+			d.fl.values += 1;
+		} else {
+			printMess(d, "INCOMPLETE DATA", str, begin, end);
+		}
+	}
+	d.fl.line += 1;
+	d.fl.bytes += end - begin;
+	processOrders(d.impl);
+	return;
+};
+
+(volatile stateful readData d, const char body[], int status) -> () readCallback = {
+	if (status <= 0) {
+		if (d.fl.pos == 0) {
+			printMess(d, "EMPTY FILE    ", d.body, d.pos, d.body.csize);
+			finish(d, mkError("empty file", "readCallback"));
+			return;
+		}
+		if (status < 0)
+			printMess(d, "READ ERROR    ", d.body, d.pos, d.body.csize);
+		processLine(d, d.body, d.pos, d.body.csize);
+		finish(d, "");
+		return;
+	}
+
+	if (status == body.csize) {
+		int pos = substrchr(body, 0, status, '\n');
+		if (pos < 0)
+			pos = status;
+		else
+			pos += 1;
+		if (d.pos < d.body.csize) {
+			char str[];
+			substrcat(str, d.body, d.pos, d.body.csize);
+			substrcat(str, body, 0, pos);
+			processLine(d, str, 0, str.csize);
+		} else
+			processLine(d, body, 0, pos);
+
+		d.body = body;
+		d.pos = pos;
+		d.fl.pos += status;
+
+		do {
+			pos = substrchr(d.body, d.pos, d.body.csize, '\n');
+			if (pos >= 0) {
+				pos += 1;
+				processLine(d, d.body, d.pos, pos);
+				d.pos = pos;
+			}
+		} while (pos >= 0);
+	}
+
+	read(code, d, d.fl.name, d.fl.pos, READ_SIZE);
+	return;
+};
+
+(volatile stateful any forexObj, const (volatile stateful any data, const char error[]) -> () callback,
+		volatile stateful any data, volatile stateful inputFile f, int inputValuesPerSlot) -> () readCsvData = {
+	char mess[];
+	printf(mess, "Reading file %s, %d values per slot.\r\n", {f.name, inputValuesPerSlot});
+	logOutput(forexObj, mess, 6);
+
+	forexImpl impl;
+	readData d = {impl, callback, data, f, "", inputValuesPerSlot};
+	char err[] = convertObjToImpl(impl, forexObj, "readCsvData");
+	if (err.csize) return finish(d, err);
+	if (inputValuesPerSlot != 1 && inputValuesPerSlot != 4)
+		return finish(d, mkError("Illegal inputValuesPerSlot", "readCsvData"));
+	impl.data.inputValuesPerSlot = inputValuesPerSlot;
+
+	return readCallback(d, "", 1);
+};

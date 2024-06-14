@@ -1,0 +1,57 @@
+/* dpvm byte code translator, main function; T16.070-T20.135; $DVS:time$ */
+
+#include "translator.dpvmake"
+
+(const stateful any func, const stateful addrs_list addrs, 
+		const stateful checker_data cdata, const stateful char arch[]) -> 
+		(volatile mach_code machcode, int res) {
+	mach_code machcode;
+	int i;
+	int j;
+	int res;
+
+	for (i = 0; i < cdata.code_map.csize; i += 1) {
+		if (cdata.code_map[i] != 0) {
+			for (j = 0; j < 4; j += 1) {
+				int n = cdata.states[i].i[j] - cdata.input.i[j];
+				if (n > machcode.i[j]) machcode.i[j] = n;
+			}
+		}
+	}
+
+	res = getaddr(addrs, "stack0");
+	if (res < 0) return (machcode, -4);
+	machcode.i[0] += res;
+	res = getaddr(addrs, "stack1");
+	if (res < 0) return (machcode, -5);
+	machcode.i[1] += res;
+	res = getaddr(addrs, "stack2");
+	if (res < 0) return (machcode, -6);
+	machcode.i[2] += res;
+	res = getaddr(addrs, "stack3");
+	if (res < 0) return (machcode, -7);
+	machcode.i[3] += res;
+
+	translator_data data;
+	data.input = cdata.input;
+	data.output = cdata.output;
+	data.jumps_map = cdata.jumps_map;
+	data.code_map = cdata.code_map;
+	data.states = cdata.states;
+	data.machcode = machcode;
+	data.addrs = addrs;
+	data.func = func;
+	data.label = func.csize;
+
+	res = -8;
+	for (i = 0; i < translator_methods.lsize; i += 1) {
+		translator_method method = translator_methods[i];
+		if (method.arch == arch) {
+			res = method.translate(data);
+			if (!res)
+				return (machcode, res);
+		}
+	}	
+
+	return (machcode, res);
+}

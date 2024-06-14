@@ -1,0 +1,417 @@
+/* dpvm: declaration initizlizer; T15.444-T20.144; $DVS:time$ */
+
+/* type var [[=] value] [, ...] ; */
+
+/* context:
+	0 - global
+	1 - local inside function
+	2 - local inside expression in a form (type)initizlizer
+*/
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "../../lib/algorithms/vectorset/vectorset.dpvmake"
+#include "compiler.dpvmake"
+#include "lexems.dpvmh"
+
+(volatile stateful compdata data, volatile stateful compdata olddata, const Instr instr, const Getexpr getexpr,
+		const Getexterm getexterm, const type tres, int structsLsize, int namePos, int status, int context)
+		-> (int status) getDeclInitializer {
+	any dst;
+	int tmp[];
+	char err[];
+	any lvalue;
+	int ivalue;
+	float fvalue;
+	char cvalue;
+	int loadlvalue;
+	int processed;
+	int n;
+	int k;
+	int tstatus;
+	int i;
+	int j;
+	char c;
+
+
+	/* read lexem */
+	int pos;
+	int end;
+	int s;
+	(pos, end, s) = getlexem(data.src, lexems, data.pos, data.end);
+
+
+	/* declaration without initializer */
+
+	if (context == CONTEXT_EXPRESSION) {
+		if (s == LEX_ARROW_R || !(status & 3) && s != LEX_FIGURE_L)
+			return -1;
+
+	} else if (s == LEX_COMMA || s == LEX_DOT_COMMA) { /* ; or , */
+		if (status & 4) {
+			data.mess = "expected initializer for const declaration";
+			return -2;
+		}
+
+		dst = data.dst;
+
+	
+		/* object without initializer */
+
+		if (!(status & 3)) {
+			lvalue = tres;
+			loadlvalue = 2;
+
+
+		/* int without initializer */
+
+		} else if ((status & 3) == 1) {
+			dst.cpush(0);
+			data.ndst++;
+
+
+		/* float without initializer */
+
+		} else if ((status & 3) == 2) {
+			dst.cpush(0);
+			dst.cpush(DPVM_CODE_ITOF);
+			data.ndst += 2;
+
+
+		/* char without initializer */
+
+		} else if ((status & 3) == 3) {
+			dst.cpush(0);
+			dst.cpush(DPVM_CODE_ITOC);
+			data.ndst += 2;
+		}
+
+		processed = 1;
+		status &= ~0x40;
+
+	} else if (s == LEX_ASSIGN) {
+		data.pos = pos;
+		int st;
+		(pos, end, st) = getlexem(data.src, lexems, data.pos, data.end);
+		if (st != LEX_SQUARE_L && st != LEX_FIGURE_L)
+			status &= ~0x40;
+
+	} else if (s != LEX_SQUARE_L && s != LEX_FIGURE_L) {
+		data.mess = "',', ';' or initializer expected";
+		return -2;
+	}
+
+
+	/* restore old data if not function definition */
+	if (!(status & 0x40)) {
+		data.links  = olddata.links;
+		data.ints   = olddata.ints;
+		data.floats = olddata.floats;
+		data.chars  = olddata.chars;
+		data.ltypes = olddata.ltypes;
+	}
+
+
+	/* type initializer */
+
+	if (!processed && status & 0x20 && !(status & 0x40)) {
+		(lvalue, tstatus) = getdecl(data, CONTEXT_INITIALIZER);
+		if (tstatus >= 0) loadlvalue = 1, processed = 1;
+		else {
+			if (tstatus == -1 && s != LEX_ASSIGN) {
+				data.mess = "type initializer expected";
+				tstatus = -2;
+			}
+			if (tstatus == -2) return tstatus;
+			status &= ~0x20;
+		}
+	} else
+		status &= ~0x20;
+
+
+	/* const initializer */
+
+	if (!processed && (s == LEX_ASSIGN || context == CONTEXT_EXPRESSION)
+			&& (status & 4 || !(status & 3)) && !(status & 0x50)) {
+		int st, pos0 = data.pos;
+		(lvalue, ivalue, st, fvalue, cvalue) = getconstexpr(data, tres, status & 3 | 4);
+
+		if (!st) {
+			(pos, end, st) = getlexem(data.src, lexems, data.pos, data.end);
+			if (context == CONTEXT_EXPRESSION) {
+				processed = 1;
+				loadlvalue = 1;
+			} else if (st == LEX_COMMA || st == LEX_DOT_COMMA) {
+				processed = 1;
+				if (!(status & 4))
+					loadlvalue = 1;
+			}
+		} else if (status & 4) {
+			if (st != -2)
+				data.mess = "constant expression expected";
+			return -2;
+		}
+
+		if (!processed)
+			data.pos = pos0;
+	}
+
+
+	/* non-const initializer */
+
+	if (!processed && (s == LEX_ASSIGN || context == CONTEXT_EXPRESSION) && !(status & 0x44)) {
+		int pos0 = data.pos, st = -1;
+		type res;
+
+		if (context != CONTEXT_EXPRESSION) {
+			data.nlinks = 0;
+			data.nints = 0;
+			data.nfloats = 0;
+			data.nchars = 0;
+		}
+
+		if (!(status & 3))
+			(res, st) = getObject(data, instr, getexpr, tres);
+
+		if (st == -1) {
+			if (context == CONTEXT_EXPRESSION)
+				(res, st) = getexterm(data, instr, getexpr);
+			else
+				(res, st) = getexpr(data, instr);
+		}
+
+		if (st >= 0) {
+			if (st != (status & 3)) {
+				if (st > 3) {
+					data.mess = "expression type mismatch";
+					data.pos = pos0;
+					return -2;
+				}
+				st = typecast(data, status & 3, st);
+				if (st < 0) return st;
+			}
+			processed = 1;
+		} else if (!(status & 0x40)) {
+			data.mess = "expression expected";
+			return -2;
+		} else
+			data.pos = pos0;
+	}
+
+
+	/* declaration of function */
+
+	if (!processed && status & 0x40) {
+		any funcs, chdata;
+		int f, d, iold[], inew[], size;
+
+		/* continue save old data */
+
+		for (iold = olddata.clinks,  inew = data.clinks,  size = inew.isize, i = 0; i < size; i++) iold.ipush(inew.i[i]);
+		for (iold = olddata.cints,   inew = data.cints,   size = inew.isize, i = 0; i < size; i++) iold.ipush(inew.i[i]);
+		for (iold = olddata.cfloats, inew = data.cfloats, size = inew.isize, i = 0; i < size; i++) iold.ipush(inew.i[i]);
+		for (iold = olddata.cchars,  inew = data.cchars,  size = inew.isize, i = 0; i < size; i++) iold.ipush(inew.i[i]);
+		for (iold = olddata.ctypes,  inew = data.ctypes,  size = inew.isize, i = 0; i < size; i++) iold.ipush(inew.i[i]);
+
+		any consts = data.consts;
+		int ptrs[] = {structsLsize, consts.lsize, consts.isize, consts.fsize, consts.csize};
+
+		olddata.dst = data.dst;
+		olddata.ndst = data.ndst;
+
+
+		/* create function object */
+
+		lvalue = new_object(tres, tres.i[0], tres.i[1], tres.i[2], tres.i[3], 0, 0, 0, 0);
+		dst = data.dst;
+		for (size = dst.lsize, i = 0; i < size; i++)
+			lvalue.lpush(dst.l[i]);
+		data.dst = lvalue;
+		data.ndst = 0;
+
+
+		/* compile function body */
+
+		s = instr(data);
+		if (s < 0) {
+			if (s == -1) data.mess = "function body expected";
+			return -2;
+		}
+
+		
+		/* remove trailing codes */
+
+		f = 1;
+		while (lvalue.csize > 0 && f) {
+			d = lvalue.c[lvalue.csize - 1];
+			if (d == DPVM_CODE_RET || (d >= DPVM_CODE_LB && d <= DPVM_CODE_JNZF)) f = 0; /* ret, jumps */
+			else lvalue.cpop(1);
+		}
+
+
+		/* check function */
+
+		(funcs, chdata, err, s) = data.registry.checker(lvalue);
+
+		if (s & 1) {
+			data.mess = err;
+			return -2;
+		}
+		
+
+		/* restore old data */
+		
+		data.links = olddata.links;
+		data.ints = olddata.ints;
+		data.floats = olddata.floats;
+		data.chars = olddata.chars;
+		data.ltypes  = olddata.ltypes;
+
+		data.dst = olddata.dst;
+		data.ndst = olddata.ndst;
+		data.structs.lpop(data.structs.lsize - ptrs[0]);
+		consts.lpop(consts.lsize - ptrs[1]);
+		consts.ipop(consts.isize - ptrs[2]);
+		consts.fpop(consts.fsize - ptrs[3]);
+		consts.cpop(consts.csize - ptrs[4]);
+
+		(data.clinks , olddata.clinks ) = (olddata.clinks , data.clinks ); olddata.clinks .ipop(olddata.clinks .isize);
+		(data.cints  , olddata.cints  ) = (olddata.cints  , data.cints  ); olddata.cints  .ipop(olddata.cints  .isize);
+		(data.cfloats, olddata.cfloats) = (olddata.cfloats, data.cfloats); olddata.cfloats.ipop(olddata.cfloats.isize);
+		(data.cchars , olddata.cchars ) = (olddata.cchars , data.cchars ); olddata.cchars .ipop(olddata.cchars .isize);
+		(data.ctypes , olddata.ctypes ) = (olddata.ctypes , data.ctypes ); olddata.ctypes .ipop(olddata.ctypes .isize);
+
+		data.cstruct.ipop(data.cstruct.isize);
+		for (iold = olddata.cstruct, inew = data.cstruct, size = iold.isize, i = 0; i < size; i++) inew.ipush(iold[i]);
+
+		loadlvalue = 1;
+		processed = 1;
+	}
+
+	if (!processed) {
+		data.mess = "',', ';' or initializer expected";
+		return -2;
+	}
+
+
+	/* check if name already used */
+
+	if (status & -maxnames) {
+		int lexemarr[][];
+
+		lexemarr.push(data.links);
+		lexemarr.push(data.ints);
+		lexemarr.push(data.floats);
+		lexemarr.push(data.chars);
+
+		lexemarr.push(data.clinks);
+		lexemarr.push(data.cints);
+		lexemarr.push(data.cfloats);
+		lexemarr.push(data.cchars);
+
+		lexemarr.push(data.ctypes);
+		lexemarr.push(lexems);
+
+		(i, pos) = findlexem(lexemarr, status);
+		if (i >= 0) {
+			data.mess = "identifier already used in this scope";
+			data.pos = namePos;
+			return -2;
+		}
+	}
+
+
+	/* add constant to collection, determine its sequence */
+
+	k = status & 3;
+	if (status & 4 && context != CONTEXT_EXPRESSION) {
+		if (status & 0x20) {
+			tmp = data.ctypes;
+			n = tstatus & 3;
+			if (!n) {
+				int f = -1;
+				for (n = dst.lsize - 1; n >= 0; n--)
+					if (data.structs[n].stype == lvalue)
+						f = n, n = 0;
+				if (f < 0) {
+					structdata sdata;
+                                        objcopyto(sdata.stype, lvalue);
+					n = data.structs.lsize;
+					data.structs.lpush(sdata);
+					addint(data.cstruct, lvalue * maxnames | (n + 4));
+				}
+				n += 4;
+			}
+		} else {
+			dst = data.consts;
+			if (!k) {
+				n = dst.lsize;
+				dst.lpush(lvalue);
+				tmp = data.clinks;
+			} else if (k == 1) {
+				n = dst.isize;
+				dst.ipush(ivalue);
+				tmp = data.cints;
+			} else if (k == 2) {
+				n = dst.fsize;
+				dst.fpush(fvalue);
+				tmp = data.cfloats;
+			} else {
+				n = dst.csize;
+				dst.cpush(cvalue);
+				tmp = data.cchars;
+			}
+		}
+	} else {
+		if (!k) tmp = data.links;
+		else if (k == 1) tmp = data.ints;
+		else if (k == 2) tmp = data.floats;
+		else tmp = data.chars;
+		n = tmp.isize;
+
+
+		/* push constant to stack */
+
+		if (loadlvalue) {
+			dst = data.dst;
+
+			int f = 1;
+			for (i = 0; i < dst.lsize && f; i++)
+				if (dst.l[i] == lvalue) f = 0, i--;
+	
+			if (f) dst.lpush(lvalue);
+
+			dst.cpush(DPVM_CODE_CODE);
+			putint(data, i);
+			dst.cpush(DPVM_CODE_LGET);
+
+			if (loadlvalue >= 2) {
+				for (i = 0; i < 4; i++)
+					putint(data, dst.type.i[i]);
+			
+				for (i = 8; i < 12; i++)
+					putint(data, lvalue.i[i]);
+
+				dst.cpush(DPVM_CODE_NEW);
+				data.ndst += 3;
+			} else 
+				data.ndst += 2;
+
+			if (context == CONTEXT_EXPRESSION)
+				data.i[k]++;
+		}
+	}
+
+
+	/* add name to vector */
+
+	if (context != CONTEXT_EXPRESSION) {
+		addint(tmp, status & -maxnames | n);
+
+		if (!k && !(status & 4)) data.ltypes.lpush(tres);
+	}
+
+	return 0;
+}

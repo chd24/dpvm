@@ -1,0 +1,4 @@
+(int x) -> (int x) {
+	x = x & 0xffffffff;
+	return (x >> 6 ^ x << 26) & 0xffffffff;
+}

@@ -1,0 +1,61 @@
+/* make projects utility, makefile; T16.603-T20.171; $DVS:time$ */
+
+#include "../../lib/math/crypto/base58/base58.dpvmh"
+#include "../registry/registry.dpvmh"
+
+/* work data structure of maker */
+type makedata = {
+        const (volatile stateful any arg, const char res[]) -> ()
+                callback;           /* callback for call after all is done;
+                                       parameters are custom argument and string
+                                       with last compiled object name or error */
+        const any read_file;        /* read_file() function */
+        volatile stateful any arg;  /* custom argument to pass to callback */
+        volatile any objs;          /* vector of compiled objects */
+        volatile compsrc allfiles[];/* all downloaded files within this make instance;
+                                       file with index 0 is new makefile, file with index 1
+                                       is old makefile; for each file its name, contents
+                                       and vector of objects mentioned in this file by
+                                       their names are stored */
+        volatile compsrc files[];   /* all files required to build next source, i.e.
+                                       the source and all included files */
+        const registryData registry;/* system registry */
+        const base58Class base58Obj;/* base58 encoding object for long object names */
+        int makepos;                /* position in old makefile */
+        int nfile;                  /* index of file in files[] from which includes
+                                       are currently read and downloaded */
+        int filepos;                /* position in file files[nfile] */
+};
+
+/*@ "version.dpvm": returns version of maker */
+() -> (const char version[]) version_maker = discotheque_wearer_haft;
+/* @*/
+
+/*@ "registry.dpvm": check registry and cast it to native type */
+(const stateful any regSrc) -> (volatile registryData reg, const char error[])
+        registryPrepare = takeovers_bloated_sank;
+/* @*/
+
+/*@ "written.dpvm": called after new makefile was written to disk */
+(volatile stateful makedata data, int status) -> ()
+	written = hops_burble_board;
+/* @*/
+
+/*@ "saved.dpvm": called after all compiled objects are saved to database */
+(volatile stateful makedata data, const any objs) -> ()
+	saved = condemnatory_shrunk_recriminate;
+/* @*/
+
+/*@ "loaded.dpvm": called each time when objects from file loaded from database */
+(volatile stateful makedata data, const any objs) -> ()
+	loaded = coats_fulfilling_numbered;
+/* @*/
+
+/*@ "read_file.dpvm": called each time when part of file read from disk */
+(volatile stateful makedata data, const char text[], int status) -> ()
+	read_file = bridals_detraction_combated;
+/* @*/
+
+/*@ "main.dpvm": main function of maker */
+makerType maker = headman_issued_regulators;
+/* @*/                                  

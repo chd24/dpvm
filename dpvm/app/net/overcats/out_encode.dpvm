@@ -1,0 +1,56 @@
+/* overcats encode of client output data; T17.470-T17.489; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "../math/crypto/base64/base64.dpvmake"
+#include "overcats.dpvmake"
+
+(const stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[], int start, int end) -> () encode_one {
+	strcat(dst, "GET /");
+
+	char todo[];
+	todo.cpush(end - start);
+	substrcat(todo, src, start, end);
+	while (todo.csize % 3)
+		todo.cpush(0);
+	char res[] = base64_encode_substr(todo, 0, todo.csize);
+	strcat(dst, res);
+
+	todo.cpop(todo.csize);
+	strcat(todo, " HTTP/1.1\r\nHost: ");
+	strcat(todo, data.out_host);
+	strcat(todo, ":");
+	printint(todo, data.out_port, 1);
+	strcat(todo, "\r\n\r\n");
+
+	int i;
+	int sum;
+	for (i = 0; i < todo.csize; i += 1) {
+		int c = todo[i];
+		sum += (c >= '0' && c <= '9' || c >= 'A' && c <= 'Z'
+			|| c >= 'a' && c <= 'z' || c == '+' || c == '/');
+	}
+	sum &= 3;
+	if (sum == 1) strcat(dst, ".txt");
+	else if (sum == 2) strcat(dst, ".cc");
+	else if (sum == 3) strcat(dst, ".c");
+
+	strcat(dst, todo);
+	return;
+}
+
+(const stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () {
+	int start;
+	int end = src.csize;
+
+	while (start < end) {
+		int tmpend = start + 0xff;
+		if (tmpend > end)
+			tmpend = end;
+		encode_one(data, dst, src, start, tmpend);
+		start = tmpend;
+	}
+
+	return;
+}

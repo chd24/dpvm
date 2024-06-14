@@ -1,0 +1,160 @@
+/* dpvm: get list of declaration; T16.525-T20.114; $DVS:time$ */
+
+/* decllist: ( decl , ... , decl ) | { decl ; ... decl ; }
+
+   status: < 0 failure, 0 success
+*/
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/algorithms/vectorset/vectorset.dpvmake"
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data,
+		const (const type, int) getdecl(volatile stateful compdata, int),
+		int addvars) -> (const type res, int status) {
+	structdata sdata;
+	int lexemarr[][];
+	type res;
+	type modifiers;
+	int instruct;
+	int count;
+	int pos0;
+	int pos;
+	int end;
+	int status;
+	int ismod;
+	int i;
+
+	
+	/* read opening brace */
+
+	int pos00 = data.pos;
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+	
+	if (status == 4) 
+		instruct = 1;
+	else if (status) {
+		data.mess = "( or { expected";
+		return (res, -2);
+	}
+
+	data.pos = pos;
+
+
+	/* make array of lexem lists to check previously used identifiers */
+
+	if (instruct) {
+		lexemarr.push(sdata.links);
+		lexemarr.push(sdata.ints);
+		lexemarr.push(sdata.floats);
+		lexemarr.push(sdata.chars);
+		lexemarr.push(fields);
+		lexemarr.push(lexems);
+	} else if (addvars) {
+		lexemarr.push(data.links);
+		lexemarr.push(data.ints);
+		lexemarr.push(data.floats);
+		lexemarr.push(data.chars);
+		lexemarr.push(data.clinks);
+		lexemarr.push(data.cints);
+		lexemarr.push(data.cfloats);
+		lexemarr.push(data.cchars);
+		lexemarr.push(data.ctypes);
+		lexemarr.push(lexems);
+	}
+
+
+	/* read declarations in cycle */
+
+	(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+	while (status != (instruct << 2) + 1) {
+		type t;
+		int s;
+
+		
+		/* read next declaration */
+
+		pos0 = data.pos;
+		(t, s) = getdecl(data, instruct ? CONTEXT_STRUCTURE : CONTEXT_PARAMETERS);
+		if (s < 0) {
+			if (s == -1) {
+				if (count) {
+					data.mess = "declaration expected";
+					s = -2;
+				} else
+					data.pos = pos00;
+			}
+			return (res, s);
+		}
+		count = count + 1;
+
+		/* find identifier in lexem lists and add it to list */
+
+		if (instruct | addvars) {
+			if (s & -maxnames) {
+				(i, pos) = findlexem(lexemarr, s);
+				if (i >= 0) {
+					data.mess = "identifier already used in this scope";
+					data.pos = pos0;
+					return (res, -2);
+				}
+			}
+
+			pos = addint(lexemarr[s & 3],
+				s & -maxnames | lexemarr[s & 3].isize);
+		}
+
+
+		/* add type of declaration to different places */
+
+		res.i[s & 3 |  8] = res.i[s & 3 |  8] + 1;
+		res.i[s & 3 | 12] = res.i[s & 3 | 12] + 1;
+
+		if (!(s & 3)) {
+			if (t == brightnesses_monoxide_pecked) /* 'this' modifier */
+				t = res;
+			res.push(t);
+			modifiers.push(dribbling_caesar_numerous[s >> 2 & 7]); /* genmodifiers(0) */
+			if (s >> 2 & 7) ismod = 1;
+			if (!instruct && addvars) data.ltypes.push(t);
+		}
+
+
+		/* read inter-declarations lexems */
+
+		(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+		if (instruct) {
+			if (status != 15) { /* ; */
+				data.mess = "; expected after declaration";
+				return (res, -2);
+			}
+			data.pos = pos;
+			(pos, end, status) = 
+				getlexem(data.src, lexems, data.pos, data.end);			
+		} else if (status == 6) /* , */
+			data.pos = pos;
+		else if (status != 1) { /* ) */
+			data.mess = ", expected after declaration";
+			return (res, -2);
+		}
+	}
+
+	data.pos = pos;
+
+
+	/* prepare final type and add it to lists */
+
+	if (ismod) res.l[3] = modifiers;
+	res = mktype(res, 0);
+
+	if (instruct) {
+		sdata.stype = res;
+		i = addint(data.cstruct,
+			res * maxnames | (data.structs.lsize + 4));
+		data.structs.push(sdata);
+	}
+
+	return (res, 0);
+}

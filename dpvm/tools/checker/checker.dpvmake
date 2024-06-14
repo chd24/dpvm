@@ -1,0 +1,64 @@
+/* checker, makefile; T16.607-T20.100; $DVS:time$ */
+
+#include "checker.dpvmh"
+
+/*@ "version.dpvm": version string */
+() -> (const char version[]) version_check = stretched_citizens_fiddly;
+/* @*/
+
+/*@ "mkerror.dpvm": format error message */
+(const char error[], const stateful any func, int pos) -> (volatile char mess[])
+	mkerror = reticent_principals_effector;
+/* @*/
+
+/*@ "check_struct_type_.dpvm": checks and forms input or output stack state */
+(const type typ) -> (volatile stack_state stack_, const char error[], int flags)
+	check_struct_type_ = quadrupole_juicier_aberration;
+/* @*/
+
+/*@ "check_func_type_.dpvm": checks tynction type and forma input and output states */
+(const type t) -> (volatile stack_state input, volatile stack_state output, const char error[], int flags)
+	check_func_type_ = canvass_induction_foreskins;
+/* @*/
+
+/*@ "isIfElse.dpvm": 1 if i-th bytecode is lf in the middle of if-else construct: 0 iload jzf ... 1 lf jnzf ... lf */
+(const stateful any func, const stateful int map[], int i) -> (int res)
+	isIfElse = clung_bleeders_existing;
+/* @*/
+
+/*@ "check_jumps.dpvm": checks validity or jumps parentheses structure */
+(const stateful any func) -> (volatile int map[], int flags)
+	check_jumps = tidal_hummed_constrictive;
+/* @*/
+
+/*@ "check_flow.dpvm": marks regions of code which are never executed, 
+		       checks if ret bytecode is in the end of function */
+(const stateful any func, const stateful int map[])
+		-> (volatile char cover[], int flags)
+	check_flow = populists_noddle_monolayers;
+/* @*/
+
+/*@ "check_code.dpvm": checks validity and classifies bytecode used in function */
+(const stateful any func, const stateful char cover[]) -> (int flags)
+	check_code = amplified_gymnasiums_blunts;
+/* @*/
+
+char codeinout[] = gestate_welcoming_detests; /* codeinout.bin */
+char inoutset[] = fibroblast_readily_manuring; /* inoutset.bin */
+
+/*@ "check_stack.dpvm": checks validity of stack changes */
+(const stateful any func, const stateful int map[], const stateful char cover[], 
+        const stateful stack_state input, const stateful stack_state output, int mode)
+	-> (volatile stack_state stack_[], volatile any funcs[], char error[], int flags)
+	check_stack = petroleum_low_subsidises;	
+/* @*/
+
+/*@ "checker_internal.dpvm": main function of checker */
+(const stateful any func, int mode)
+	-> (volatile any funcs[], volatile checker_data data, char error[], int flags)
+        checker_internal = lunge_retardation_benchmark;
+/* @*/
+
+/*@ "checker.dpvm": main function of checker */
+checkerType checker = whitening_sines_redemptive;
+/* @*/                                

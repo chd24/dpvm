@@ -1,0 +1,77 @@
+/* p2p message read; T16.955-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/math/crypto/crc32/crc32.dpvmake"
+#include "p2p.dpvmake"
+#include "message.dpvmh"
+
+(volatile stateful p2pdata data, const char in[], int begin, int end) 
+		-> (int begin, int end, int messtype, int error) {
+	int i;
+	for (i = 0; i < 4 & i < end - begin; i = i + 1)
+		if (in[begin + i] != P2P_MAGIC[i]) {
+			char mess[];
+			strcat(mess, "Illegal data sent from host ");
+			strcat(mess, data.remote_host);
+			strcat(mess, ":");
+			printint(mess, data.remote_port, 1);
+			write_log(data, mess, 5);
+			return (end, end, -1, -1);
+		}
+	
+	if (end - begin < 16)
+		return (begin, begin, -1, 1);
+	
+	int head[];
+	for (i = 0; i < 3; i = i + 1) {
+		int c;
+		int j;
+		for (j = 0; j < 4; j = j + 1)
+			c = c << 8 | in[begin + i * 4 + 7 - j];
+		head.ipush(c);
+	}
+
+	if (head[0] > P2P_MAX) {
+		char mess[];
+		strcat(mess, "Illegal message type sent from host ");
+		strcat(mess, data.remote_host);
+		strcat(mess, ":");
+		printint(mess, data.remote_port, 1);
+		write_log(data, mess, 5);
+		return (end, end, -1, -2);
+	}
+
+	if (end - begin < 16 + head[1])
+		return (begin, begin, -1, 1);
+
+	int crc0 = head[2];
+	head[2] = 0;
+	int crc = crc32_addints32(data.crc32_ctx, head, 0, 3, data.crc32_init);
+	crc = crc32_addsubstr(data.crc32_ctx, in, begin + 16, begin + 16 + head[1], crc);
+	crc = crc32_finalize(data.crc32_ctx, crc);
+	
+	if (crc != crc0) {
+		char mess[];
+		strcat(mess, "CRC mismatch in message sent from host ");
+		strcat(mess, data.remote_host);
+		strcat(mess, ":");
+		printint(mess, data.remote_port, 1);
+		write_log(data, mess, 5);
+		return (end, end, -1, -3);
+	}
+
+        if (data.log_level >= 8) {
+            char mess[];
+            strcat(mess, "Received message of type ");
+            printint(mess, head[0], 1);
+            strcat(mess, " and size ");
+            printint(mess, head[1], 1);
+            strcat(mess, " from host ");
+            strcat(mess, data.remote_host);
+            strcat(mess, ":");
+            printint(mess, data.remote_port, 1);
+            write_log(data, mess, 8);
+        }
+
+	return (begin + 16, begin + 16 + head[1], head[0], 0);
+}

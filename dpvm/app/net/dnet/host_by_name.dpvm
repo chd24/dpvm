@@ -1,0 +1,20 @@
+/* dnet node, find host by name; T17.566-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const stateful dnet_context ctx, const char name[]) -> (int number) {
+	int i;
+	for (i = 0; i < ctx.hosts.lsize; i += 1) {
+		if (ctx.hosts[i].name == name)
+			return i;
+	}
+	for (i = 0; i < ctx.hosts.lsize; i += 1) {
+		char hex[];
+		printhex(hex, ctx.hosts[i].crc, 8, 1);
+		if (hex == name)
+			return i;
+	}
+
+	return -1;
+}

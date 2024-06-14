@@ -1,0 +1,32 @@
+/* prints name of dpvm crash error; T16.514-T17.156; $DVS:time$ */
+
+#include "stdlib.dpvmake"
+
+char errors[] = "
+	SUCCESS		FINISHED	TERMINATED	END_OF_CODE
+	NOT_IMPLEMENTED	NOT_FINISHED	NOT_CHECKED	NOT_TRANSLATED
+	NO_MEMORY	CREATE_OBJECT	STORE_ERROR	MAP
+	CONST		OBJECT_PARAMS	TYPE_MISMATCH	IO
+	LINKS_INDEX	INTS_INDEX	FLOATS_INDEX	CODES_INDEX
+	LINKS_OVERFLOW	INTS_OVERFLOW	FLOATS_OVERFLOW	CODES_OVERFLOW
+	LINKS_STACK	INTS_STACK	FLOATS_STACK	CODES_STACK
+	N_LINK_ARGS	N_INT_ARGS	N_FLOAT_ARGS	N_CODE_ARGS
+";
+
+(volatile stateful char mess[], int cod) -> () {
+	int begin;
+	int end;
+
+	if (cod & ~0x1f) {
+		strcat(mess, "UNKNOWN");
+		return;
+	}
+
+	end = 0; do {
+		(begin, end) = strtostr(errors, end, errors.csize);
+		cod = cod - 1;
+	} while (cod >= 0);
+
+	substrcat(mess, errors, begin, end);
+	return;
+}

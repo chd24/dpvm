@@ -1,0 +1,268 @@
+/* crypto wealth logger */
+
+char version[] = "crypto wealth logger, ver 0.1.0, T18.393-T18.394"; /* $DVS:time$
+
+history:
+
+T18.394 ver 0.1.0: first version, dowloading prices from coingecko, reading quantites from text file
+
+T18.393 ver 0.0.1: project started
+
+*/
+
+#include "../stdlib/stdlib.dpvmake"
+
+int PERIOD = 600000000000; /* 10 min */
+int TIMEOUT = 60000000000; /* 1 min */
+
+type coin = {
+	const char short[];
+	const char name[];
+	float quantity;
+};
+
+type crypto = {
+	const char version[];
+	const char cryptoList[];
+	const char logFile[];
+	const any cycle;
+	volatile coin coins[];
+	volatile char text[];
+	int time;
+	int timezone;
+	int logSize;
+};
+
+(volatile crypto data, int status) -> () logWritten = {
+	if (status != data.logSize) {
+		return;
+	}
+
+	const int vars[] = {0};
+	int values[];
+	values.ipush(data.time + PERIOD);
+	setsys(data.cycle, data, vars, values);
+	return;
+};
+
+(volatile crypto data, const char mess[]) -> () writeLog = {
+	char out[];
+	strftime(out, "%Y-%m-%d %H:%M:%S  ", data.time, data.timezone);
+	strcat(out, mess);
+	strcat(out, "\r\n");
+	data.logSize = out.csize;
+	write(logWritten, data, data.logFile, out, -1);
+	return;
+};
+
+(volatile crypto data, const char text[], int status) -> () responseRead = {
+	if (status <= 0 && data.text.csize == 0) {
+		writeLog(data, "Error: no output from 'wget' program");
+		return;
+	} else if (status > 0) {
+		strcat(data.text, text);
+		input(code, data, 0x100000, TIMEOUT);
+		return;
+	}
+
+	float total, btc, eth, xdag;
+	int i, priced, size = data.text.csize;
+	for (i = 0; i < data.coins.lsize; i += 1) {
+		int pos = strstr(data.text, data.coins[i].name);
+		if (pos >= 0)
+			pos = substrchr(data.text, pos + 1, size, ':');
+		if (pos >= 0)
+			pos = substrchr(data.text, pos + 1, size, ':');
+		if (pos >= 0) {
+			int err;
+			int begin;
+			float price;
+			(err, begin, price) = strtof(data.text, pos + 1, size);
+			if (err) {
+				int n;
+				(n, err, begin) = strtoi(data.text, pos + 1, size, 10);
+				price = n;
+			}
+			if (!err && price > 0) {
+				priced += 1;
+				if (data.coins[i].short == "btc")
+					btc = price;
+				else if (data.coins[i].short == "eth")
+					eth = price;
+				else if (data.coins[i].short == "xdag")
+					xdag = price;
+				price *= data.coins[i].quantity;
+				total += price;
+			}
+		}
+	}
+
+	if (!priced) {
+		writeLog(data, "Error: no actual data in output from 'wget' program");
+		return;
+	}
+
+	char mess[];
+	strcat(mess, "total=$");
+	printfloat(mess, 2, total);
+	strcat(mess, ", btc=$");
+	printfloat(mess, 2, btc);
+	strcat(mess, ", eth=$");
+	printfloat(mess, 2, eth);
+	strcat(mess, ", xdag=$");
+	printfloat(mess, 4, xdag);
+	strcat(mess, ", coins=");
+	printint(mess, data.coins.lsize, 1);
+	strcat(mess, ", priced=");
+	printint(mess, priced, 1);
+
+	writeLog(data, mess);
+	return;
+};
+
+(volatile crypto data, int status) -> () wgetLaunched = {
+	if (status != 1) {
+		writeLog(data, "Error: can't launch 'wget' program");
+		return;
+	}
+
+	data.text.cpop(data.text.csize);
+
+	input(responseRead, data, 0x100000, TIMEOUT);
+	return;
+};
+
+(volatile crypto data, const char text[], int status) -> () fileRead = {
+	if (status <= 0) {
+		char mess[];
+		strcat(mess, "Error: can't read file '");
+		strcat(mess, data.cryptoList);
+		strcat(mess, "' or file is empty");
+		writeLog(data, mess);
+		return;
+	}
+
+	char request[];
+	strcat(request, "https://api.coingecko.com/api/v3/simple/price?ids=");
+
+	data.coins.lpop(data.coins.lsize);
+	int begin, end = text.csize;
+	while (begin < end) {
+		coin c;
+		int wend;
+
+		(begin, wend) = strtostr(text, begin, end);
+		char short[];
+		substrcat(short, text, begin, wend);
+		c.short = short;
+		begin = wend;
+
+		(begin, wend) = strtostr(text, begin, end);
+		char name[];
+		substrcat(name, text, begin, wend);
+		c.name = name;
+		begin = wend;
+
+		int err;
+		(err, begin, c.quantity) = strtof(text, begin, end);
+
+		if (!c.short.csize || !c.name.csize || err || c.quantity <= 0) {
+			char mess[];
+			strcat(mess, "Error parsing file '");
+			strcat(mess, data.cryptoList);
+			strcat(mess, "', in crypto entry #");
+			printint(mess, data.coins.lsize, 1);
+			writeLog(data, mess);
+			return;
+		}
+
+		if (data.coins.lsize)
+			strcat(request, "%2C");
+		strcat(request, c.name);
+
+		data.coins.lpush(c);
+
+		(begin, wend) = strtostr(text, begin, end);
+		if (begin >= wend)
+			begin = end;
+	}
+
+	strcat(request, "&vs_currencies=usd");
+
+	char args[][];
+	args.lpush("--header=Accept: application/json");
+	args.lpush("--timeout=60");
+	args.lpush("-qO-");
+	args.lpush(request);
+
+	mpopen(wgetLaunched, data, "/usr/bin/wget", args, 1);
+	return;
+};
+
+(volatile crypto data, const int values[]) -> () cycle = {
+	data.time = values[0];
+
+	read(fileRead, data, data.cryptoList, 0, 0x100000);
+	return;
+};
+
+(const crypto cdata, const int values[]) -> () start = {
+	crypto data;
+	objcopyto(data, cdata);
+	coin coins[];
+	data.coins = coins;
+	char text[];
+	data.text = text;
+
+	data.time = values[0];
+
+	char mess[];
+
+	if (values.isize > 1) {
+		strcat(mess, "Crashed with error ");
+		int cod = values[1] & 0x1f;
+		printhex(mess, cod, 2, 0);
+		strcat(mess, " (");
+		print_error(mess, cod);
+		strcat(mess, ") in ");
+		printobjname(mess, values[4]);
+		strcat(mess, "() pos ");
+		printhex(mess, values[3] & 0xfff, 3, 0);
+		strcat(mess, " code ");
+		cod = values[2] & 0xff;
+		printhex(mess, cod, 2, 0);
+		strcat(mess, " (");
+		print_bytecode(mess, cod);
+		strcat(mess, "); restarted");
+	} else {
+		strcat(mess, "Started ");
+		strcat(mess, data.version);
+	}
+
+	writeLog(data, mess);
+	return;
+};
+
+(const char cryptoList[], const char logFile[], int timezone) -> (const char version[]) cryptoLogger = {
+	crypto data;
+
+	data.cryptoList = cryptoList;
+	data.logFile = logFile;
+	data.timezone = timezone;
+	data.cycle = cycle;
+
+	char vers[];
+	strcat(vers, version);
+	strcat(vers, " (");
+	printobjname(vers, code);
+	strcat(vers, ")");
+	data.version = vers;
+
+	const int hvars[] = {0, 0x100, 0x101, 0x102, 0x103};
+	getsysp(start, data, hvars);
+
+	const int vars[] = {0};
+	getsysp(start, data, vars);
+
+	return data.version;
+};

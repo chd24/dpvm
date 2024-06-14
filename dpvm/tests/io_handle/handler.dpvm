@@ -1,0 +1,36 @@
+/* io_handle: error handler; T17.155-T17.156; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "io_handle.dpvmake"
+
+(const stateful io_handle arg, const stateful int values[]) -> () {
+	char str[];
+
+	strftime(str, "%Y-%m-%d:%H:%M:%S  ", values[4], arg.time_offset);
+	strcat(str, arg.version);
+	strcat(str, " for program ");
+	strcat(str, arg.progname);
+	strcat(str, " crashed with error ");
+	int cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+	str.push('\n');
+
+	outputp("", "", str);
+	return;
+}

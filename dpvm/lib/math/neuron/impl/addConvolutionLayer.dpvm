@@ -1,0 +1,111 @@
+/* neuron class */
+char funcVersion[] = "addConvolutionLayer() method implementation, T19.481-T19.733"; /* $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../long/long.dpvmake"
+#include "neuron.dpvmake"
+
+(volatile stateful neuronImpl impl, const activationFunction activation, int depth, int width, int maskDepth, int maskSize,
+		int step) -> (const char error[]) addConvolutionLayer = {
+	if (depth <= 0 || width <= 0 || maskDepth <= 0 || maskSize <= 0 || step <= 0)
+		return mkError("nonpositive parameter in convolution layer", "addConvolutionLayer");
+
+	neuronDataCompile data = impl.data.cdata;
+	neuronNet net = data.net;
+
+	if (!data.registrySet)
+		return mkError("registry is not set", "addConvolutionLayer");
+
+	if (!net.layers.lsize)
+		return mkError("convolution layer could not be first", "addConvolutionLayer");
+
+	neuronLayer layer, prev = net.layers[net.layers.lsize - 1];
+	layer.neuronStartId = prev.neuronStartId + prev.nNeurons;
+	layer.weightStartId = prev.weightStartId + prev.nWeights;
+
+	if (prev.nNeurons % (depth * width))
+		return mkError("number of neurons in previous layer not divided by depth * width", "addConvolutionLayer");
+
+	int height = prev.nNeurons / depth / width;
+
+	if (maskSize > width || maskSize > height)
+		return mkError("too large maskSize", "addConvolutionLayer");
+
+	int newDepth = maskDepth,
+		newWidth = (width - maskSize) / step + 1,
+		newHeight = (height - maskSize) / step + 1,
+		nNeurons = newDepth * newWidth * newHeight,
+		nWeightsInMask = depth * maskSize * maskSize + 1,
+		nWeights = nWeightsInMask * maskDepth;
+
+	layer.nWeights = nWeights;
+
+	int i, j;
+	for (i = 0; i < nWeights; i += 1) {
+		int inputs[], outputs[];
+		layer.inputNeuronIds.lpush(inputs);
+		layer.outputNeuronIds.lpush(outputs);
+	}
+
+	for (i = 0; i < NEURON_PARALLEL; i += 1) {
+		neuronGroup group = layer.groups[i];
+		int jbegin = j, jend = nNeurons * (i + 1) / NEURON_PARALLEL;
+		group.neuronStartId = layer.neuronStartId + layer.nNeurons;
+
+		for (j = jbegin; j < jend; j += 1) {
+			neuron n;
+
+			n.layerId = net.layers.lsize;
+			n.groupId = i;
+			n.outputStartId = group.nOutputs;
+			n.nOutputs += 1;
+
+			int nid = layer.neuronStartId + layer.nNeurons, inputIds[], weightIds[], weightMask[], k, l,
+				newColor = j % newDepth, newColumn = (j / newDepth) % newWidth,
+				newRow = j / (newDepth * newWidth), column = newColumn * step, row = newRow * step,
+				begin = prev.neuronStartId + (row * width + column) * depth,
+				wid = newColor * nWeightsInMask, weightId = layer.weightStartId + wid;
+
+
+			/* fill inputIds[], weightIds[], outputIds[] arrays */
+
+			for (k = 0; k < maskSize; k += 1) {
+				for (l = 0; l < maskSize * depth; l += 1, wid += 1, weightId += 1) {
+					int neuronId = begin + k * width * depth + l;
+
+					n.inputNeuronIds.ipush(neuronId);
+					n.inputWeightIds.ipush(weightId);
+					net.neurons[neuronId].outputNeuronIds.ipush(nid);
+					net.neurons[neuronId].outputWeightIds.ipush(weightId);
+					layer.inputNeuronIds[wid].ipush(neuronId);
+					layer.outputNeuronIds[wid].ipush(nid);
+				}
+			}
+
+			n.inputNeuronIds.ipush(-1);
+			n.inputWeightIds.ipush(weightId);
+			layer.inputNeuronIds[wid].ipush(-1);
+			layer.outputNeuronIds[wid].ipush(nid);
+
+			n.activation = activation;
+
+			group.neurons.lpush(n);
+			group.nOutputs += n.nOutputs;
+			net.neurons.lpush(n);
+			layer.nNeurons += 1;
+		}
+	}
+
+	for (i = 0; i < NEURON_PARALLEL; i += 1) {
+		neuronGroup group = layer.groups[i];
+		group.weightStartId = layer.weightStartId + layer.nWeights * i / NEURON_PARALLEL;
+		group.nWeights = layer.nWeights * (i + 1) / NEURON_PARALLEL - layer.nWeights * i / NEURON_PARALLEL;
+	}
+
+	net.layers.lpush(layer);
+	neuronLayerRuntime layerR;
+	impl.data.net.layers.lpush(layerR);
+
+	return "";
+};

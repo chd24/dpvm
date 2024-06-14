@@ -1,0 +1,244 @@
+/* telnet utility, main routine; T18.249-T18.252; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "telnet.dpvmake"
+
+int KILL_DELAY = 1000000000;
+int INPUT_DELAY = 1000000000;
+
+int MAIN_THREAD = 0;
+int LOCAL_THREAD = 1;
+int REMOTE_THREAD = 2;
+int INPUT_THREAD = 3;
+
+type telnet_addr = {
+	const char version[];
+	int thread;
+};
+
+type telnet_data = {
+	const telnet_addr main_addr;
+	const telnet_addr local_addr;
+	const telnet_addr remote_addr;
+	const telnet_addr input_addr;
+	const char host[];
+	int port;
+	int logging;
+	int thread;
+};
+
+type telnet_mess = {
+	const char text[];
+};
+
+
+(const telnet_data data, const char mess[], const char text[]) -> () log {
+	if (!data.logging)
+		return;
+	
+	char m[];
+	printint(m, data.thread, 1);
+	strcat(m, "  ");
+	strcat(m, mess);
+	strcat(m, ": '");
+	strcat(m, text);
+	strcat(m, "'\r\n");
+	writep("", "", "telnet.log", m, -1);
+	return;
+}
+
+(const telnet_data data, const int values[]) -> () kill {
+	/* kill this task */
+	const int vars1[] = {0x200};
+	const int values1[] = {-1};
+	log(data, "**kill**", "");
+	setsys("", "", vars1, values1);
+	return;
+}
+
+(const telnet_data data, const int values[]) -> () get_time {
+	const int vars[] = {0};
+	int values1[];
+	values1.ipush(values[0] + KILL_DELAY);
+	setsys(kill, data, vars, values);
+	return;
+}
+
+(const telnet_data data) -> () finish {
+	telnet_mess mess;
+	msendp("", "", data.main_addr, mess);
+	const int vars[] = {0};
+	getsys(get_time, data, vars);
+	return;
+}
+
+
+(const telnet_data data, const char text[], int status) -> () sender {
+	telnet_addr addr;
+	if (data.thread == LOCAL_THREAD)
+		status = status < 0,
+		addr = data.remote_addr;
+	else
+		status = status <= 0,
+		addr = data.local_addr;
+
+	if (status) {
+		outputp("", "", "Connection finished\r\n");
+		log(data, "finished", "");
+		finish(data);
+		return;
+	}
+
+	log(data, "inputted", text);
+
+	telnet_mess mess;
+	mess.text = text;
+
+	if (data.thread == LOCAL_THREAD)
+		mrecvp("", "", data.input_addr, 0);
+
+	msendp("", "", addr, mess);
+
+	if (data.thread == LOCAL_THREAD)
+		mrecvp("", "", data.input_addr, INPUT_DELAY);
+	
+	input(code, data, 0x100000, -1);
+	return;
+}
+
+(const telnet_data data, const any objs, int status) -> () receiver {
+	if (status) {
+		outputp("", "", "Error in receiver\r\n");
+		finish(data);
+		return;
+	}
+
+	int i;
+	int flag;
+	for (i = 0; i < objs.lsize; i += 1) {
+		telnet_mess mess;
+		if (objs.l[i].type == mess.type) {
+			objcopyto(mess, objs.l[i]);
+			char text[] = mess.text;
+			log(data, "received", text);
+			if (data.thread == REMOTE_THREAD) {
+				char m[];
+				strcat(m, text);
+				strcat(m, "\r\n");
+				text = m;
+			}
+			outputp("", "", text);
+			if (data.thread == LOCAL_THREAD)
+				flag = text.csize && text[text.csize - 1] != '\n';
+		}
+	}
+
+	if (flag)
+		msendp("", "", data.input_addr, "");
+
+	telnet_addr addr;
+	if (data.thread == LOCAL_THREAD)
+		addr = data.local_addr;
+	else
+		addr = data.remote_addr;
+
+	mrecv(code, data, addr, -1);
+	return;	
+}
+
+(const telnet_data data) -> () start {
+	telnet_addr addr;
+	if (data.thread == LOCAL_THREAD)
+		addr = data.local_addr;
+	else
+		addr = data.remote_addr;
+
+	log(data, "starting", "");
+
+	mrecvp(receiver, data, addr, -1);
+
+	if (data.thread == LOCAL_THREAD)
+		mrecvp("", "", data.input_addr, INPUT_DELAY);	
+
+	inputp(sender, data, 0x100000, -1);
+	return;
+}
+
+(const telnet_data data, int port, int ip0, int ip1) -> () connected {
+	if (port < 0) {
+		char mess[];
+		strcat(mess, "Connection failed with error ");
+		printhex(mess, -port, 1, 0);
+		strcat(mess, "\r\n");
+		outputp("", "", mess);
+		finish(data);
+		return;
+	}
+
+	start(data);
+	return;	
+}
+
+(const char host[], int port) -> () telnet {
+	int logging;
+	if (port < 0) {
+		port = -port;
+		logging = 1;
+	}
+
+	char vers[];
+	strcat(vers, version());
+	strcat(vers, " (");
+	printobjname(vers, code);
+	strcat(vers, ") to ");
+	strcat(vers, host);
+	strcat(vers, ":");
+	printint(vers, port, 1);
+	strcat(vers, "\r\n");
+
+	outputp("", "", vers);
+
+	telnet_data data;
+	data.host = host;
+	data.port = port;
+	data.logging = logging;
+	data.thread = MAIN_THREAD;
+
+	telnet_addr main_addr;
+	main_addr.version = vers;
+	main_addr.thread = MAIN_THREAD;
+	data.main_addr = main_addr;
+	mrecvp("", "", main_addr, 0);
+
+	telnet_addr local_addr;
+	objcopyto(local_addr, main_addr);
+	local_addr.thread = LOCAL_THREAD;
+	data.local_addr = local_addr;
+	mrecvp("", "", local_addr, 0);
+
+	telnet_addr remote_addr;	
+	objcopyto(remote_addr, main_addr);
+	remote_addr.thread = REMOTE_THREAD;
+	data.remote_addr = remote_addr;
+	mrecvp("", "", remote_addr, 0);
+
+	telnet_addr input_addr;	
+	objcopyto(input_addr, main_addr);
+	input_addr.thread = INPUT_THREAD;
+	data.input_addr = input_addr;
+	mrecvp("", "", input_addr, 0);
+
+	telnet_data remote_data;
+	objcopyto(remote_data, data);
+	remote_data.thread = REMOTE_THREAD;
+	connectp(connected, remote_data, host, 0x4060000 | port);
+
+	telnet_data local_data;
+	objcopyto(local_data, data);
+	local_data.thread = LOCAL_THREAD;
+	start(local_data);
+
+	mrecvp("", "", data.main_addr, -1);
+	log(data, "finished", "");
+	return;
+}

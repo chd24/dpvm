@@ -1,0 +1,16 @@
+/* www server: helper makefile for blog internal cgi module; T18.779-T19.037; $DVS:time$ */
+
+#include "blog.dpvmh"
+
+/*@ "action.dpvm": actions methods */
+blogActionClass blogActionObj = dragging_vaned_disyllabic;
+/* @*/
+
+/*@ "out.dpvm": output methods */
+blogOutClass blogOutObj = summing_boyhood_return;
+/* @*/
+
+/*@ "read.dpvm": read file method */
+(volatile stateful any data, volatile int file[], const char error[]) -> ()
+readFileCallback = blacking_communed_canonically;
+/* @*/           

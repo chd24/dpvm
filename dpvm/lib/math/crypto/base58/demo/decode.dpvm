@@ -1,0 +1,14 @@
+/* base58 class, decode demo, T19.570-T20.166; $DVS:time$ */
+
+#include "../base58.dpvmake"
+
+(const stateful char in[]) -> (const char out[]) decode = {
+	base58Class base58Obj = base58Create();
+
+	char out[], err[] = base58Obj.methods.decode(out, base58Obj, in, 0, in.csize);
+
+	if (err.csize)
+		return err;
+
+	return out;
+};

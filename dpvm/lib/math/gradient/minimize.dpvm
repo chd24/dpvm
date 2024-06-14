@@ -1,0 +1,57 @@
+/* minimize value of real extrapolation starting from given point; T16.486-T16.489; $DVS:time$
+   also given boolean schema and extrapolation function;
+   schema is array of triplets (ci,ai,bi) where ci = NAND(ai,bi) in i-th step. */
+
+(int schema[], float point[], stellar_embroidering_maritime nand, int nsteps) -> 
+		(float point[]) {
+	float p[];
+	float q[];
+	float g[];
+	float h[];
+	int n;
+	int i;
+	int j;
+	float c;
+	float x;
+
+	n = point.fsize;
+
+	i = 0; do {
+		p.push(point.f[i]);
+		q.push(0.0);
+		i = i + 1;
+	} while (i < n);
+
+	g = coordinators_endurable_carry(schema, p, nand); /* compute() */
+
+	i = 0; do {
+		c = 1.0;
+
+		j = 0; do {
+			x = p.f[j] - c * g.f[j + 1];
+			if (x < 0.0) { x = 0.0; }
+			if (x > 1.0) { x = 1.0; }
+			q[j] = x;
+			j = j + 1;
+			if (j == n) {
+				h = coordinators_endurable_carry(schema, q, nand); /* compute() */
+				if (h.f[0] >= g.f[0]) {
+					c = c / 2.0;
+					if (1.0 + c == 1.0) {
+						return (p); 
+					}
+					j = 0;
+				}
+			}
+		} while (j < n);
+
+		g = h;
+		point = p;
+		p = q;
+		q = point;
+
+		i = i + 1;
+	} while (i < nsteps);
+
+	return (p);
+}

@@ -1,0 +1,29 @@
+/* dnet node, trust command; T17.595-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(volatile stateful dnet_context ctx, const char args[][]) 
+		-> (const char res[], int error) trust_func {
+	int A = host_by_name(ctx, args[0]);
+	if (A < 0) {
+		char m[];
+		strcat(m, "Host '");
+		strcat(m, args[0]);
+		strcat(m, "' not found.");
+		return (m, -1);
+	}
+
+	ctx.hosts[A].flags |= DNET_HOST_TRUSTED;
+	context_send(ctx);
+
+	return ("", 0);
+}
+
+dnet_command trust_command = {
+	"trust",
+	"mark host A as trusted for local host",
+	trust_func,
+	1,
+	1		
+};

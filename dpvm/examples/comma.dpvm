@@ -1,0 +1,8 @@
+/* use comma in declarations; T18.378-T18.378; $DVS:time$ */
+
+int A = 2, B = 3;
+
+(int x) -> (int y) f = {
+	int L = A * x + B, arr[], c(int x) = code, sqr(int x) = { return x * x; };
+	return sqr(L);
+};

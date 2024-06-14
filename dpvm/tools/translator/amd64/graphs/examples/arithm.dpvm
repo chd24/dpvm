@@ -1,0 +1,3 @@
+(int a1, int an, int n) -> (int sum) {
+	return (a1 + an) * n >> 1;
+}

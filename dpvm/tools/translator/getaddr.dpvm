@@ -1,0 +1,12 @@
+/* dpvm byte code translator; get addr of object from array; T16.114-T17.648; $DVS:time$ */
+
+(const stateful heap_interfaces_feasts addrs, const stateful any obj) -> (int addr) {
+	int i;
+
+	for (i = 0; i < addrs.lsize; i += 1) {
+		if (addrs.l[i] == obj)
+			return addrs.i[i];
+	}
+
+	return -1;
+}

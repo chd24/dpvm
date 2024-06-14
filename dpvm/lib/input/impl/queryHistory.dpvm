@@ -1,0 +1,229 @@
+/* input class, runServer method implementation, T20.193-T20.219; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/sysParams.dpvmh"
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../../algorithms/hashtable/hash.dpvmake"
+#include "input.dpvmake"
+
+char historyFile[]	= ".dpvm_history.txt";
+int HASH_SIZE		= 0x1000;
+int TIMEOUT		= 1000000000;
+
+type Address = {
+	int hash[4];
+	int flags;
+};
+
+type Message = {
+	const Address returnAddr;
+	const historyLine lines[];
+	const char error[];
+	int query;
+};
+
+type serverData = {
+	const Address addr;		/* hash of create function for the class */
+	volatile hashData hash;		/* hash table to find line index by pos in file */
+	volatile historyLine old[];	/* lines from existing history file in descending order (indexes -1, -2, ,,,) */
+	volatile historyLine new[];	/* new added lines to history in ascending order (indexes 0, 1, ... ) */
+	int fileLength;			/* history file length */
+};
+
+type queryData = {
+	volatile stateful historyLine lines[];
+	volatile stateful inputImpl impl;
+	const (volatile stateful any data, const char error[]) -> () callback;
+	volatile stateful any data;
+	const Address addr;
+	const Address returnAddr;
+	int query;
+	int stage;
+};
+
+(const Address addr, int n) -> () debug = {
+	if (addr.flags & INPUT_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[%d]", {n});
+		outputp("", "", mess);
+	}
+	return;
+};
+
+(volatile stateful serverData data, const any objs, int status) -> () serverMain = {
+	Address addr = data.addr;
+	debug(addr, 102);
+	if (status) {
+		debug(addr, 103);
+		char mess[];
+		printf(mess, "error %d while receiving messages on address %p.\r\n", {Message, status});
+		outputp("", "", mkError(mess, "queryHistory:serverMain"));
+		return;
+	}
+	int i;
+	for (i = 0; i < objs.lsize; i++) {
+		debug(addr, 104);
+		if (objs.l[i].type == Message) {
+			debug(addr, 105);
+			Message arr[];
+			pushObject(objs.l[i], arr);
+			Message m = arr[0], r;
+			historyLine lines[];
+			char error[] = "";
+
+			if (m.query == HISTORY_QUERY_LAST) {
+				debug(addr, 106);
+				if (data.new.lsize)
+					debug(addr, 107), lines.lpush(data.new[data.new.lsize - 1]);
+				else if (data.old.lsize)
+					debug(addr, 108), lines.lpush(data.old[0]);
+				else
+					debug(addr, 109), error = mkError("history is empty", "queryHistory:serverMain");
+
+			} else if (m.query == HISTORY_QUERY_ADD) {
+				debug(addr, 110);
+				if (!m.lines.lsize)
+					debug(addr, 111), error = mkError("line is not given", "queryHistory:serverMain");
+				else {
+					debug(addr, 112);
+					historyLine l = {m.lines[0].text, data.fileLength};
+					data.fileLength += l.text.csize + 2;
+					data.new.lpush(l);
+					hashObj.findAddKeyValue(data.hash, {l.posInFile}, {data.new.lsize - 1});
+				}
+
+			} else if (m.query == HISTORY_QUERY_PREV || m.query == HISTORY_QUERY_NEXT) {
+				debug(addr, 113);
+				if (!m.lines.lsize)
+					debug(addr, 114), error = mkError("line is not given", "queryHistory:serverMain");
+				else {
+					debug(addr, 115);
+					any value;
+					int res;
+					(value, res) = hashObj.findGetValue(data.hash, {m.lines[0].posInFile});
+					debug(addr, 116);
+					if (!res)
+						debug(addr, 117), error = mkError("line not found in hash table", "queryHistory:serverMain");
+					else if (!value.isize)
+						debug(addr, 118), error = mkError("incorrect object in hash table", "queryHistory:serverMain");
+					else if (value.i[0] >= data.new.lsize || ~value.i[0] >= data.old.lsize)
+						debug(addr, 119), error = mkError("line not found in arrays", "queryHistory:serverMain");
+					else {
+						debug(addr, 120);
+						int n = value.i[0] + (m.query == HISTORY_QUERY_PREV ? -1 : 1);
+						if (n >= data.new.lsize || ~n >= data.old.lsize)
+							debug(addr, 121), error = mkError("end of history", "queryHistory:serverMain");
+						else if (n >= 0)
+							debug(addr, 122), lines.lpush(data.new[n]);
+						else
+							debug(addr, 123), lines.lpush(data.old[~n]);
+					}
+				}
+			}
+
+			if (lines.lsize)
+				debug(addr, 124), r.lines = lines;
+			if (error.csize)
+				debug(addr, 125), r.error = error;
+			msendp("", "", m.returnAddr, r);
+			debug(addr, 126);
+		} else {
+			debug(addr, 127);
+			char mess[];
+			printf(mess, "type of received message %p equals %p, expected %p.\r\n", {objs.l[i], objs.l[i].type, Message});
+			outputp("", "", mkError(mess, "queryHistory:serverMain"));
+		}
+	}
+	debug(addr, 128);
+	mrecv(code, data, data.addr, -1);
+	return;
+};
+
+(const Address addr, const int values[]) -> () serverStart = {
+	debug(addr, 100);
+	serverData data = {addr};
+	hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
+	debug(addr, 101);
+	mrecv(serverMain, data, data.addr, -1);
+	return;
+};
+
+(volatile stateful queryData data, const any objs, int status) -> () queryMain = {
+	if (!data.stage) {
+		debug(data.addr, 4);
+		if (!status) {
+			debug(data.addr, 5);
+			data.impl.data.serverRunned = 1;
+			getsysp(serverStart, data.addr, (int[]){});
+		}
+
+		data.stage = 1;
+
+		historyLine lines[];
+		int i;
+		for (i = 0; i < data.lines.lsize; i++)
+			lines.lpush(data.lines[i]);
+		data.lines.lpop(data.lines.lsize);
+		Message m = {data.returnAddr, lines, "", data.query};
+		mrecvp("", "", data.returnAddr, 0);
+		msendp("", "", data.addr, m);
+		debug(data.addr, 6);
+		mrecv(code, data, data.returnAddr, TIMEOUT);
+	} else {
+		debug(data.addr, 7);
+		mrecvp("", "", data.returnAddr, 1 << 63);
+		debug(data.addr, 8);
+		if (status || !objs.lsize)
+			return data.callback(data.data, mkError("timeout expired, no response from history server", "queryHistory:queryMain"));
+		debug(data.addr, 9);
+		if (objs.l[0].type != Message)
+			return data.callback(data.data, mkError("illegal type of message", "queryHistory:queryMain"));
+		debug(data.addr, 10);
+		Message arr[];
+		pushObject(objs.l[0], arr);
+		Message m = arr[0];
+		if (m.error.csize)
+			return data.callback(data.data, m.error);
+		debug(data.addr, 11);
+		int i;
+		for (i = 0; i < m.lines.lsize; i++)
+			data.lines.lpush(m.lines[i]);
+		debug(data.addr, 12);
+		data.callback(data.data, "");
+	}
+	return;
+};
+
+(volatile stateful queryData data, const int values[]) -> () queryStart = {
+	int h[4];
+	(h[0], h[1], h[2], h[3]) = getfullhash({data.addr, values[0], values[1]});
+	data.returnAddr = (Address){h, data.addr.flags};
+
+	if (data.impl.data.serverRunned) {
+		debug(data.addr, 2);
+		queryMain(data, {}, -1);
+	} else {
+		debug(data.addr, 3);
+		mrecv(queryMain, data, data.addr, 0);
+	}
+	return;
+};
+
+(volatile stateful historyLine lines[], volatile stateful any inputObj,
+		const (volatile stateful any data, const char error[]) -> () callback,
+		volatile stateful any data, int query) -> () queryHistory = {
+	inputImpl impl;
+	char err[] = convertObjToImpl(impl, inputObj, "queryHistory");
+	if (err.csize) return callback(data, err);
+
+	int h[4];
+	(h[0], h[1], h[2], h[3]) = getfullhash(impl.data.createFunc);
+	Address addr = {h, impl.data.flags};
+	queryData d = {lines, impl, callback, data, addr, addr, query};
+
+	debug(addr, 1);
+
+	getsys(queryStart, d, (int[]){DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ID});
+	return callback(data, "");
+};

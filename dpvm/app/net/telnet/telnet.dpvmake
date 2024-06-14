@@ -1,0 +1,13 @@
+/* telnet module, makefile; T18.249-T18.249; $DVS:time$ */
+
+#include "telnet.dpvmh"
+
+/*@ "version.dpvm": returns version of telnet */
+() -> (const char version[])
+	version = wordless_joyously_popcorn;
+/* @*/
+
+/*@ "main.dpvm": main function of telnet */
+(const char host[], int port) -> ()
+	telnet = tots_chick_stoolpigeon;
+/* @*/                        

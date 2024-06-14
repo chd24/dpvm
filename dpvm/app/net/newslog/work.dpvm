@@ -1,0 +1,86 @@
+/* newslog: work, central routine; T15.590-T19.591; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "newslog.dpvmake"
+
+(volatile stateful news_data data, const stateful int values[]) -> () {
+	data.time = values.i[0];
+	
+	/* re-read sites database each 10 min */
+	if (data.time > data.last_read + 600000000000) {
+		mstat(get_stat, data, data.feeds_file, 0, 1);
+		return;
+	}
+
+	/* read random site from database */
+	char site[];
+	int res;
+	(site, res, data.seed) = db_getrandom(data.feeds_db, 3, data.seed);
+
+	/* re-read each site every 15 min */
+	if (res == -1 | data.time < res + 900000000000) { 
+		delay(data);
+		return;
+	}
+	db_add(data.feeds_db, site, 3, data.time);
+
+	int beg = -1;
+	do {
+		beg = beg + 1;
+		if (beg >= site.csize) {
+			delay(data);
+			return;
+		}
+	} while (site[beg] <= ' ');
+
+	if (site[beg] == '#') {
+		delay(data);
+		return; 
+	}
+
+	res = beg;
+	do {
+		res = res + 1;
+		if (res >= site.csize) {
+			delay(data);
+			return; 
+		}
+	} while (site[res] > ' ');
+
+	char name[];
+	substrcat(name, site, beg, res);
+	
+	do {
+		res = res + 1;
+		if (res >= site.csize) {
+			delay(data);
+			return;
+		}
+	} while (site[res] <= ' ');
+
+	int end = res;
+	int fin;
+
+	do {
+		end = end + 1;
+		if (end >= site.csize) fin = 1;
+		else if (site[end] <= ' ') fin = 1;
+	} while (!fin);
+
+	data.name = name;
+	char text[];
+	data.text = text;
+	char url[];
+	substrcat(url, site, res, end);
+	data.url = url;
+
+	char args[][];
+	args.lpush("--header=Accept: text/html");
+        args.lpush("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:21.0) Gecko/20100101 Firefox/21.0");
+	args.lpush("--timeout=60");
+	args.lpush("-qO-");
+	args.lpush(url);
+
+	mpopen(handle_wget, data, "/usr/bin/wget", args, 1);
+	return;
+}

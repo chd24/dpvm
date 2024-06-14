@@ -1,0 +1,147 @@
+/* forex class */
+
+int _Z = 0;
+#include "../../../common/sysParams.dpvmh"
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../forex.dpvmake"
+
+const char version[]	= "tradeEmulation demo, T19.772-T19.800"; /* $DVS:time$ */
+
+int ORDER_CYCLES	= 32;
+int DUMP_CYCLES		= 144;
+int CYCLE_PERIOD	= 600000000000;
+float START_AMOUNT	= 1000.0;
+
+type constDemoData = {
+	const any demo;
+	const any registry;
+	const char logName[];
+	const char fileName[];
+	const char neuronNet[];
+	const float training_params[];
+	int nCurrency;
+	int graphX;
+	int graphY;
+	int neuronFlags;
+	float amountCoeff;
+	float rateCoeff;
+};
+
+type demoData = {
+	const constDemoData cd;
+	volatile forexClass forexObj;
+	volatile stateful inputFile fl;
+	int time;
+	int cycle;
+	int testPart;
+	int oldValues;
+};
+
+(volatile stateful any data, const char error[]) -> () callback = {
+	demoData darr[];
+	pushObject(data, darr);
+	demoData d = darr[0];
+
+	if (error.csize) {
+		char out[];
+		printf(out, "%s\r\n", {error});
+		d.forexObj.methods.logOutput(d.forexObj, out, 4);
+	}
+
+	if (!(d.cycle % DUMP_CYCLES)) {
+		char out[];
+		int level = 7;
+		error = d.forexObj.methods.dump(out, d.forexObj, d.cd.graphX, d.cd.graphY);
+		if (error.csize)
+			printf(out, "%s\r\n", {error}), level = 4;
+		d.forexObj.methods.logOutput(d.forexObj, out, level);
+	}
+
+	if (d.fl.values > d.oldValues) {
+		if (!d.oldValues) {
+			float rate;
+			(error, rate) = d.forexObj.methods.getCurrentRate(d.forexObj, 1, 0);
+			if (!error.csize)
+				error = d.forexObj.methods.addBalance(d.forexObj, 0, START_AMOUNT / 2);
+			if (!error.csize)
+				error = d.forexObj.methods.addBalance(d.forexObj, 1, START_AMOUNT / 2 * rate);
+			if (error.csize) {
+				char out[];
+				printf(out, "%s\r\n", {error}),
+				d.forexObj.methods.logOutput(d.forexObj, out, 4);
+			}
+			d.testPart = -1;
+		} else
+			d.testPart = d.oldValues - d.fl.values;
+		d.oldValues = d.fl.values;
+	}
+
+	error = d.forexObj.methods.neuronTraining(d.forexObj, d.cd.neuronNet, d.cd.training_params,
+			0, 1, d.cd.neuronFlags);
+	if (error == "1" || error == "2" || error == "3") {
+		int currencyFrom = (error == "1"), currencyTo = 1 - currencyFrom;
+		float balance, rate;
+		(error, balance) = d.forexObj.methods.getBalance(d.forexObj, currencyFrom, BALANCE_TYPE_FREE);
+		float amount = balance * d.cd.amountCoeff;
+		if (!error.csize)
+			(error, rate) = d.forexObj.methods.getCurrentRate(d.forexObj, currencyTo, currencyFrom);
+		if (!error.csize)
+			error = d.forexObj.methods.putOrder(d.forexObj, ORDER_TYPE_LIMIT, currencyFrom, currencyTo,
+				1, amount, rate);
+		if (!error.csize)
+			error = d.forexObj.methods.putOrder(d.forexObj, ORDER_TYPE_TRAILING_STOP, currencyTo, currencyFrom,
+				CYCLE_PERIOD * ORDER_CYCLES, amount * rate, d.cd.rateCoeff);
+	} else if (!error.csize)
+		error = "No expected prediction from neuron net";
+
+	if (error.csize && error != "0") {
+		char out[];
+		printf(out, "%s\r\n", {error}),
+		d.forexObj.methods.logOutput(d.forexObj, out, 4);
+	}
+
+	d.cycle += 1;
+	d.time += CYCLE_PERIOD;
+	const int vars[] = {DPVM_SYS_PARAM_TIME};
+	int values[] = {d.time};
+	setsysp("", "", vars, values);
+
+	d.forexObj.methods.readCryptoLog(d.forexObj, code, d, d.fl, d.cd.nCurrency);
+	return;
+};
+
+(const constDemoData cd, const int values[]) -> () fork = {
+	inputFile f = {cd.fileName};
+	demoData d = {cd, forexCreate(), f, values[0]};
+
+	char error[] = d.forexObj.methods.setRegistry(d.forexObj, cd.registry);
+	if (error.csize) {
+		d.forexObj.methods.logOutput(d.forexObj, error, 1);
+		return;
+	}
+
+	error = d.forexObj.methods.runLogger(d.forexObj, cd.logName, values[1]);
+	if (error.csize) {
+		d.forexObj.methods.logOutput(d.forexObj, error, 1);
+		return;
+	}
+
+	char out[];
+	printf(out, "Starting %s (%p) based on %s", {version, cd.demo, d.forexObj.methods.version});
+	d.forexObj.methods.logOutput(d.forexObj, out, 6);
+
+	d.forexObj.methods.readCryptoLog(d.forexObj, callback, d, f, d.cd.nCurrency);
+	return;
+};
+
+(const any registry, const char logname[], const char filename[], const char neuronNet[], const float training_params[],
+		int nCurrency, int graphX, int graphY, int neuronFlags, float amountCoeff, float rateCoeff)
+		-> () tradeEmulation = {
+	constDemoData cd = {code, registry, logname, filename, neuronNet, training_params, nCurrency, graphX, graphY,
+		neuronFlags, amountCoeff, rateCoeff};
+
+	const int vars[] = {DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ID};
+	getsysp(fork, cd, vars);
+	return;
+};

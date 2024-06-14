@@ -1,0 +1,33 @@
+/* return n % mod for long n and short mod; T17.922-T17.923; $DVS:time$ */
+
+#include "long.dpvmake"
+
+(const stateful int n[], int mod) -> (int rem) {
+    int sign = 1;
+    if (mod <= 0) {
+        if (!mod)
+            return 0;
+        mod = -mod;
+        sign = -1;
+    }
+
+    if (mod & -0x80000000) {
+        int dst[] = copy_long(n);
+        int src[];
+        src.ipush(mod);
+        mod_long(dst, src);
+        if (!dst.isize)
+            return 0;
+        return dst[0] * sign;
+    }
+
+    int rem;
+    int i;
+    for (i = n.isize - 1; i >= 0; i -= 1) {
+        int d = n[i];
+        rem = (rem << 32 | d >> 32) % mod;
+        rem = (rem << 32 | d & 0xffffffff) % mod;
+    }
+
+    return rem * sign;
+}

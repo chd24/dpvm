@@ -1,0 +1,40 @@
+/* p2p message write; T16.954-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/math/crypto/crc32/crc32.dpvmake"
+#include "p2p.dpvmake"
+#include "message.dpvmh"
+
+(const stateful p2pdata data, volatile stateful char out[],
+		const char body[], int messtype) -> () {
+	int head[];
+	head.ipush(messtype);
+	head.ipush(body.csize);
+	head.ipush(0);
+	int crc = crc32_addints32(data.crc32_ctx, head, 0, 3, data.crc32_init);
+	crc = crc32_addsubstr(data.crc32_ctx, body, 0, body.csize, crc);
+	head[2] = crc32_finalize(data.crc32_ctx, crc);
+
+	strcat(out, P2P_MAGIC);
+	int i;
+	int j;
+	for (i = 0; i < 3; i = i + 1)
+		for (j = 0; j < 32; j = j + 8)
+			out.cpush(head[i] >> j & 0xff);
+	strcat(out, body);
+
+        if (data.log_level >= 8) {
+            char mess[];
+            strcat(mess, "Sending message of type ");
+            printint(mess, messtype, 1);
+            strcat(mess, " and size ");
+            printint(mess, body.csize, 1);
+            strcat(mess, " to host ");
+            strcat(mess, data.remote_host);
+            strcat(mess, ":");
+            printint(mess, data.remote_port, 1);
+            write_log(data, mess, 8);
+        }
+
+	return;
+}

@@ -1,0 +1,116 @@
+/* dpvm: declaration; T15.444-T20.114; $DVS:time$ */
+
+/* type var [[=] value] [, ...] ; */
+
+#include "compiler.dpvmake"
+#include "lexems.dpvmh"
+
+(volatile stateful compdata data, const Instr instr, int context) -> (int status) {
+
+
+	/* save old data (partially) */
+
+	compdata olddata;
+	int iold[];
+	int inew[];
+	int size;
+	int i;
+
+	for (iold = olddata.cstruct, inew = data.cstruct, size = inew.isize, i = 0; i < size; i++) iold.ipush(inew[i]);
+
+	(data.links , olddata.links ) = (olddata.links , data.links );
+	(data.ints  , olddata.ints  ) = (olddata.ints  , data.ints  );
+	(data.floats, olddata.floats) = (olddata.floats, data.floats);
+	(data.chars , olddata.chars ) = (olddata.chars , data.chars );
+	(data.ltypes, olddata.ltypes) = (olddata.ltypes, data.ltypes);
+
+	int structsLsize = data.structs.lsize;
+
+
+	/* read base type */
+
+	type baseType;
+	int baseStatus;
+	(baseType, baseStatus) = getdecltype(data, getdecl, context);
+
+	if (baseStatus < 0) {
+		if (baseStatus == -1) {
+			data.links  = olddata.links ;
+			data.ints   = olddata.ints  ;
+			data.floats = olddata.floats;
+			data.chars  = olddata.chars ;
+			data.ltypes = olddata.ltypes;
+		}
+		return baseStatus;
+	}
+
+
+	/* save data connected with baseType to baseData */
+
+	compdata baseData;
+	for (iold = baseData.links , inew = data.links , size = inew.isize, i = 0; i < size; i++) iold.ipush(inew[i]);
+	for (iold = baseData.ints  , inew = data.ints  , size = inew.isize, i = 0; i < size; i++) iold.ipush(inew[i]);
+	for (iold = baseData.floats, inew = data.floats, size = inew.isize, i = 0; i < size; i++) iold.ipush(inew[i]);
+	for (iold = baseData.chars , inew = data.chars , size = inew.isize, i = 0; i < size; i++) iold.ipush(inew[i]);
+
+	for (size = data.structs.lsize, i = structsLsize; i < size; i++) baseData.structs.lpush(data.structs.l[i]);
+	for (size = data.ltypes.lsize, i = 0; i < size; i++) baseData.ltypes.lpush(data.ltypes.l[i]);
+
+
+	/* cycle for all declarations */
+
+	int s;
+	do {
+		/* read name of object */
+
+		int namePos = data.pos;
+		int status;
+		type tres;
+		(tres, status) = getdeclname(data, getdecl, baseType, context, baseStatus);
+
+		if (status < 0)
+			return status;
+
+
+		/* call getDeclInitializer() */
+
+		s = getDeclInitializer(data, olddata, instr, getexpr, getexterm, tres, structsLsize, namePos, status,
+				context);
+
+		if (s < 0)
+			return s;
+
+
+		/* read next lexem */
+
+		int pos;
+		int end;
+		(pos, end, s) = getlexem(data.src, lexems, data.pos, data.end);
+
+		if (s == LEX_COMMA) { /* , */
+			data.pos = pos;
+
+			/* restore baseData */
+
+			int arr0[]; for (inew = baseData.links , size = inew.isize, i = 0; i < size; i++) arr0.ipush(inew[i]); data.links  = arr0;
+			int arr1[]; for (inew = baseData.ints  , size = inew.isize, i = 0; i < size; i++) arr1.ipush(inew[i]); data.ints   = arr1;
+			int arr2[]; for (inew = baseData.floats, size = inew.isize, i = 0; i < size; i++) arr2.ipush(inew[i]); data.floats = arr2;
+			int arr3[]; for (inew = baseData.chars , size = inew.isize, i = 0; i < size; i++) arr3.ipush(inew[i]); data.chars  = arr3;
+
+			for (size = baseData.structs.lsize, i = 0; i < size; i++) data.structs.lpush(baseData.structs[i]);
+			type ltypes[];
+			for (size = baseData.ltypes.lsize, i = 0; i < size; i++) ltypes.lpush(baseData.ltypes[i]);
+			data.ltypes = ltypes;
+
+		} else if (s == LEX_DOT_COMMA) { /* ; */
+			data.pos = pos;
+		} else if (status & 0x40) { /* ';' may be omitted after function body */
+			s = LEX_DOT_COMMA;
+		} else {
+			data.mess = "',' or ';' expected after end of declaration";
+			return -2;
+		}
+	} while (s == LEX_COMMA);
+
+	return 0;
+}

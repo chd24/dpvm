@@ -1,0 +1,27 @@
+/* mloadp replacement for p2p: load or request objects; T17.967-T18.023; $DVS:time$ */
+
+#include "p2p_io.dpvmake"
+
+type mloadpdata = {
+    const any callback;
+    const any data;
+    const int hashes[];
+    int timeout;
+};
+
+(const mloadpdata d, const int values[]) -> () detach {
+    mload_p2p(d.callback, d.data, d.hashes, d.timeout);
+    return;
+}
+
+(const any callback, const any data, const int hashes[], int timeout) -> () {
+        mloadpdata d;
+	d.callback = callback;
+	d.data = data;
+        d.hashes = hashes;
+        d.timeout = timeout;
+
+        int vars[];
+        getsysp(detach, d, vars);
+        return;
+}

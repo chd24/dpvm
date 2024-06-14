@@ -1,0 +1,175 @@
+/* dpvm byte code translator, amd64 info operations; T16.130-T19.631; $DVS:time$ */
+
+/* 
+ 	rsi = ints stack end
+*/
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../../common/errors.dpvmh"
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		const stateful char asm_[], const stateful char hex_[], 
+		int datatype, int param, int reg, int i, int n) -> ()
+	ld = amd64_load;
+
+(const stateful translator_data data, volatile stateful asm_instr list[], 
+		int datatype, int reg, int i, int n) -> ()
+	st = amd64_store;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[],
+		volatile stateful asm_instr endlist[], int i, int c)
+		-> (int res, int i) {
+
+	if (c == DPVM_CODE_CODE) {
+		if (i + 2 < data.func.csize) {
+			int n = data.func.c[i + 1];
+
+			if (n < 0x80 && data.func.c[i + 2] == DPVM_CODE_IGET && n < data.func.isize) {
+				i += 2;
+				n = data.func.i[n];
+				if (n <= 0x7ffffff0 && n >= -0x7ffffff0)
+					as(list, "mov rax,d", "48 C7 C0 124", 0, 0, n, 0, 0);
+				else
+					as(list, "mov rax,q", "48 B8 128", 0, 0, n, 0, 0);
+				st(data, list, 1, 0, i, 0);
+				return (0, i);
+			}
+
+			if (i + 3 < data.func.csize && n < 0x80 && data.func.c[i + 2] == DPVM_CODE_LGET
+					&& n < data.func.lsize && data.func.c[i + 3] == DPVM_CODE_CALL) {
+				i += 2;
+				return (0, i);
+			}
+		}
+
+		int addr = getaddr(data.addrs, "code");
+		if (addr == -1) { return (-1, i); }
+
+		as(list, "mov rax,q", "48 B8 128", 0, 0, addr, 0, 0);
+		as(list, "mov rcx,d", "48 C7 C1 124", 0, 0, 1, 0, 0);
+		as(list, "lock xadd [rax+b],rcx", "F0 48 0F C1 48 111", 0, 0x78, 0, 0, 0);
+		st(data, list, 0, 0, i, 0);
+		return (0, i);
+	}
+
+	if (c == DPVM_CODE_UNFIX) {
+		int j = data.i[0];
+		data.i[0] = j + 2;
+
+		ld(data, list, "mov", "48 8B", 0, 0, 0, i, 1);
+		as(list, "cmp [rax+b],b", "48 83 78 111 121", 0, 0x70, 0, 0, 0);
+		as(list, "jcc label", "0F 101 134", 0x8D, 0, 0, j, 0);
+		as(list, "cmp [rax+b],b", "48 83 78 111 121", 0, 0x78, 1, 0, 0);
+		amd64_fail(data, list, endlist, i, 0x85, DPVM_ERROR_CONST);
+		as(list, "mov q[rax+b],d", "48 C7 40 111 124", 0, 0x70, 0, 0, 0);
+		as(list, "label", "", 0, 0, 0, j, 0);
+		return (0, i);
+	}
+
+	if (c == DPVM_CODE_INFO) {
+		ld(data, list, "mov", "48 8B", 0, 0, 0, i, 1);
+		as(list, "mov rcx,d", "48 C7 C1 124", 0, 0, 0x20, 0, 0);
+		as(list, "mov rdx,d", "48 C7 C2 124", 0, 0, 0x08, 0, 0);
+		st(data, list, 1, 1, i, 7);
+		st(data, list, 1, 2, i, 6);
+		as(list, "mov rcx,d", "48 C7 C1 124", 0, 0, 1, 0, 0);
+		st(data, list, 1, 2, i, 5);
+		st(data, list, 1, 1, i, 4);
+		as(list, "mov rdx,[rax+b]", "48 8B 50 111", 0, 0x20, 0, 0, 0);
+		as(list, "mov rcx,[rax+b]", "48 8B 48 111", 0, 0x28, 0, 0, 0);
+		st(data, list, 1, 2, i, 3);
+		st(data, list, 1, 1, i, 2);
+		as(list, "mov rdx,[rax+b]", "48 8B 50 111", 0, 0x30, 0, 0, 0);
+		as(list, "mov rcx,[rax+b]", "48 8B 48 111", 0, 0x38, 0, 0, 0);
+		st(data, list, 1, 2, i, 1);
+		st(data, list, 1, 1, i, 0);
+
+		if (i + 1 < data.func.csize && data.func.c[i + 1] == DPVM_CODE_LPOPS)
+			i += 1;
+		else {
+			as(list, "mov rdx,[rax+b]", "48 8B 50 111", 0, 0x60, 0, 0, 0);
+			as(list, "mov rcx,d", "48 C7 C1 124", 0, 0, 1, 0, 0);
+			as(list, "lock xadd [rdx+b],rcx", "F0 48 0F C1 4A 111", 0, 0x78, 0, 0, 0);
+			st(data, list, 0, 2, i, 0);
+		}
+
+		return (amd64_unlink(data, list, endlist, -1, 0), i);
+	}
+
+	if (c == DPVM_CODE_NEW) {
+		int addr = getaddr(data.addrs, "new");
+		if (addr == -1) { return (-1, i); }
+		
+		ld(data, list, "mov", "48 8B", 1, 0, 0, i, 0);
+		ld(data, list, "mov", "48 8B", 1, 0, 1, i, -1);
+		as(list, "xor rax,d", "48 83 F0 121", 0, 0, 32, 0, 0);
+		as(list, "xor rcx,d", "48 83 F1 121", 0, 0, 8, 0, 0);
+		as(list, "or rax,rcx", "48 09 C8", 0, 0, 0, 0, 0);
+		ld(data, list, "mov", "48 8B", 1, 0, 1, i, -2);
+		ld(data, list, "mov", "48 8B", 1, 0, 2, i, -3);
+		as(list, "xor rcx,d", "48 83 F1 121", 0, 0, 8, 0, 0);
+		as(list, "xor rdx,d", "48 83 F2 121", 0, 0, 1, 0, 0);
+		as(list, "or rax,rcx", "48 09 C8", 0, 0, 0, 0, 0);
+		as(list, "or rax,rdx", "48 09 D0", 0, 0, 0, 0, 0);
+		amd64_fail(data, list, endlist, i, 0x85, DPVM_ERROR_OBJECT_PARAMS);
+
+		amd64_precall(list);
+		as(list, "mov r10,r8", "4D 89 C2", 0, 0, 0, 0, 0);
+		ld(data, list, "mov", "48 8B", 1, 0, 9, i, -7);
+		ld(data, list, "mov", "48 8B", 1, 0, 8, i, -6);
+		ld(data, list, "mov", "48 8B", 1, 0, 1, i, -5);
+		ld(data, list, "mov", "48 8B", 1, 0, 2, i, -4);
+		ld(data, list, "cp", "48 8B", 0, 0, 6, i, 1);
+		as(list, "mov rdi,r10", "4C 89 D7", 0, 0, 0, 0, 0);
+		amd64_call(list, addr);
+		as(list, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
+		amd64_fail(data, list, endlist, i, 0x84, DPVM_ERROR_CREATE_OBJECT);
+		ld(data, list, "xchg", "48 87", 0, 0, 0, i, 1);
+
+		return (amd64_unlink(data, list, endlist, -1, 0), i);
+	}
+
+	if (c == DPVM_CODE_HASH || c == DPVM_CODE_FIX) {
+		int addr = getaddr(data.addrs, "hash");
+		if (addr == -1) return (-1, i);
+
+		int j = data.i[0];
+		data.i[0] = j + 2;
+
+		ld(data, list, "mov", "48 8B", 0, 0, 0, i, 0);
+		as(list, "cmp [rax+b],b", "48 83 78 111 121", 0, 0x70, -2 * (c == DPVM_CODE_HASH), 0, 0);
+		as(list, "jcc label", "0F 101 134", 0x8D - 0xB * (c == DPVM_CODE_HASH), 0, 0, j, 0);
+		as(endlist, "label", "", 0, 0, 0, j, 0);
+		as(endlist, "push rax", "50", 0, 0, 0, 0, 0);
+		as(endlist, "push rax", "50", 0, 0, 0, 0, 0);
+		amd64_precall(endlist);
+		as(endlist, "cp rdi,rax", "48 89 C7", 0, 0, 0, 0, 0);
+		as(endlist, "mov rsi,d", "48 C7 C6 124", 0, 0, -4 + (c == DPVM_CODE_HASH), 0, 0);
+		amd64_call(endlist, addr);
+		as(endlist, "pop rax", "58", 0, 0, 0, 0, 0);
+		as(endlist, "pop rax", "58", 0, 0, 0, 0, 0);
+		as(endlist, "jmp label", "E9 134", 0, 0, 0, j + 1, 0);
+		as(list, "label", "", 0, 0, 0, j + 1, 0);
+
+		if (c == DPVM_CODE_HASH) {
+			as(list, "cp rcx,[rax+d]", "48 8B 88 114", 0, 0x80, 0, 0, 0);
+			as(list, "cp rdx,[rax+d]", "48 8B 90 114", 0, 0x88, 0, 0, 0);
+			st(data, list, 1, 1, i, 3);
+			st(data, list, 1, 2, i, 2);
+			as(list, "cp rcx,[rax+d]", "48 8B 88 114", 0, 0x90, 0, 0, 0);
+			as(list, "cp rdx,[rax+d]", "48 8B 90 114", 0, 0x98, 0, 0, 0);
+			st(data, list, 1, 1, i, 1);
+			st(data, list, 1, 2, i, 0);
+		}
+
+		return (amd64_unlink(data, list, endlist, -1, 0), i);
+	}
+	
+	return (0, i);
+}

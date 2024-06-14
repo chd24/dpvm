@@ -1,0 +1,6 @@
+/* compiler, test for ?: operator, makefile; T20.097-T20.110; $DVS:time$ */
+
+/*@ "choose.dpvm": test for ?: */
+() -> (int res)
+	chooseTest = gallantries_intimacies_buys;
+/* @*/     

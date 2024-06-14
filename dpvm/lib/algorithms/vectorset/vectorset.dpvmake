@@ -1,0 +1,11 @@
+/* vectorset library, makefile; T16.624-T20.056; $DVS:time$ */
+
+/*@ "findint.dpvm": finds int in sorted array */
+(const stateful int set[], int n) -> (int index)
+	findint = check_holsters_enigma;
+/* @*/
+
+/*@ "addint.dpvm": adds int in sorted array */
+(volatile stateful int set[], int n) -> (int index)
+	addint = british_orchestra_newlywed;
+/* @*/  

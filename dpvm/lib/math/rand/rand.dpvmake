@@ -1,0 +1,7 @@
+/* rand class, makefile; T17.990-T18.120; $DVS:time$ */
+
+#include "rand.dpvmh"
+
+/*@ "rand.dpvm": random numbers generator */
+randClass randObj = signed_underwear_certain;
+/* @*/     

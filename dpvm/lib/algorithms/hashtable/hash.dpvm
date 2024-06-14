@@ -1,0 +1,413 @@
+/* hash table of objects */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../math/rand/rand.dpvmake"
+#include "hash.dpvmh"
+
+char hashVersion[] = "hash table 0.1.3, T18.016-T18.334"; /* $DVS:time$
+
+history:
+
+T18.334 - ver. 0.1.3: fixed bug in hashRemove
+
+T18.305 - ver. 0.1.2: added dump amd unit test
+
+T18.264 - ver. 0.1.1: add flags, store key-value pairs, remove entries
+
+T18.016 - ver. 0.1.0: first version with init and findAdd methods
+
+*/
+
+
+(volatile stateful hashData hash, int hashSize, int flags) -> (int) hashInitExt {
+	if (hashSize <= 0 || hashSize & (hashSize - 1) || flags & ~(hashFlagKeyValue))
+		return -1;
+
+        hash.hashSize = hashSize;
+        hash.flags = flags;
+
+	int i;
+        for (i = 0; i < hashSize; i += 1)
+		hash.indexes.ipush(-1),
+		hash.revertIndexes.ipush(-1);
+
+	return 0;
+}
+
+(volatile stateful hashData hash, int hashSize) -> (int) hashInit {
+        return hashInitExt(hash, hashSize, 0);
+}
+
+(volatile stateful hashData hash, const any key) -> (volatile any bucket[]) getBucket {
+        int index = key & (hash.hashSize - 1);
+        any bucket[];
+
+        if (hash.indexes[index] < 0) {
+                hash.indexes[index] = hash.objects.lsize;
+                hash.revertIndexes[hash.objects.lsize] = index;
+                hash.objects.lpush(bucket);
+                hash.nBuckets += 1;
+        } else
+                bucket = hash.objects[hash.indexes[index]];
+
+        return bucket;
+}
+
+(volatile stateful hashData hash, const any key) -> (int) delBucket {
+        int index = key & (hash.hashSize - 1);
+        int index0 = hash.indexes[index];
+        if (index0 < 0)
+                return 0;
+
+        int index1 = hash.objects.lsize - 1;
+        if (index0 < index1) {
+                int rIndex1 = hash.revertIndexes[index1];
+                hash.objects[index0] = hash.objects[index1];
+                hash.indexes[rIndex1] = index0;
+                hash.revertIndexes[index0] = rIndex1;
+        }
+
+        hash.indexes[index] = -1;
+        hash.revertIndexes[index1] = -1;
+        hash.objects.lpop(1);
+        hash.nBuckets -= 1;
+
+        return 1;
+}
+
+(volatile stateful hashData hash, const any key, const any value) -> (int) hashFindAddKeyValue {
+        any bucket[] = getBucket(hash, key);
+	int i;
+	int size = bucket.lsize;
+
+        if (hash.flags & hashFlagKeyValue) {
+                for (i = 0; i < size; i += 2) {
+                        if (bucket[i] == key) {
+                                bucket[i + 1] = value;
+                                return 0;
+                        }
+                }
+
+                bucket.lpush(key);
+                bucket.lpush(value);
+        } else {
+                for (i = 0; i < size; i += 1) {
+                        if (bucket[i] == key)
+                                return 0;
+                }
+
+                bucket.lpush(key);
+        }
+
+        hash.nObjects += 1;
+	return 1;
+}
+
+(volatile stateful hashData hash, const any object) -> (int) hashFindAdd {
+        return hashFindAddKeyValue(hash, object, wind_speeded_hogwash);
+}
+
+(volatile stateful hashData hash, const any key) -> (const any value, int found) hashFindGetValue {
+        any bucket[] = getBucket(hash, key);
+        int i;
+        int size = bucket.lsize;
+
+        if (hash.flags & hashFlagKeyValue) {
+                for (i = 0; i < size; i += 2) {
+                        if (bucket[i] == key)
+                                return (bucket[i + 1], 1);
+                }
+        } else {
+                for (i = 0; i < size; i += 1) {
+                        if (bucket[i] == key)
+                                return (wind_speeded_hogwash, 1);
+                }
+        }
+
+        return (wind_speeded_hogwash, 0);
+}
+
+(volatile stateful hashData hash, const any key) -> (int found) hashFind {
+        any value;
+        int found;
+        (value, found) = hashFindGetValue(hash, key);
+        return found;
+}
+
+(volatile stateful hashData hash, const any key) -> (int found) hashRemove {
+	int index = key & (hash.hashSize - 1);
+	if (hash.indexes[index] < 0) {
+		return 0;
+	}
+
+	any bucket[] = getBucket(hash, key);
+        int i;
+        int size = bucket.lsize;
+
+        if (hash.flags & hashFlagKeyValue) {
+                for (i = 0; i < size; i += 2) {
+                        if (bucket[i] == key) {
+                                if (i + 2 != size) {
+                                        bucket[i] = bucket[size - 2];
+                                        bucket[i + 1] = bucket[size - 1];
+                                }
+                                bucket.lpop(2);
+                                hash.nObjects -= 1;
+                                if (!bucket.lsize)
+                                        delBucket(hash, key);
+                                return 1;
+                        }
+                }
+        } else {
+                for (i = 0; i < size; i += 1) {
+                        if (bucket[i] == key) {
+                                if (i + 1 != size) {
+                                        bucket[i] = bucket[size - 1];
+                                }
+                                bucket.lpop(1);
+                                hash.nObjects -= 1;
+                                if (!bucket.lsize)
+                                        delBucket(hash, key);
+                                return 1;
+                        }
+                }
+        }
+
+        return 0;
+}
+
+(volatile stateful char text[], const hashData hash) -> () hashDump {
+	strcat(text, "Dump of hash: hashSize = ");
+	printint(text, hash.hashSize, 1);
+	strcat(text, ", nBuckets = ");
+	printint(text, hash.nBuckets, 1);
+	strcat(text, ", nObjects = ");
+	printint(text, hash.nObjects, 1);
+	strcat(text, ", flags = ");
+	printint(text, hash.flags, 1);
+        strcat(text, ";\r\n");
+
+	int i;
+	for (i = 0; i < hash.objects.lsize; i += 1) {
+		int n = -1;
+		if (i < hash.revertIndexes.isize)
+			n = hash.revertIndexes[i];
+		strcat(text, "Bucket ");
+		printint(text, n, 1);
+		int r = -1;
+		if (n >= 0 && n < hash.indexes.isize)
+			r = hash.indexes[n];
+		if (r != i) {
+			strcat(text, " (index = ");
+			printint(text, r, 1);
+			strcat(text, ", MISMATCHED!)");
+		}
+
+		any bucket[] = hash.objects[i];
+		int j;
+		for (j = 0; j < bucket.lsize; j += 1) {
+			char delim[];
+			if (j == 0)
+				delim = ": ";
+			else if (j & 1 && hash.flags & hashFlagKeyValue)
+				delim = "->";
+			else
+				delim = ", ";
+
+			strcat(text, delim);
+			printhex(text, bucket[j], 12, 0);
+		}
+
+		strcat(text, ";\r\n");
+	}
+
+	return;
+}
+
+type hashAction = {
+	int action;
+	int key;
+	int value;
+};
+
+(const hashData hash, const hashAction actions[], const char mess[]) -> (const char text[]) mkError {
+	char text[];
+
+	strcat(text, hashVersion);
+	if (mess == "") {
+		strcat(text, ": test PASSED.\r\n");
+		return text;
+	}
+	strcat(text, ": test FAILED: ");
+	strcat(text, mess);
+	strcat(text, ";\r\n");
+	hashDump(text, hash);
+
+	strcat(text, "Actions");
+	int i;
+	for (i = 0; i < actions.lsize; i += 1) {
+		if (i == 0)
+			strcat(text, ": ");
+		else
+			strcat(text, ", ");
+
+		if (actions[i].action)
+			text.cpush('+');
+		else
+			text.cpush('-');
+
+		printhex(text, actions[i].key, 12, 0);
+
+		if (hash.flags & hashFlagKeyValue) {
+			strcat(text, "->");
+			printhex(text, actions[i].value, 12, 0);
+		}
+	}
+	strcat(text, ".\r\n");
+
+	return text;
+}
+
+(int hashSize, int flags) -> (const char result[]) hashTestFlags {
+        int vectorSize = hashSize * 4;
+        int nRounds = hashSize * 16;
+
+        randData rnd;
+        char seed[];
+        printint(seed, hashSize, 1);
+        strcat(seed, ",");
+        printint(seed, flags, 1);
+        randObj.init(rnd, seed);
+
+        hashData hash;
+        int vector[];
+        hashAction actions[];
+
+        int i;
+        for (i = 0; i < vectorSize; i += 1)
+                vector.ipush(-1);
+
+        int res;
+        if (flags)
+                res = hashInitExt(hash, hashSize, flags);
+        else
+                res = hashInit(hash, hashSize);
+        if (res)
+                return mkError(hash, actions, "hash initialization failed");
+
+        for (i = 0; i < nRounds; i += 1) {
+                int a = randObj.getLimited(rnd, 2);
+                int k = randObj.getLimited(rnd, vectorSize);
+                int v = randObj.getLimited(rnd, 1 << 63);
+
+                any key;
+                any value;
+                key.ipush(k);
+                value.ipush(v);
+
+                hashAction act;
+                act.action = a;
+                act.key = key;
+                act.value = value;
+                actions.lpush(act);
+
+                if (a) {
+                        if (flags & hashFlagKeyValue)
+                                res = hashFindAddKeyValue(hash, key, value);
+                        else
+                                res = hashFindAdd(hash, key);
+
+                        if (res && vector[k] >= 0)
+                                return mkError(hash, actions, "existing object is recognized as just added");
+
+                        if (!res && vector[k] < 0)
+                                return mkError(hash, actions, "not existing object is not added");
+
+                        vector[k] = v;
+                } else {
+                        res = hashRemove(hash, key);
+
+                        if (!res && vector[k] >= 0)
+                                return mkError(hash, actions, "existing object is not removed");
+
+                        if (res && vector[k] < 0)
+                                return mkError(hash, actions, "not existing object is removed");
+
+                        vector[k] = -1;
+                }
+
+                for (k = 0; k < vectorSize; k += 1) {
+                        v = vector[k];
+
+                        any ke;
+                        any va;
+                        ke.ipush(k);
+                        va.ipush(v);
+
+                        if (flags & hashFlagKeyValue)
+                                (va, res) = hashFindGetValue(hash, ke);
+                        else
+                                res = hashFind(hash, ke);
+
+                        if (!res && v >= 0)
+                                return mkError(hash, actions, "existing object is not found");
+
+                        if (res && v < 0)
+                                return mkError(hash, actions, "not existing object is found");
+
+                        if (res) {
+                                if (va.type != ke.type || va.isize != 1 || va.lsize || va.fsize || va.csize) {
+                                        char mess[];
+                                        strcat(mess, "unappropriate value of type ");
+                                        printobjname(mess, va.type);
+                                        strcat(mess, " and sizes (");
+                                        printint(mess, va.lsize, 1);
+                                        strcat(mess, ", ");
+                                        printint(mess, va.isize, 1);
+                                        strcat(mess, ", ");
+                                        printint(mess, va.fsize, 1);
+                                        strcat(mess, ", ");
+                                        printint(mess, va.csize, 1);
+                                        strcat(mess, ") is returned by find");
+                                        return mkError(hash, actions, mess);
+                                }
+
+                                if (v != va.i[0])
+                                        return mkError(hash, actions, "unexpected value is returned by find");
+                        }
+                }
+        }
+
+        return mkError(hash, actions, "");
+}
+
+(int hashSize) -> (const char result[]) hashTest {
+        char res0[];
+        char res1[];
+
+        [
+                res0 = hashTestFlags(hashSize, 0);
+                res1 = hashTestFlags(hashSize, hashFlagKeyValue);
+        ]
+
+        if (strstr(res0, "FAILED") >= 0)
+                return res0;
+        if (strstr(res1, "FAILED") >= 0)
+                return res1;
+
+        return res0;
+}
+
+/* hash table of objects */
+hashClass hashObj = {
+	hashVersion,
+	hashInit,
+	hashInitExt,
+	hashFindAdd,
+	hashFindAddKeyValue,
+	hashFind,
+	hashFindGetValue,
+	hashRemove,
+	hashDump,
+	hashTest
+};

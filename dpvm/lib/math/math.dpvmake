@@ -1,0 +1,16 @@
+/* common math functions, makefile; T17.969-T20.110; $DVS:time$ */
+
+/*@ "mul.dpvm": full unsigned multiplication */
+(int x, int y) -> (int low, int high)
+        fullMul = soundlessly_voracious_rotary;
+/* @*/
+
+/*@ "fastPow.dpvm": fast power */
+(int base, int degree) -> (int pow)
+	fastPow = lissom_kinswoman_reiterating;
+/* @*/
+
+/*@ "fFastPow.dpvm": fast float power */
+(int degree, float base) -> (float pow)
+	fFastPow = tapas_actuary_calculator;
+/* @*/

@@ -1,0 +1,72 @@
+/* dpvmb class, store demo, T20.144-T20.155; $DVS:time$ */
+
+#include "../../../../lib/utils/utils.dpvmake"
+#include "../dpvmb.dpvmake"
+
+type storeData = {
+	volatile stateful dpvmbClass dpvmbObj;
+	const any objects;
+};
+
+(const char err[]) -> () outErr = {
+	outputp("", "", err);
+	outputp("", "", "\r\n");
+	return;
+};
+
+(volatile stateful any data, const char error[]) -> () loadCallback = {
+	if (error.csize) return outErr(error);
+
+	storeData arr[];
+	pushObject(data, arr);
+	storeData d = arr[0];
+
+	error = d.dpvmbObj.methods.verify(d.dpvmbObj);
+	if (error.csize) return outErr(error);
+
+	error = d.dpvmbObj.methods.store(d.dpvmbObj, d.objects);
+	d.dpvmbObj.methods.save(d.dpvmbObj);
+	if (error.csize) return outErr(error);
+
+	error = d.dpvmbObj.methods.verify(d.dpvmbObj);
+	if (error.csize) return outErr(error);
+
+	int hashes[], i, a, b, c, e;
+	for (i = 0; i < d.objects.lsize; i++) {
+		(a, b, c, e) = getfullhash(d.objects.l[i]);
+		hashes.ipush(a), hashes.ipush(b), hashes.ipush(c), hashes.ipush(e);
+		hashes.ipush(a << 17 >> 17), hashes.ipush(0), hashes.ipush(0), hashes.ipush(0);
+	}
+
+	any restored;
+
+	error = d.dpvmbObj.methods.restore(restored, d.dpvmbObj, hashes);
+	if (error.csize) return outErr(error);
+
+	for (i = 0; i < d.objects.lsize; i++) {
+		if (restored.l[i << 1] != d.objects.l[i] || restored.l[i << 1 | 1] != d.objects.l[i])
+			return outErr("Error: restored object not matched original one.");
+	}
+
+	error = d.dpvmbObj.methods.save(d.dpvmbObj);
+	if (error.csize) return outErr(error);
+
+	return outErr("Objects stored.");
+};
+
+(const stateful any registry, const char fileName[], const any objects, int flags) -> (const char error[]) store = {
+	dpvmbClass dpvmbObj = dpvmbCreate();
+
+	char error[] = dpvmbObj.methods.setFlags(dpvmbObj, flags);
+	if (error.csize) return error;
+
+	error = dpvmbObj.methods.setRegistry(dpvmbObj, registry);
+	if (error.csize) return error;
+
+	error = dpvmbObj.methods.setFileName(dpvmbObj, fileName);
+	if (error.csize) return error;
+
+	dpvmbObj.methods.load(dpvmbObj, loadCallback, (storeData){dpvmbObj, objects});
+
+	return "";
+};

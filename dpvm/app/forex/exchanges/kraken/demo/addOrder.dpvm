@@ -1,0 +1,71 @@
+/* kraken class */
+
+int _Z = 0;
+#include "../../../../../common/sysParams.dpvmh"
+#include "../../../../../common/taskFlags.dpvmh"
+#include "../../../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../../../lib/utils/utils.dpvmake"
+#include "../kraken.dpvmake"
+
+char version[] = "addOrder demo 0.1.1, T19.996-T20.029"; /* $DVS:time$ */
+
+type demoData = {
+	const char publicKey[];
+	volatile stateful krakenClass krakenObj;
+	volatile char out[];
+	const char currencyPair[];
+	int orderType;
+	int direction;
+	float volume;
+	float price;
+};
+
+(volatile stateful any d, const char error[]) -> () getCallback = {
+	demoData darr[];
+	pushObject(d, darr);
+	demoData data = darr[0];
+
+	char text[];
+	if (error.csize)
+		printf(text, "%s\r\n", {error});
+	else
+		printf(text, "Order placed, txid = %s\r\n", {data.out});
+
+	outputp("", "", text);
+	return;
+};
+
+(volatile stateful demoData data, const char text[], int status) -> () inputCallback = {
+	char error[];
+	if (status <= 0)
+		error = "Error: empty private key.";
+	else
+		error = data.krakenObj.methods.setKey(data.krakenObj, data.publicKey, text);
+
+	if (error.csize) {
+		outputp("", "", error);
+		outputp("", "", "\r\n");
+		return;
+	}
+
+	data.krakenObj.methods.addOrder(data.out, data.krakenObj, getCallback, data, data.currencyPair,
+			data.orderType, data.direction, data.volume, data.price);
+	return;
+};
+
+(const char publicKey[], const char currencyPair[], int orderType, int direction, float volume, float price) -> ()
+		addOrder = {
+	krakenClass krakenObj = krakenCreate();
+	char out[];
+	demoData data = {publicKey, krakenObj, out, currencyPair, orderType, direction, volume, price};
+
+	const int vars[] = {DPVM_SYS_PARAM_FLAGS};
+	const int flags = DPVM_TASK_FLAG_NO_INPUT_HISTORY + DPVM_TASK_FLAG_NO_INPUT_ECHO;
+	const int values[] = {flags};
+	setsysp("", "", vars, values);
+
+	outputp("", "", "Private key: ");
+
+	input(inputCallback, data, 256, -1);
+	return;
+};

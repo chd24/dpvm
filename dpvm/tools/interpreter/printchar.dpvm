@@ -1,0 +1,26 @@
+/* dpvm print char; T15.525-T19.640; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+
+(volatile stateful char arr[], int status, char c) -> (int status) {
+	if (status == 2 || c < ' ' || c >= 0x80) {
+		if (status) {
+			if (status < 0) arr.cpush('"');
+			arr.cpush(',');
+		}
+		if (status <= 0)
+			status = 1;
+
+		printhex(arr, c, 2, 0);
+
+	} else {
+		if (status >= 0) {
+			if (status > 0) arr.cpush(',');
+			arr.cpush('"');
+			status = -1;
+		}
+		arr.cpush(c);
+	}
+
+	return status;
+}

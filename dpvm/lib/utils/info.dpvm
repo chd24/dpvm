@@ -1,0 +1,6 @@
+/* info of object; T15.518-T17.648; $DVS:time$ */
+
+(const stateful any obj) -> (const type t, int a, int b, int c, int d, 
+		int e, int f, int g, int h) {
+	asm { info ret }
+}

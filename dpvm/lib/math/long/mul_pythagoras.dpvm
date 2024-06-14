@@ -1,0 +1,37 @@
+/* mul two long numbers and return result using simple pythagoras method; T17.523-T17.990; $DVS:time$ */
+
+int Z = 0x8000000000000000;
+
+(const stateful int s1[], const stateful int s2[]) -> (volatile int res[]) {
+        int res[];
+        int s1size = s1.isize;
+        int s2size = s2.isize;
+
+        int i;
+        int j;
+
+        for (i = 0; i < s1size; i += 1)
+                res.ipush(0);
+
+        for (j = 0; j < s2size; j += 1) {
+                int m = s2[j];
+                int p;
+
+                for (i = 0; i < s1size; i += 1) {
+                        int l = s1[i];
+                        int h = m;
+                        asm { mul };
+                        p += Z;
+                        l += p;
+                        int q = res[i + j] + l;
+                        res[i + j] = q + Z;
+                        p = h + (l < p) + (q < l);
+                }
+
+                res.ipush(p);
+        }
+
+        while (res.isize && !res[res.isize - 1])
+                res.ipop(1);
+        return res;
+}

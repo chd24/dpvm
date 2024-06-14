@@ -1,0 +1,39 @@
+/* overcats decode of client output data; T17.470-T17.473; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "../math/crypto/base64/base64.dpvmake"
+#include "overcats.dpvmake"
+
+(volatile stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () {
+	int bstate = data.state >> 16;
+	int state = data.state & 0xffff;
+
+	char dsrc[];
+	bstate = base64_decode_str(dsrc, src, bstate);
+
+	int i;
+	for (i = 0; i < dsrc.csize; i += 1) {
+		int c = dsrc[i];
+	
+		if (state == 0) {
+			if (c == 0x18) state = 0x101;
+		} else if (state <= 0x100) {
+			dst.cpush(c);
+			state -= 1;
+		} else if (state == 0x101) {
+			if (c == 0x44) state = 0x102;
+			else if (c == 0x18) state = 0x101;
+			else state = 0;
+		} else if (state == 0x102) {
+			if (c == 0xff) state = 0x103;
+			else if (c == 0x18) state = 0x101;
+			else state = 0;
+		} else if (state == 0x103) {
+			state = c;
+		}
+	}
+	
+	data.state = state | bstate << 16;
+	return;
+}

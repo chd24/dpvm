@@ -1,0 +1,287 @@
+/* monitor: command processing; T15.570-T19.700; $DVS:time$ */
+
+int _Z = 0;
+#include "../../common/sysParams.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "../../lib/utils/utils.dpvmake"
+#include "../../app/net/p2p/p2p_io.dpvmake"
+#include "monitor.dpvmake"
+#include "version.dpvmh"
+
+int KILL_PERIOD		=   100000000; /* 0.1s */
+int KILL_TIMEOUT	= 10000000000; /* 10s */
+
+(volatile stateful mondata data, const char text[], int status) -> () {
+	int begin;
+	int end;
+
+	if (status < 0 || (status == 0 && data.address.i[1] != 0)) {
+		mrecvp("", "", data.address, 1 << 63);
+		return;
+	}
+
+	(begin, end) = strtostr(text, 0, text.csize);
+
+	if (begin == end) {
+		out_result(data, "");
+		return;
+	}
+
+	char cmd[];
+	substrcat(cmd, text, begin, end);
+	
+	if (cmd == "exit" || cmd == "quit") {
+		mrecvp("", "", data.address, 1 << 63);
+		return;
+	}
+
+	if (cmd == "version") {
+		out_result(data, version);
+		return;
+	}
+
+	if (cmd == "help") {
+		out_result(data,
+"Commands:
+  compile [a]  compile file, [a] = filename.dpvm
+  debug   [a]  debug expression computation step by step, [a] = expression
+  exit         exit the program
+  file    [a]  save file as object of type char[] and print its name, [a] = filename
+  help         print this help
+  kill    [a]  kill task, [a] = hexadecimal task id, see output of tasks command
+  make    [a]  make project, [a] = filename.dpvmake
+  object  [a]  construct object and pront its name, [a] = type, 4 sizes, object names, ints, floats, chars
+  quit         exit the program
+  quota   [a]  set memory quota for task, [a] = hexadecimal task id, quota in bytes
+  run     [a]  compute expression in separate task, [a] = expression
+  save    [a]  compute expression and save result as object, [a] = expression
+  set     [a]  print environment variables or set environment variable, [a] = 'var=value'
+  stats        print current statistics
+  tasks        output list of active tasks
+  type    [a]  construct type and print its name, [a] = 4 min sizes, 4 max sizes, object names
+  upgrade      upgrade running monitor to new version provided in environment variable 'monitor'
+  version      print version of running monitor
+  [expr]       compute expression and print result");
+		return;
+	}
+
+	if (cmd == "kill") {
+		int err, n;
+
+		(n, err, begin) = strtoi(text, end, text.csize, 16);
+		if (err) {
+			out_result(data, "Usage: kill taskID_hex");
+			return;
+		}
+
+		const (volatile stateful mondata data, const int values[]) -> () kill = {
+			if (values.isize <= 2) {
+				data.time = values[0];
+				outputp("", "", "Waiting for task to complete");
+			} else {
+				outputp("", "", ".");
+				if (values[2] == -1) {
+					out_result(data, " OK");
+					return;
+				}
+				if (values[0] - data.time >= KILL_TIMEOUT) {
+					out_result(data, " timeout");
+					return;
+				}
+			}
+			int vars0[] = {DPVM_SYS_PARAM_TIME}, values0[] = {values[0] + KILL_PERIOD};
+			setsysp("", "", vars0, values0);
+			int vars1[] = {DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_NTASKS, data.task << 16 | DPVM_SYS_PARAM_ID};
+			getsys(code, data, vars1);
+			return;
+		};
+
+		int vars[] = {DPVM_SYS_PARAM_TIME, n << 16 | DPVM_SYS_PARAM_FLAGS}, values[] = {0, -1};
+		data.task = n;
+		setsys(kill, data, vars, values);
+		return;
+	}
+
+	if (cmd == "stats") {
+		outStats(data);
+		return;
+	}
+
+	if (cmd == "tasks") {
+		const int list[] = {DPVM_SYS_PARAM_ID};
+		int ids[];
+		char strings[][];
+		data.ids = ids;
+		data.strings = strings;
+		getsys(tasks, data, list);
+		return;
+	}
+
+	if (cmd == "compile" || cmd == "file") {
+		(begin, end) = strtostr(text, end, text.csize);
+
+		if (begin == end) {
+			out_result(data, "File name not given.");
+			return;
+		}
+
+		char name[];
+		substrcat(name, text, begin, end);
+		data.name = name;
+
+		char file[];
+		data.text = file;
+
+		data.mode = (cmd == "compile");
+		read(read_file_m, data, name, 0, 0x100000);
+		return;
+	}
+
+	if (cmd == "make") {
+		(begin, end) = strtostr(text, end, text.csize);
+
+		if (begin == end) {
+			out_result(data, "Makefile name not given.");
+			return;
+		}
+
+		char name[];
+		substrcat(name, text, begin, end);
+
+		const (volatile stateful any arg, const char text[]) -> () callback {
+			mondata data;
+			objcopyto(data, arg);
+			out_result(data, text);
+			return;
+		}
+
+		data.registry.maker(data.registry, callback, data, name);
+		return;
+	}
+
+	if (cmd == "set") {
+		(begin, end) = strtostr(text, end, text.csize);
+		if (begin == end) {
+			char mess[];
+			monitorRegistryObj.print(mess, data.registry, " ");
+			out_result(data, mess);
+			return;
+		}
+
+		mondata data1;
+		objcopyto(data1, data);
+		registryData reg;
+		objcopyto(reg, data.registry);
+		data1.registry = reg;
+
+		const (volatile any arg, const char text[]) -> () callback = {
+			mondata arr[];
+			pushObject(arg, arr);
+			mondata data = arr[0];
+
+			if (!text.csize) {
+				if (strstr(data.text, "checker") >= 0) {
+					int vars[] = {DPVM_SYS_PARAM_CHECKER_HASH + 3,
+						DPVM_SYS_PARAM_CHECKER_HASH + 2, DPVM_SYS_PARAM_CHECKER_HASH + 1,
+						DPVM_SYS_PARAM_CHECKER_HASH}, values[] = intsArray(4);
+					(values[3], values[2], values[1], values[0]) = getfullhash(data.registry.checker);
+					setsysp("", "", vars, values);
+
+				} else if (strstr(data.text, "translator") >= 0) {
+					int vars[] = {DPVM_SYS_PARAM_TRANSLATOR_HASH + 3,
+						DPVM_SYS_PARAM_TRANSLATOR_HASH + 2, DPVM_SYS_PARAM_TRANSLATOR_HASH + 1,
+						DPVM_SYS_PARAM_TRANSLATOR_HASH}, values[] = intsArray(4);
+					(values[3], values[2], values[1], values[0]) = getfullhash(data.registry.translator);
+					setsysp("", "", vars, values);
+
+				} else if (strstr(data.text, "debugger") >= 0)
+					text = prepareDebugger(data);
+
+				else if (strstr(data.text, "totalMemory") >= 0) {
+					const int vars[] = {DPVM_SYS_PARAM_MEMORY_QUOTA};
+					int values[] = {data.registry.totalMemory};
+					setsysp("", "", vars, values);
+				}
+			}
+
+			out_result(data, text);
+			return;
+		};
+
+		char env[];
+		substrcat(env, text, begin, text.csize);
+		data1.text = env;
+
+		monitorRegistryObj.set(data1.registry, callback, data1, env, MLOAD_TIMEOUT);
+		return;
+	}
+
+	if (cmd == "quota") {
+		int err, n, q;
+
+		(n, err, begin) = strtoi(text, end, text.csize, 16);
+		if (!err) (q, err, begin) = strtoi(text, begin, text.csize, 0);
+		if (err) {
+			out_result(data, "Usage: quota taskID_hex memoryQuota");
+			return;
+		}
+
+		int vars[] = {n << 16 | DPVM_SYS_PARAM_MEMORY_QUOTA}, values[] = {q};
+		setsysp("", "", vars, values);
+		out_result(data, "");
+		return;
+	}
+
+	if (cmd == "upgrade") {
+		(const any arg, const char text[]) -> () callback;
+		any addr;
+		objcopyto(addr, data.address);
+		addr.l[0] = data.registry.monitor.version;
+
+		data.registry.monitor.executeCommand(data.registry, callback, "", addr, "version");
+		return;
+	}
+
+	int hashes[] = text2hashes(text);
+	char textend[];
+
+	if (cmd == "type") {
+		substrcat(textend, text, end, text.csize);
+		data.text = textend;
+                mload_p2p(type_cmd, data, hashes, MLOAD_TIMEOUT);
+		return;
+	}
+
+	if (cmd == "object") {
+		substrcat(textend, text, end, text.csize);
+		data.text = textend;
+                mload_p2p(object, data, hashes, MLOAD_TIMEOUT);
+		return;
+	}
+
+	if (cmd == "save") {
+		substrcat(textend, text, end, text.csize);
+		data.text = textend;
+		data.name = textend;
+		data.mode = 1;
+		data.flags = 0;
+                mload_p2p(interpret, data, hashes, MLOAD_TIMEOUT);
+		return;
+	}
+
+	if (cmd == "run")
+		substrcat(textend, text, end, text.csize), text = textend;
+
+	data.name = text;
+        char txt[];
+        strcat(txt, text);
+        data.text = txt;
+	data.mode = (cmd == "debug") << 1;
+	data.flags = 0;
+
+	if (hashes.isize)
+                mload_p2p(interpret, data, hashes, MLOAD_TIMEOUT);
+	else
+		interpret(data, wind_speeded_hogwash);
+	return;
+}

@@ -1,0 +1,58 @@
+/* monitor: convert string to char; T16.467-T19.547; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+
+(const stateful char str[], int begin, int end, int status) -> (int error, int nextbegin, int status, char c) {
+	int err;
+	int n;
+	char c;
+
+	if (begin >= end) {
+		err = -1;
+		return (err, begin, status, c);
+	}
+
+	if (status) {
+		c = str.c[begin];
+		begin = begin + 1;
+		if (c != status) {
+			return (err, begin, status, c);
+		}
+		status = 0;
+	}
+
+	(n, err, begin) = strtoi(str, begin, end, 16);
+	if (!err) {
+		if (n >> 8) { err = -2; }
+		c = n;
+		return (err, begin, status, c);
+	}
+	err = 0;
+	
+	if (begin >= end) {
+		err = -3;
+		return (err, begin, status, c);
+	}
+
+	c = str.c[begin];
+	begin = begin + 1;
+	if (c != 0x22 & c != 0x27) {
+		return (err, begin, status, c);		
+	}
+
+	status = c;
+	
+	if (begin >= end) {
+		err = -4;
+		return (err, begin, status, c);
+	}
+
+	c = str.c[begin];
+	begin = begin + 1;
+	if (c == status) {
+		err = -5;
+		return (err, begin, status, c);
+	}
+
+	return (err, begin, status, c);
+}

@@ -1,0 +1,101 @@
+/* form amd64 final optimization rules array; T16.083-T18.018; $DVS:time$ */
+
+#include "final.dpvmake"
+
+(volatile stateful asm_instr list[], 
+		const stateful char mnem[], const stateful char hex[], 
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	a = asm_add;
+
+() -> (volatile asm_instr list[][]) {
+	asm_instr list[][];
+	asm_instr r[];
+
+	r = new_rule();
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "mov [rsi+b],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov [rsi+b],d", "48 C7 46 111 124", 0, 0x4500, 0x4200, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "mov rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "mov [rsi+d],rax", "", 0, 0, 0, 0, 0);
+	a(r, "mov [rsi+d],d", "48 C7 86 114 124", 0, 0x4500, 0x4200, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "bop rax,d", "", 0, 0, 0, 0, 0);
+	a(r, "test rax,rax", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,d", "48 101 124", 0x4000, 0, 0x4200, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "bop rax,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "test rax,rax", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,[rsi+b]", "48 101 46 111", 0x4000, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "bop rax,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "test rax,rax", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,[rsi+d]", "48 101 86 114", 0x4000, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "test rax,rax", "", 0, 0, 0, 0, 0);
+	a(r, "cmp [rsi+b],b", "48 83 7E 111 121", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "test rax,rax", "", 0, 0, 0, 0, 0);
+	a(r, "cmp [rsi+d],b", "48 83 BE 114 121", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "bop rax,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "mov [rsi+b],rax", "", 0, 0xC1040000, 0, 0, 0);
+	a(r, "bop [rsi+b],rax", "48 101 46 111", 0x9BC14002, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "bop rax,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "mov [rsi+d],rax", "", 0, 0xC1040000, 0, 0, 0);
+	a(r, "bop [rsi+d],rax", "48 101 86 114", 0x9BC14002, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,d", "", 0xC10005, 0, 0xC10001, 0, 0);
+	a(r, "mov [rsi+b],rax", "", 0, 0xC1000800, 0, 0, 0);
+	a(r, "inc [rsi+b]", "48 FF 46 111", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,d", "", 0xC10005, 0, 0xC10001, 0, 0);
+	a(r, "mov [rsi+d],rax", "", 0, 0xC1000800, 0, 0, 0);
+	a(r, "inc [rsi+d]", "48 FF 86 114", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+b]", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,d", "", 0xC10005, 0, 0xC00001, 0, 0);
+	a(r, "mov [rsi+b],rax", "", 0, 0xC1000800, 0, 0, 0);
+	a(r, "dec [rsi+b]", "48 FF 4E 111", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	r = new_rule();
+	a(r, "cp rax,[rsi+d]", "", 0, 0, 0, 0, 0);
+	a(r, "bop rax,d", "", 0xC10005, 0, 0xC00001, 0, 0);
+	a(r, "mov [rsi+d],rax", "", 0, 0xC1000800, 0, 0, 0);
+	a(r, "dec [rsi+d]", "48 FF 8E 114", 0, 0x4100, 0, 0, 0);
+	add_rule(list, r);
+
+	final_cmp(list);
+	final_cpcmp(list);
+	final_setcc(list);
+
+	return list;
+}

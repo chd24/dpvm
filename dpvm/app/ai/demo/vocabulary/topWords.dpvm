@@ -1,0 +1,91 @@
+/* aiVocabulary class, topWords demo, T18.405-T18.417; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../alphabet.dpvmake"
+#include "../../vocabulary.dpvmake"
+
+type parserData = {
+	volatile char input[];
+	const char inputFile[];
+	const char codeTable[];
+	int nWords;
+};
+
+(volatile parserData data, const char text[]) -> (const char out[], int status) processText = {
+	char err[];
+
+	aiAlphabet aiA = aiAlphabetCreate();
+
+	char indexes[];
+	(indexes, err) = aiA.methods.parseText(aiA, data.codeTable, data.input);
+	if (err.csize) return (err, 1);
+
+	int stats[];
+	(stats, err) = aiA.methods.getStatistics(aiA, data.codeTable);
+	if (err.csize) return (err, 2);
+
+	char defCodeTable[];
+	(defCodeTable, err) = aiA.methods.getDefaultCodeTable(aiA, data.codeTable);
+	if (err.csize) return (err, 3);
+
+	char letters[][];
+	(letters, err) = aiA.methods.getLetters(aiA, defCodeTable, AI_ALPHABET_SMALL);
+	if (err.csize) return (err, 4);
+
+	aiVocabulary aiV = aiVocabularyCreate();
+
+	err = aiV.methods.setStatistics(aiV, stats);
+	if (err.csize) return (err, 5);
+
+	char words[];
+	int pos;
+	(err, pos) = aiV.methods.parseIndexes(words, aiV, indexes, 0, indexes.csize);
+	if (err.csize) return (err, -pos);
+
+	char out[];
+	err = aiV.methods.printTopWords(out, aiV, letters, data.nWords);
+	if (err.csize) return (err, 7);
+
+	return (out, 0);
+}
+
+(volatile parserData data, const char text[], int status) -> () inputRead = {
+	if (status < 0 || status + data.input.csize == 0) {
+		outputp("", "", "Error reading input file.\r\n");
+		return;
+	}
+
+	if (status)
+		strcat(data.input, text);
+
+	if (status == 0x100000) {
+		read(code, data, data.inputFile, data.input.csize, 0x100000);
+		return;
+	}
+
+	char res[];
+	(res, status) = processText(data, data.input);
+
+	if (status) {
+		char out[];
+		strcat(out, res);
+		strcat(out," (position ");
+		printint(out, -status, 1);
+		strcat(out, ")\r\n");
+		res = out;
+	}
+
+	outputp("", "", res);
+	return;
+};
+
+(const char inputFile[], const char codeTable[], int nWords) -> () topWords = {
+	parserData data;
+
+	data.inputFile = inputFile;
+	data.codeTable = codeTable;
+	data.nWords = nWords;
+
+	read(inputRead, data, inputFile, 0, 0x100000);
+	return;
+};

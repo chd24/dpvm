@@ -1,0 +1,96 @@
+/* neuron class */
+char funcVersion[] = "addFullLayer() method implementation, T19.374-T19.733"; /* $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../long/long.dpvmake"
+#include "neuron.dpvmake"
+
+(volatile stateful neuronImpl impl, const activationFunction activation, int nNeurons) -> (const char error[]) addFullLayer = {
+	if (nNeurons <= 0)
+		return mkError("nonpositive number of neurons in layer", "addFullLayer");
+
+	neuronDataCompile data = impl.data.cdata;
+	neuronNet net = data.net;
+
+	if (!data.registrySet)
+		return mkError("registry is not set", "addFullLayer");
+
+	neuronLayer layer, prev;
+	if (net.layers.lsize) {
+		prev = net.layers[net.layers.lsize - 1];
+		layer.neuronStartId = prev.neuronStartId + prev.nNeurons;
+		layer.weightStartId = prev.weightStartId + prev.nWeights;
+	}
+
+	int i, j;
+	for (i = 0; i < NEURON_PARALLEL; i += 1) {
+		neuronGroup group = layer.groups[i];
+		int jbegin = j, jend = nNeurons * (i + 1) / NEURON_PARALLEL;
+		group.neuronStartId = layer.neuronStartId + layer.nNeurons;
+
+		for (j = jbegin; j < jend; j += 1) {
+			neuron n;
+
+			n.layerId = net.layers.lsize;
+			n.groupId = i;
+			n.outputStartId = group.nOutputs;
+			n.nOutputs += 1;
+
+			if (n.layerId) {
+				int begin = prev.neuronStartId, end = layer.neuronStartId, k,
+					l = layer.neuronStartId + layer.nNeurons;
+
+
+				/* fill inputIds[], weightIds[], outputIds[] arrays */
+
+				for (k = begin; k <= end; k += 1) {
+					int weightId = layer.nWeights + layer.weightStartId;
+					layer.nWeights += 1;
+					n.inputWeightIds.ipush(weightId);
+					int inputs[], outputs[];
+					outputs.ipush(l);
+
+					if (k == end)
+						n.inputNeuronIds.ipush(-1),
+						inputs.ipush(-1);
+					else {
+						n.inputNeuronIds.ipush(k);
+						inputs.ipush(k);
+						net.neurons[k].outputNeuronIds.ipush(l);
+						net.neurons[k].outputWeightIds.ipush(weightId);
+					}
+
+					layer.inputNeuronIds.lpush(inputs);
+					layer.outputNeuronIds.lpush(outputs);
+				}
+
+			} else {
+				activationFunction id;
+				char err[];
+				(id, err) = impl.methods.getActivationFunction(impl, "id");
+				if (err.csize) return err;
+				if (activation != id)
+					return mkError("activation function should be id for inputs", "addFullLayer");
+			}
+
+			n.activation = activation;
+			group.neurons.lpush(n);
+			group.nOutputs += n.nOutputs;
+			net.neurons.lpush(n);
+			layer.nNeurons += 1;
+		}
+	}
+
+	for (i = 0; i < NEURON_PARALLEL; i += 1) {
+		neuronGroup group = layer.groups[i];
+		group.weightStartId = layer.weightStartId + layer.nWeights * i / NEURON_PARALLEL;
+		group.nWeights = layer.nWeights * (i + 1) / NEURON_PARALLEL - layer.nWeights * i / NEURON_PARALLEL;
+	}
+
+	net.layers.lpush(layer);
+	neuronLayerRuntime layerR;
+	impl.data.net.layers.lpush(layerR);
+
+	return "";
+};

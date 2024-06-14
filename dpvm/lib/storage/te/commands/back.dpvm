@@ -1,0 +1,23 @@
+/* view previous viewed entry command, T18.327-T18.334; $DVS:time$ */
+
+#include "../internal.dpvmh"
+
+(volatile stateful teData data) -> (const char result[]) commandBack {
+	if (data.history.isize)
+		data.history.ipop(1);
+
+	if (data.history.isize)
+		data.pos = data.history[data.history.isize - 1];
+	else
+		data.pos = 0;
+
+	return "view";
+}
+
+teCommand cmdBack = {
+        "back",
+        "view previous viewed database entry",
+        commandBack
+};
+
+

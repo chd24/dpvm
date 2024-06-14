@@ -1,0 +1,12 @@
+/* aiAlphabet class, codetables header, T18.383-T18.383"; $DVS:time$ */
+
+type aiAlphabetLettersArray = {
+	const char letters[][];
+	int flags;
+};
+
+type aiAlphabetPredefinedCodeTable = {
+	const char name[];
+	const char version[];
+	aiAlphabetLettersArray letters[];
+};

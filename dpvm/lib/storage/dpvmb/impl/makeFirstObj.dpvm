@@ -1,0 +1,35 @@
+/* dpvmb class, makeFirstObj() method implementation, T20.132-T20.155; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/bytecodes.dpvmh"
+#include "dpvmb.dpvmake"
+
+(volatile stateful any obj, const stateful any dpvmbObj) -> (const char error[]) makeFirstObj = {
+	dpvmbImpl impl;
+	char err[] = convertObjToImpl(impl, dpvmbObj, "makeFirstObj");
+	if (err.csize) return err;
+
+	any archiver = impl.methods.selfArchiver;
+	int i, size = archiver.csize, ok;
+
+	obj.cpush(DPVM_CODE_LF);
+	obj.cpush(56);
+	obj.cpush(DPVM_CODE_IPOPN);
+
+	for (i = 0; i < size; i++)
+		obj.cpush(archiver.c[i]);
+
+	do {
+		ok = (obj.csize & 0xff) == DPVM_CODE_JF;
+		int j;
+		for (j = 8; j < 64; j += 8) {
+			int n = obj.csize >> j & 0xff;
+			if (n >= DPVM_CODE_LB && n <= DPVM_CODE_JNZF)
+				ok = 0;
+		}
+		if (!ok)
+			obj.cpush(DPVM_CODE_NOP);
+	} while (!ok);
+
+	return "";
+}

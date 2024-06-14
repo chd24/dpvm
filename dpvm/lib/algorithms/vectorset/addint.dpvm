@@ -1,0 +1,27 @@
+/* add int to vector-based set; return index of the number; T16.488-T20.056; $DVS:time$ */
+
+#include "vectorset.dpvmake"
+
+(volatile stateful int set[], int n) -> (int index) {
+	int index = findint(set, n); /* findint() */
+	if (index >= 0)
+		return index;
+
+	index = ~index;
+	int size = set.isize;
+
+	if (index == size) {
+		set.ipush(n);
+		return index; 
+	}
+	size -= 1;
+	set.ipush(set[size]);
+
+	while (index != size) {
+		size -= 1;
+		set[size + 1] = set[size];
+	}
+
+	set[size] = n; 
+	return index;
+}

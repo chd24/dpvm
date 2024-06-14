@@ -1,0 +1,156 @@
+/* dfs class, addPath method implementation, T18.858-T18.974; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "dfs.dpvmake"
+
+(const stateful any leftKey, const stateful any rightKey) -> (int bitNo, int leftBit, int rightBit) int16Compare = {
+	int lsize = leftKey.isize, rsize = rightKey.isize, i;
+
+	for (i = 0; i < lsize && i < rsize && leftKey.i[i] == rightKey.i[i]; i += 1);
+
+	int bitNo = i << 4;
+
+	if (i == lsize) {
+		if (i == rsize)
+			return (bitNo, -1, -1);
+
+		return (bitNo, -1, rightKey.i[i] >> 15);
+	}
+
+	if (i == rsize)
+		return (bitNo, leftKey.i[i] >> 15, -1);
+
+	int diff = leftKey.i[i] ^ rightKey.i[i], bit = -1;
+
+	while (diff)
+		diff >>= 1, bit += 1;
+
+	return (bitNo + 15 - bit, leftKey.i[i] >> bit & 1, rightKey.i[i] >> bit & 1);
+};
+
+(volatile stateful dfsNode parentNode, volatile stateful dfsNode node, volatile char body[], const dfsFileAttributes attr) -> (const char error[]) setNode = {
+	if (node.attr.mode && (node.attr.mode & DFS_IFMT) != (attr.mode & DFS_IFMT))
+		return mkError("path already added with different mode", "setNode");
+
+	int isdfs = (attr.mode & DFS_IFMT) == DFS_IFDIR && body.csize;
+
+	if ((attr.mode & DFS_IFMT) == DFS_IFREG || isdfs) {
+		objcopyto(node.attr, attr);
+		node.attr.size = body.csize;
+		node.attr.inode = 0;
+		if (!isdfs) {
+			while (body.csize & 0x1ff)
+				body.cpush(0);
+		} else if (body.csize & 7)
+			return mkError("illegal size of build-in dfs volume", "setNode");
+		node.body = chars2ints(body, 0, body.csize);
+		if (isdfs) {
+			char error[] = checkVolumePart(node.body, 0, 1);
+			if (error.csize) return error;
+		}
+
+	} else if ((attr.mode & DFS_IFMT) == DFS_IFDIR) {
+		int size = node.attr.size;
+		objcopyto(node.attr, attr);
+		node.attr.size = size;
+		node.attr.inode = 0;
+		if (size)
+			return "";
+		node.trie = trieCreate();
+		char err[] = node.trie.methods.setCompare(node.trie, int16Compare);
+		if (err.csize)
+			return err;
+
+		dfsNode n = {node.attr};
+		int unidot[] = {+'.'};
+		err = node.trie.methods.addKeyValue(node.trie, unidot, n);
+		if (err.csize)
+			return err;
+		node.attr.size += 1;
+
+		if (parentNode.attr.mode) {
+			dfsNode nn = {parentNode.attr};
+			int unidotdot[] = {+'.', +'.'};
+			err = node.trie.methods.addKeyValue(node.trie, unidotdot, nn);
+			if (err.csize)
+				return err;
+			node.attr.size += 1;
+		}
+	} else
+		return mkError("unsupported file mode", "setNode");
+
+	return "";
+};
+
+(volatile stateful any dfsObj, const char path[], volatile char body[], const dfsFileAttributes attr) -> (const char error[]) addPath = {
+	dfsImpl impl;
+	char err[] = convertObjToImpl(impl, dfsObj, "addPath");
+	if (err.csize) return err;
+
+	int pos = 0, end = path.csize;
+	dfsNode node = impl.data.root, parentNode;
+
+	while (pos <= end) {
+		while (pos < end && path[pos] == '/')
+			pos += 1;
+
+		if (pos >= end)
+			return setNode(parentNode, node, body, attr);
+
+		if (!node.attr.mode) {
+			dfsFileAttributes att;
+			objcopyto(att, attr);
+			att.mode &= ~DFS_IFMT;
+			att.mode |= DFS_IFDIR;
+			char bod[];
+			err = setNode(parentNode, node, bod, att);
+			if (err.csize)
+				return err;
+		}
+
+		if ((node.attr.mode & DFS_IFMT) != DFS_IFDIR)
+			return mkError("file used as catalogue in path", "addPath");
+
+		int unicode[], uni, lim = substrchr(path, pos, end, '/');
+		if (lim < 0)
+			lim = end;
+		while (pos < lim) {
+			(uni, pos) = scanutf8(path, pos, lim);
+			if (uni >> 16) {
+				if (uni < 0 || uni > 0x10ffff)
+					return mkError("illegal unicode symbol in path", "addPath");
+				uni -= 0x10000;
+				unicode.ipush(uni >> 10 | 0xD800);
+				uni &= 0x3ff;
+				uni |= 0xDC00;
+			}
+			unicode.ipush(uni);
+		}
+
+		trieNode nod;
+		(nod, err) = node.trie.methods.findKey(node.trie, unicode);
+		if (err.csize) {
+			if (strstr(err, "not found") < 0)
+				return err;
+			dfsNode n;
+			err = node.trie.methods.addKeyValue(node.trie, unicode, n);
+			if (err.csize)
+				return err;
+			(nod, err) = node.trie.methods.findKey(node.trie, unicode);
+			if (err.csize)
+				return err;
+			node.attr.size += 1;
+		}
+
+		any from;
+		dfsNode to[];
+		from.lpush(nod.value);
+		objcopyto(to, from);
+
+		parentNode = node;
+		node = to[0];
+	}
+
+	return "";
+};

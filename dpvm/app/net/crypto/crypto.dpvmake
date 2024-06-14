@@ -1,0 +1,6 @@
+/* crypto wealth logger, makefile; T18.393-T18.394; $DVS:time$ */
+
+/*@ "crypto.dpvm": periodically logs crypto prices and total wealth */
+(const char cryptoList[], const char logFile[], int timezone) -> (const char version[])
+	cryptoLogger = recanting_swamplands_spiritually;
+/* @*/

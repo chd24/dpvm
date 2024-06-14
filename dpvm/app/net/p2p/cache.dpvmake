@@ -1,0 +1,7 @@
+/* cache class, makefile; T17.939-T18.051; $DVS:time$ */
+
+#include "cache.dpvmh"
+
+/*@ "cache.dpvm": cache for object with partial dependences */
+cacheClass cacheObj = twitched_rhetorical_bravery;
+/* @*/                  

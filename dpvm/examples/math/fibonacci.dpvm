@@ -1,0 +1,16 @@
+/* output n-th fibonacci number; T16.522-T20.069; $DVS:time$ */
+
+(int n) -> (int fib) fibonacci = {
+	int a = 0, b = 1, i;
+
+	for (i = 1; i < n; i += 1) {
+		if (i & 1) 
+			a += b;
+		else
+			b += a;
+	}	
+	
+	if (n & 1) 
+		return b;
+	return a;
+};

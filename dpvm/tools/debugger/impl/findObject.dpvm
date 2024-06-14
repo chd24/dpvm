@@ -1,0 +1,57 @@
+/* find subobject in given object by name; T19.656-T20.171; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../lib/algorithms/hashtable/hash.dpvmake"
+#include "../../../lib/math/crypto/base58/base58.dpvmh"
+#include "debugger.dpvmake"
+
+int HASH_SIZE = 0x10000;
+
+(volatile stateful hashData data, const any obj, int hash) -> (const any res) findObjectRecurse = {
+	any x, z = x.type;
+
+	if (!hashObj.findAdd(data, obj))
+		return z;
+
+	if (obj == hash)
+		return obj;
+
+	any res = code(data, obj.type, hash);
+	if (res != z)
+		return res;
+
+	int i, size = obj.lsize;
+	for (i = 0; i < size; i += 1) {
+		res = code(data, obj.l[i], hash);
+		if (res != z)
+			return res;
+	}
+
+	return z;
+};
+
+(const stateful debuggerData d, const any obj, const char name[]) -> (const any res) findObject = {
+	any x, z = x.type;
+	int begin, end, hash;
+
+	(begin, end) = strtostr(name, 0, name.csize);
+	if (begin == end)
+		return z;
+
+	hash = name2hash(name, begin, end);
+	if (hash == -1) {
+		if (end - begin != 47)
+			return z;
+		int hashes[];
+		if (d.base58Obj.methods.decodeHash(hashes, d.base58Obj, name, begin, end))
+			return z;
+		hash = hashes[0] << 17 >> 17;
+	}
+
+	hashData data;
+	if (hashObj.init(data, HASH_SIZE))
+		return z;
+
+	return findObjectRecurse(data, obj, hash);
+};

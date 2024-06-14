@@ -1,0 +1,29 @@
+/* encode substring; T16.516-T19.996; $DVS:time$ */
+
+(const stateful char arr[], int begin, int end) -> (volatile char str[]) {
+	const char mime[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	char str[];
+	int c;
+	int d;
+
+	while (begin < end) {
+		c = c << 8 | arr.c[begin];
+		d += 8;
+		begin += 1;
+		do {
+			d -= 6;
+			str.cpush(mime[c >> d & 63]);
+		} while (d >= 6);
+	}
+
+	if (d == 2) {
+		str.cpush(mime[c << 4 & 63]);
+		str.cpush('=');
+		str.cpush('=');
+	} else if (d == 4) {
+		str.cpush(mime[c << 2 & 63]);
+		str.cpush('=');
+	}
+	
+	return str;
+}

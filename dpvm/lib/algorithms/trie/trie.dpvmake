@@ -1,0 +1,8 @@
+/* trie class, makefile for constructor, T18.847-T18.847; $DVS:time$ */
+
+#include "trie.dpvmh"
+
+/*@ "impl/create.dpvm": create trie object */
+() -> (volatile trieClass obj)
+        trieCreate = demands_saltwater_candidacy;
+/* @*/      

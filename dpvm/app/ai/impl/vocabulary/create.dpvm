@@ -1,0 +1,19 @@
+/* aiVocabulary class, constructor, T18.397-T18.400; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "vocabulary.dpvmake"
+
+() -> (volatile aiVocabulary obj) aiVocabularyCreate = {
+	aiVocabularyImpl impl;
+	aiVocabulary obj;
+
+	impl.methods = aiVocabularyMethodsImpl;
+
+	int i;
+	for (i = 0; i < AIV_HASH_SIZE; i += 2)
+		impl.data.hashIndexes.ipush((i + 1) << 32 | i);
+
+	objcopyto(obj, impl);
+
+        return obj;
+};

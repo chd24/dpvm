@@ -1,0 +1,29 @@
+/* monitor, registry class; T18.352-T18.354; $DVS:time$ */
+
+#include "../registry/registry.dpvmake"
+#include "registry.dpvmh"
+
+(const stateful any regSrc) -> (volatile registryData reg) copy {
+        return registryObj.copy(regSrc);
+}
+
+(const stateful registryData reg, int flags) -> (const char error[]) check {
+        return registryObj.check(reg, flags);
+}
+
+(volatile stateful registryData reg, const (volatile any data, const char error[]) -> () callback, volatile any data, const stateful char env[], int timeout) -> () set {
+        registryObj.set(reg, callback, data, env, timeout);
+	return;
+}
+
+(volatile char out[], const stateful registryData reg, const char prefix[]) -> () print {
+	registryObj.print(out, reg, prefix);
+	return;
+}
+
+monitorRegistryClass monitorRegistryObj = {
+        copy,
+	check,
+        set,
+        print
+};

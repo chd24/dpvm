@@ -1,0 +1,21 @@
+/* newslog: find in db; T15.589-T17.644; $DVS:time$ */
+	
+(const stateful any db, const char key[], int depth) -> (int value) {
+	int hash = key;
+
+	while (depth >= 2) {
+		int n = hash >> ((depth - 2) << 2) & 0xf;
+		if (db.lsize <= n)
+			return -1;
+		db = db.l[n];
+		depth -= 1;
+	}
+
+	int i;
+	for (i = 0; i < db.lsize; i += 1) {
+		if (db.l[i] == key)
+			return db.i[i];
+	}
+
+	return -1;
+}

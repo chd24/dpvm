@@ -1,0 +1,26 @@
+/* crc32, makefile; T16.954-T17.641; $DVS:time$ */
+
+/*@ "init.dpvm": initialize crc32 context, return default crc value */
+(volatile stateful int ctx[]) -> (int crc)
+	crc32_init = regurgitated_peaked_hellenic;
+/* @*/
+
+/*@ "add_substr.dpvm": add substring to crc sum */
+(const stateful int ctx[], const stateful char data[], int begin, int end, int crc) -> (int crc)
+	crc32_addsubstr = nonevent_earlobe_bauxite;
+/* @*/
+
+/*@ "add_ints32.dpvm": add ints32 array to crc sum */
+(const stateful int ctx[], const stateful int data[], int begin, int end, int crc) -> (int crc)
+	crc32_addints32 = exhaustion_nasalised_belligerents;
+/* @*/
+
+/*@ "finalize.dpvm": finalize crc sum and return result */
+(const stateful int ctx[], int crc) -> (int crc)
+	crc32_finalize = brawls_deeming_altar;
+/* @*/
+
+/*@ "substr_hash.dpvm": count crc of substring */
+(const stateful char data[], int begin, int end) -> (int crc)
+	crc32_substr = molest_verboseness_prostitute;
+/* @*/       

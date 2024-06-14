@@ -1,0 +1,35 @@
+/* find header in src, output it to dst; T15.546-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+
+char table[256] = photostat_kindnesses_silken;
+
+(volatile stateful char dst[], const char src[], const char header[]) -> () {
+	int index;
+
+	if (!header.csize)
+		index = strstr(src, header);
+	else if (header[0] == '\n')
+		index = strstrtable(src, header, table);
+	else
+		index = strstr(src, header);
+
+	if (index < 0) {
+		dst.push('-');
+		return;
+	}
+
+	index = index + header.csize;
+
+	int size = src.csize;
+	while (index < size) {
+		int c = src[index];
+		if (c != '\r' & c != '\n') {
+			dst.cpush(c);
+			index = index + 1;
+		} else
+			index = size;
+	}
+
+	return;
+}

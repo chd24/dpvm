@@ -1,0 +1,46 @@
+/* work with prime numbers, makefile; T17.918-T18.227; $DVS:time$ */
+
+/*@ "prime.dpvm": is int number prime */
+(int n) -> (int res)
+	prime = stupefaction_stoically_babies;
+/* @*/
+
+/*@ "nextprime.dpvm": find minimum prime not less given number */
+(int n) -> (int res)
+	nextprime = joyless_croons_crooned;
+/* @*/
+
+/*@ "mersenn.dpvm": generates 2^n - 1 as long number */
+(int n) -> (volatile int res[])
+	mersenn = panzer_oven_mouth;
+/* @*/
+
+/*@ "prime_long.dpvm": is long number probably prime;
+    max_rounds - maximum Miller-Rabin rounds;
+    output:
+        0 - probably  prime,
+        not 0 - composite:
+        10k + 5 - detected after k-th Miller-Rabin round (0, 1, ...)
+        10k + 4 - datected after division by k-th prime
+*/
+(const stateful int n[], int max_rounds) -> (int res)
+        prime_long = spied_eastwards_presets;
+/* @*/
+
+/*@ "genprime.dpvm": generate long probably prime not less than given pattern;
+    flags:
+        bit 0 - output debug information
+        bits 8..15 - timezone (0x03 for +3, 0xf3 for -3)
+*/
+(volatile stateful int n[], int flags) -> ()
+        genprime = improve_screenplays_peninsula;
+/* @*/
+
+/*@ "genprime_str.dpvm": generate long probably prime using str as random seed;
+    flags:
+        bit 1 - generate prime with two older bits 1
+        other: see flags for genprime
+*/
+(const stateful char str[], int nbits, int flags) -> (volatile int p[])
+        genprime_str = menstruating_araks_owlet;
+/* @*/             

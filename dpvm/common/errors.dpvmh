@@ -1,0 +1,41 @@
+/* dpvm: list of error codes for use both in dpvm source and programs; T15.417-T18.229; $DVS:time$ */
+
+int DPVM_ERROR_SUCCESS          = 0x00 + _Z;
+int DPVM_ERROR_FINISHED         = 0x01 + _Z;
+int DPVM_ERROR_TERMINATED       = 0x02 + _Z;
+int DPVM_ERROR_END_OF_CODE      = 0x03 + _Z;
+
+int DPVM_ERROR_NOT_IMPLEMENTED  = 0x04 + _Z;
+int DPVM_ERROR_NOT_FINISHED     = 0x05 + _Z;
+int DPVM_ERROR_NOT_CHECKED      = 0x06 + _Z;
+int DPVM_ERROR_NOT_TRANSLATED   = 0x07 + _Z;
+
+int DPVM_ERROR_NO_MEMORY        = 0x08 + _Z;
+int DPVM_ERROR_CREATE_OBJECT    = 0x09 + _Z;
+int DPVM_ERROR_STORE_ERROR      = 0x0a + _Z;
+int DPVM_ERROR_MAP              = 0x0b + _Z;
+
+int DPVM_ERROR_CONST            = 0x0c + _Z;
+int DPVM_ERROR_OBJECT_PARAMS    = 0x0d + _Z;
+int DPVM_ERROR_TYPE_MISMATCH    = 0x0e + _Z;
+int DPVM_ERROR_IO               = 0x0f + _Z;
+
+int DPVM_ERROR_LINKS_INDEX      = 0x10 + _Z;
+int DPVM_ERROR_INTS_INDEX       = 0x11 + _Z;
+int DPVM_ERROR_FLOATS_INDEX     = 0x12 + _Z;
+int DPVM_ERROR_CODES_INDEX      = 0x13 + _Z;
+
+int DPVM_ERROR_LINKS_OVERFLOW   = 0x14 + _Z;
+int DPVM_ERROR_INTS_OVERFLOW    = 0x15 + _Z;
+int DPVM_ERROR_FLOATS_OVERFLOW  = 0x16 + _Z;
+int DPVM_ERROR_CODES_OVERFLOW   = 0x17 + _Z;
+
+int DPVM_ERROR_LINKS_STACK      = 0x18 + _Z;
+int DPVM_ERROR_INTS_STACK       = 0x19 + _Z;
+int DPVM_ERROR_FLOATS_STACK     = 0x1a + _Z;
+int DPVM_ERROR_CODES_STACK      = 0x1b + _Z;
+
+int DPVM_ERROR_N_LINK_ARGS      = 0x1c + _Z;
+int DPVM_ERROR_N_INT_ARGS       = 0x1d + _Z;
+int DPVM_ERROR_N_FLOAT_ARGS     = 0x1e + _Z;
+int DPVM_ERROR_N_CODE_ARGS      = 0x1f + _Z;

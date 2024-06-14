@@ -1,0 +1,23 @@
+/* www server: read file; T15.543-T18.884; $DVS:time$ */
+	
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "www_server.dpvmake"
+
+(volatile stateful www_data arg, const char text[], int status) -> () {
+	/* if chunked output */
+	if (arg.length < 0) {
+		char str[];
+		printhex(str, text.csize, 1, 1);
+		strcat(str, "\r\n");
+		strcat(str, text);
+		strcat(str, "\r\n");
+		text = str;
+	} else if (!text.csize & !arg.close) {
+		write(arg.read_callback, arg, "", "", -1);
+		return;
+	}
+
+	/* output file body */
+	output(arg.read_callback, arg, text);
+	return;
+}

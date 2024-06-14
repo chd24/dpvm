@@ -1,0 +1,14 @@
+/* generate 2^n - 1 as long number; T17.920-T17.920; $DVS:time$ */
+
+(int n) -> (volatile int mersenn[]) {
+	int mersenn[];
+
+	while (n >= 64) {
+		mersenn.ipush(-1);
+		n -= 64;
+	}
+	if (n)
+		mersenn.ipush((1 << n) - 1);
+
+	return mersenn;
+}

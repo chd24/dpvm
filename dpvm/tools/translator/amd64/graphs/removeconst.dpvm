@@ -1,0 +1,300 @@
+/* removes constants from schema; T16.576-T17.980; $DVS:time$ */
+
+#include "../../../math/math.dpvmake"
+#include "graphs.dpvmake"
+
+(volatile stateful schema s) -> () {
+	gate g = s.base;
+	g.depth = -1;
+
+	int i;
+	int size = s.inputs.isize;
+	for (i = 0; i < size; i = i + 1) g = g.next;
+
+	for (g = g.next; g.depth >= 0; g = g.next) {
+		int c;
+		int d;
+		int cset;
+		int dset;
+
+		if (g.edgesmask & 1) {
+			gate p = g.in0;
+			if (p.op == op_const) {
+				c = p.value;
+				cset = 1;
+
+				g.in0 = g;
+				g.edgesmask = g.edgesmask & ~1;
+				if (g.flags & flag_in0right)
+					p.out1 = p,
+					p.edgesmask = p.edgesmask & ~8,
+					g.flags = g.flags & ~flag_in0right;
+				else
+					p.out0 = p,
+					p.edgesmask = p.edgesmask & ~4;
+			}
+                } else if (g.op >> 4 >= 2) {
+			c = g.value;
+			cset = 1;
+		}
+
+		if (g.edgesmask & 2) {
+			gate p = g.in1;
+			if (p.op == op_const) {
+				d = p.value;
+				dset = 1;
+
+				g.in1 = g;
+				g.edgesmask = g.edgesmask & ~2;
+				if (g.flags & flag_in1right)
+					p.out1 = p,
+					p.edgesmask = p.edgesmask & ~8,
+					g.flags = g.flags & ~flag_in1right;
+				else
+					p.out0 = p,
+					p.edgesmask = p.edgesmask & ~4;
+			}
+                } else if (g.op >> 4 >= 2) {
+			d = g.value;
+			dset = 1;
+		}
+
+		/* unary operations */
+                if (cset & (g.op >> 4 == 1 || !g.op)) {
+			if (g.op == op_neg) c = -c;
+			else if (g.op == op_not) c = ~c;
+
+			g.op = op_const;
+			g.value = c;
+
+		/* binary operations */
+                } else if ((cset || dset) && g.op >> 4 >= 2) {
+                        if (!dset && (g.op == op_add || g.op == op_mul || g.op == op_eq || g.op == op_lt || g.op == op_gt
+                                      || g.op == op_and || g.op == op_or || g.op == op_xor || g.op == op_fullmul)) {
+				g.in0 = g.in1;
+				g.in1 = g;
+				g.edgesmask = g.edgesmask & ~2 | 1;
+				if (g.flags & flag_in1right)
+					g.flags = g.flags & ~flag_in1right
+						| flag_in0right;
+				d = c;
+				dset = 1;
+				cset = 0;
+                                if (g.op == op_lt) g.op = op_gt;
+                                else if (g.op == op_gt) g.op = op_lt;
+			}
+
+			/* + */
+			if (g.op == op_add) {
+				if (cset)
+					g.op = op_const,
+					g.value = c + d;
+				else if (!d)
+					g.op = op_none;
+				else
+					g.value = d;
+
+			/* - */
+			} else if (g.op == op_sub) {
+				if (cset & dset)
+					g.op = op_const,
+					g.value = c - d;
+				else if (cset & (!c | c == -1)) {
+					if (!c) g.op = op_neg;
+					else g.op = op_not;
+					g.in0 = g.in1;
+					g.in1 = g;
+					g.edgesmask = g.edgesmask & ~2 | 1;
+					if (g.flags & flag_in1right)
+						g.flags = g.flags & ~flag_in1right
+							| flag_in0right;
+				} else if (cset)
+					g.value = c;
+				else if (!d)
+					g.op = op_none;
+				else
+					g.value = d;
+
+			/* * */
+			} else if (g.op == op_mul) {
+				if (cset)
+					g.op = op_const,
+					g.value = c * d;
+				else if (!d)
+					g.op = op_const,
+					g.value = 0;
+				else if (d == 1)
+					g.op = op_none;
+				else if (d == -1)
+					g.op = op_neg;
+				else if (!(d & (d - 1))) {
+					int p = -1;
+					while (d) p = p + 1, d = d >> 1;
+					g.op = op_shl;
+					g.value = p;
+				} else
+					g.value = d;
+
+                        /* ** */
+                        } else if (g.op == op_fullmul) {
+                                gate h;
+                                if (cset || !d || d == 1) {
+                                    h.next = g.next;
+                                    h.prev = g;
+                                    g.next = h;
+                                    h.op = op_const;
+                                    h.stackpos0 = g.stackpos1;
+                                    g.stackpos1 = -1;
+                                    h.stackpos1 = -1;
+                                    h.funcpos = g.funcpos;
+                                    g.depth = -2;
+                                    if (g.edgesmask & 8) {
+                                        g.edgesmask &= ~8;
+                                        h.edgesmask |= 4;
+                                        gate g1 = g.out1;
+                                        h.out0 = g1;
+                                        g.out1 = g;
+                                        if (g1.in0.depth == -2 && g1.flags & flag_in0right)
+                                            g1.in0 = h, g1.flags &= ~flag_in0right;
+                                        else
+                                            g1.in1 = h, g1.flags &= ~flag_in1right;
+                                    }
+                                    if (g.flags & flag_output1) {
+                                        g.flags &= ~flag_output1;
+                                        h.flags |= flag_output0;
+                                        size = s.outputs.lsize;
+                                        for (i = 0; i < size; i += 1) {
+                                            gate o = s.outputs[i];
+                                            if (o.depth == -2 && s.outright[i])
+                                                s.outputs[i] = h, s.outright[i] = 0, i = size;
+                                        }
+                                    }
+                                    g.depth = 0;
+                                }
+
+                                if (cset)
+                                        g.op = op_const,
+                                        (g.value, h.value) = fullMul(c, d);
+                                else if (!d)
+                                        g.op = op_const,
+                                        g.value = 0;
+                                else if (d == 1)
+                                        g.op = op_none;
+                                else
+                                        g.value = d;
+
+                        /* == */
+                        } else if (g.op == op_eq) {
+                                if (cset)
+                                        g.op = op_const,
+                                        g.value = c == d;
+                                else
+                                        g.value = d;
+
+                        /* < */
+                        } else if (g.op == op_lt) {
+                                if (cset)
+                                        g.op = op_const,
+                                        g.value = c < d;
+                                else
+                                        g.value = d;
+
+                        /* > */
+                        } else if (g.op == op_gt) {
+                                if (cset)
+                                        g.op = op_const,
+                                        g.value = c > d;
+                                else
+                                        g.value = d;
+
+                        /* & */
+			} else if (g.op == op_and) {
+				if (cset)
+					g.op = op_const,
+					g.value = c & d;
+				else if (!d)
+					g.op = op_const,
+					g.value = 0;
+				else if (d == -1)
+					g.op = op_none;
+				else if (d == 0xffffffff & g.in0.op > 0 & g.in0.op < op_shl)
+					g.op = op_none,
+					g.flags = g.flags | flag_32bit,
+					g.in0.flags = g.in0.flags | flag_32bit;
+				else if (d == 0xffffffff & g.in0.op == op_shl & g.in0.value >= 32)
+					g.op = op_const,
+					g.value = 0;
+				else if (d == 0xffffffff & g.in0.op == op_shl)
+					g.op = op_none,
+					g.flags = g.flags | flag_32bit,
+					g.in0.flags = g.in0.flags | flag_32bit;
+				else if (!(d & ~0xffffffff))
+					g.value = d,
+					g.flags = g.flags | flag_32bit;
+				else
+					g.value = d;
+
+			/* | */
+			} else if (g.op == op_or) {
+				if (cset)
+					g.op = op_const,
+					g.value = c | d;
+				else if (!d)
+					g.op = op_none;
+				else if (d == -1)
+					g.op = op_const,
+					g.value = -1;
+				else
+					g.value = d;
+
+			/* ^ */
+			} else if (g.op == op_xor) {
+				if (cset)
+					g.op = op_const,
+					g.value = c ^ d;
+				else if (!d)
+					g.op = op_none;
+				else if (d == -1)
+					g.op = op_not;
+				else
+					g.value = d;
+
+			/* << */
+			} else if (g.op == op_shl) {
+				if (cset)
+					g.op = op_const,
+					g.value = c << d;
+				else if (!d)
+					g.op = op_none;
+				else if (d >= 64)
+					g.op = op_const,
+					g.value = 0;
+				else
+					g.value = d;
+
+			/* >> */
+			} else if (g.op == op_shr) {
+				if (cset)
+					g.op = op_const,
+					g.value = c >> d;
+				else if (!d)
+					g.op = op_none;
+				else if (d >= 64)
+					g.op = op_const,
+					g.value = 0;
+				else if ((g.in0.flags & flag_32bit) != 0 & d >= 32)
+					g.op = op_const,
+					g.value = 0;
+				else if (g.in0.flags & flag_32bit)
+					g.flags = g.flags | flag_32bit,
+					g.value = d;
+				else
+					g.value = d;
+
+			}
+		} else if (!g.op & (g.in0.flags & flag_32bit) != 0)
+			g.flags = g.flags | flag_32bit;
+	}
+
+	return;
+}

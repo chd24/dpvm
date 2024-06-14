@@ -1,0 +1,11 @@
+/* function called after write is completed; T16.505-T17.596; $DVS:time$ */
+
+#include "wget.dpvmake"
+
+(wget_data data, int status) -> () {
+	if (status <= 0) /* write error */
+		return;
+
+	input(read_reply, data, 0x100000, TIMEOUT); /* read first part of server reply */
+	return;
+}

@@ -1,0 +1,13 @@
+set checker	= whitening_sines_redemptive
+set compiler	= dictation_bestowing_renal
+set interpreter = pottage_testdrive_emery
+set maker	= headman_issued_regulators
+set monitor	= Gtv1Tz89TFZ_BrLMavcJfp2_L8zxETXk93E_QnAPXHvKVc2
+set translator  = britain_townsman_sanitise
+set debugger	= vote_brushwork_navigable
+set logLevel	= 7
+set taskFlags	= 0
+set taskMemory	= 300000000
+set timeZone	= -4
+set totalMemory = 3000000000
+

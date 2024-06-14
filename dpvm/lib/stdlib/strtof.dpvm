@@ -1,0 +1,66 @@
+/* string to float; T16.467-T16.637; $DVS:time$ */
+
+#include "stdlib.dpvmake"
+	
+(const stateful char str[], int begin, int end) 
+		-> (int error, int nextbegin, float number) {
+	float n;
+	float period;
+	int c;
+	int d;
+	int err;
+	int minus;
+
+	(begin, end) = strtostr(str, begin, end);
+
+	if (begin != end) {
+		c = str.c[begin];
+		if (c == '+') { begin = begin + 1; }
+		else if (c == '-') { minus = 1; begin = begin + 1; }
+	}
+	
+	if (begin == end) {
+		err = -1;
+		return (err, end, n);
+	}
+
+	int flag;
+
+	do {
+		c = str.c[begin];
+		if (c >= '0' & c <= '9') {
+			n = n * 10 + (c - '0');
+			c = '0';
+			begin = begin + 1;
+			flag = 1;
+		}
+	} while (begin < end & c == '0');
+	
+	if (c != '.') {
+		err = -1;
+		return (err, end, n);
+	}
+	begin = begin + 1;
+
+	if (begin == end) {
+		if (minus) { n = -n; }
+		err = flag - 1;
+		return (err, begin, n);
+	}
+
+	period = 1;
+	do {
+		c = str.c[begin];
+		if (c >= '0' & c <= '9') {
+			period = period / 10;
+			n = n + (c - '0') * period;
+			begin = begin + 1;
+			c = '0';
+			flag = 1;
+		}
+	} while (begin < end & c == '0');
+
+	if (minus) { n = -n; }
+	err = flag - 1;
+	return (err, begin, n);
+}

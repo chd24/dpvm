@@ -1,0 +1,38 @@
+/* trie class, public header, T18.847-T18.871; $DVS:time$ */
+
+/* flags of a node */
+int TRIE_FLAG_KEY       =    1; /* node contains key */
+int TRIE_FLAG_VALUE     =    2; /* node contains value (if not then the key equals to key of one child nodes which actually contains value) */
+int TRIE_FLAG_LEFT      =    4; /* node contains left child node */
+int TRIE_FLAG_RIGHT     =    8; /* node contains right child node */
+int TRIE_FLAG_KEY_DIR   = 0x10; /* if node does not contain self value, this flag show if it contain key from left (0) or right (1) child */
+
+type trieNode = {
+    const any key;
+    volatile stateful any value;
+    volatile stateful this left;
+    volatile stateful this right;
+    int bitNo;
+    int flags;
+};
+
+/* function to compare keys; outputs:
+    bitNo - minimum number of the bit in which keys differ;
+    left/rightBit = 0, 1, or -1 if key does not contain this bit
+*/
+type trieCompare = (const stateful any leftKey, const stateful any rightKey) -> (int bitNo, int leftBit, int rightBit);
+
+type trieMethods = {
+    const char version[];
+    const (volatile stateful any trieObj, const trieCompare compare) -> (const char error[]) setCompare;
+    const (volatile stateful any trieObj, const any key, volatile any value) -> (const char error[]) addKeyValue;
+    const (volatile stateful any trieObj, const any key) -> (volatile stateful trieNode node, const char error[]) findKey;
+    const (volatile stateful any trieObj, volatile stateful any data,
+    const (volatile stateful any data, volatile stateful trieNode parentNode, volatile stateful trieNode node, int dir) -> () callback)
+        -> (const char error[]) traverseDown;
+};
+
+type trieClass = {
+    volatile any data;
+    const trieMethods methods;
+};

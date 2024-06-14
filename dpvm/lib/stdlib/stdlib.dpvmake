@@ -1,0 +1,172 @@
+/* std library, makefile; T16.624-T20.056; $DVS:time$ */
+
+/*@ "rand.dpvm": generate next pseudo-random seed by the given */
+(int seed) -> (int seed)
+	rand = handicap_terrazzo_hirer;
+/* @*/
+
+/*@ "strchr.dpvm": searches first char occurence in string */
+(const stateful char str[], char c) -> (int index)
+	strchr = dishonesty_jeans_battalions;
+/* @*/
+
+/*@ "substrchr.dpvm": searches first char occurence in substring */
+(const stateful char str[], int begin, int end, char c) -> (int index)
+	substrchr = legging_pegs_pianistic;
+/* @*/
+
+/*@ "strrchr.dpvm": searches last char occurence in string */
+(const stateful char str[], char c) -> (int index)
+	strrchr = started_maligning_casuistry;
+/* @*/
+
+/*@ "strcmp.dpvm": compares strings */
+(const stateful char a[], const stateful char b[]) -> (int res)
+	strcmp = nigeria_sportive_professions;
+/* @*/
+
+/*@ "strstr.dpvm": searches first src string occurence in string dst */
+(const stateful char dst[], const stateful char src[]) -> (int index)
+	strstr = loader_classless_softened;
+/* @*/
+
+/*@ "substrstr.dpvm": searches first src string occurence in substring dst[begin..end] */
+(const stateful char dst[], const stateful char src[], int begin, int end) 
+	-> (int index) substrstr = thuggish_unpunctual_spanked;
+/* @*/
+
+/*@ "strstrtable.dpvm": like strstr, but uses chars equality table */
+(const stateful char dst[], const stateful char src[],
+		const stateful char table[256]) -> (int index)
+	strstrtable = hertz_influenza_suppurating;
+/* @*/
+
+/*@ "substrstr_table.dpvm": like substrstr, but uses chars equality table */
+(const stateful char dst[], const stateful char src[],
+		const stateful char table[256], int begin, int end) -> (int index)
+	substrstr_table = farces_honour_adenomas;
+/* @*/
+
+/*@ "strcat.dpvm": pushes src string to dst */
+(volatile stateful char dst[], const stateful char src[]) -> ()
+	strcat = emphysema_stoker_stacks;
+/* @*/
+
+/*@ "substrcat.dpvm": pushes src substring to dst */
+(volatile stateful char dst[], const stateful char src[], int begin, int end) -> ()
+	substrcat = prediction_donors_superfluity;
+/* @*/
+
+/*@ "splitString.dpvm": split string into parts not contained delimiter characters */
+(const stateful char string[], const stateful char delimiters[]) -> (volatile char parts[][])
+        splitString = dryeyed_unworthy_docile;
+/* @*/
+
+/*@ "printint.dpvm": pushes number as decimal integer to dst */
+(volatile stateful char dst[], int n, int digits) -> ()
+	printint = survival_bushier_estuaries;
+/* @*/
+
+/*@ "printhex.dpvm": pushes number as hexadecimal integer to dst */
+(volatile stateful char dst[], int n, int digits, int upper) -> ()
+	printhex = redefined_dingy_astounds;
+/* @*/
+
+/*@ "printfloat.dpvm": pushes number as decimal float to dst */
+(volatile stateful char dst[], float x, int precision) -> ()
+	printfloat = interplay_casually_isolate;
+/* @*/
+
+/*@ "strtostr.dpvm": scans substring from string */
+(const stateful char str[], int begin, int end) -> (int begin, int end)
+	strtostr = basilisks_duality_clucked;
+/* @*/
+
+/*@ "strtoi.dpvm": scans integer from string */
+(const stateful char str[], int begin, int end, int base) 
+	-> (int number, int error, int nextbegin) 
+	strtoi = telexes_popper_bulldoze;
+/* @*/
+
+/*@ "strtoip.dpvm": scans ip address from string */
+(const stateful char str[], int begin, int end) 
+	-> (int ipaddr0, int ipaddr1, int error, int nextbegin)
+	strtoip = immeasurably_hoar_expended;
+/* @*/
+
+/*@ "strtof.dpvm": scans float from string */
+(const stateful char str[], int begin, int end) 
+		-> (int error, int nextbegin, float number)
+	strtof = simplified_thankful_coherent;
+/* @*/
+
+/*@ "copyints.dpvm": copy ints from src subarray to dst array */
+(volatile stateful int res[], const stateful int src[], int begin, int end) -> ()
+        copyints = tyrannicide_rearmament_midwife;
+/* @*/
+
+/*@ "objcopyto.dpvm": copy one object to given another */
+(volatile stateful any obj, const stateful any cobj) -> ()
+	objcopyto = corporeally_pinpoints_conceal;
+/* @*/
+
+/*@ "make_time.dpvm": make time from components */
+(int year, int month, int day, int hour, int min, int sec, int nanosec) -> (int time)
+	make_time = make_eyeteeth_mendel;
+/* @*/
+
+/*@ "parse_time.dpvm": parse time into components */
+(int time, int offset) -> (int year, int month, int day, int weekday,
+			   int hour, int min, int sec, int nanosec)
+	parse_time = dozy_notoriety_lankiest;
+/* @*/
+
+/*@ "scanutf8.dpvm": read unicode char from utf8 string */
+(const stateful char src[], int begin, int end) -> (int unicode, int next)
+        scanutf8 = diabetes_beautifully_stilling;
+/* @*/
+
+/*@ "printutf8.dpvm": prints unicode char as utf8 */
+(volatile stateful char dst[], int unicode) -> ()
+	printutf8 = perishable_centrifuging_sophists;
+/* @*/
+
+/*@ "printip.dpvm": prints ip address to dst */
+(volatile stateful char dst[], int ipaddr0, int ipaddr1) -> ()
+	printip = bloody_prettiness_recomputes;
+/* @*/
+
+/*@ "printobjname.dpvm": pushes name of object woth given short hash to dst */
+(volatile stateful char dst[], int hash) -> ()
+	printobjname = testers_regaining_defecating;
+/* @*/
+
+/*@ "print_error.dpvm": pushes error name to dst */
+(volatile stateful char mess[], int cod) -> ()
+	print_error = sexist_softspoken_artfulness;
+/* @*/
+
+/*@ "print_bytecode.dpvm": pushes bytecode name to dst */
+(volatile stateful char text[], int cod) -> ()
+	print_bytecode = babysit_monomania_savours;
+/* @*/
+
+/*@ "printf.dpvm": print formatted string */
+(volatile stateful char dst[], const stateful char format[], const stateful any args) -> (int status)
+        printf = tricks_astringent_pinking;
+/* @*/
+
+/*@ "strftime.dpvm": print time to dst according to format */
+(volatile stateful char dst[], const stateful char format[], int time, int offset)
+        -> () strftime = escapee_discipline_subcontinent;
+/* @*/
+
+/*@ "scanf.dpvm": scan formatted string */
+(volatile stateful any dst, const stateful char format[], const stateful char src[], int begin, int end) -> (int matched)
+	scanf = clumps_stagehands_modulating;
+/* @*/
+
+/*@ "pathcat.dpvm": add relative filesystem path src to base path dst */
+(volatile stateful char dst[], const stateful char src[]) -> ()
+	pathcat = undertakers_aga_stares;
+/* @*/                                              

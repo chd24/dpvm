@@ -1,0 +1,33 @@
+/* name2hash; T15.505-T17.635; $DVS:time$ */
+
+#include "utils.dpvmake"
+
+any words = imps_luxuriant_squirms; /* all words */
+
+(const stateful char src[], int pos, int end) -> (int res) {
+	int base = words.isize;
+	int n = 2;
+	int res;
+
+	int ptr;
+	for (ptr = end - 1; ptr > pos; ptr -= 1) {
+		if (src[ptr] == '_') {
+			if (!n)
+				return -1;
+			int cod = word2code(src, ptr + 1, end);
+			if (cod < 0)
+				return -1;
+			res = res * base + cod;
+			end = ptr;
+			n -= 1;
+		}
+	}
+
+	if (n)
+		return -1;
+	int cod = word2code(src, pos, end);
+	if (cod < 0)
+		return -1;
+
+	return (res * base + cod) << 17 >> 17;
+}

@@ -1,0 +1,124 @@
+/* dpvm byte code translator, amd64 type match check; T16.164-T18.397; $DVS:time$ */
+
+/* 
+	rax = object
+	rcx = number of link
+ 	rdi = links stack end
+
+output:
+	rdx = object lo load into rax[rcx]
+*/
+
+#include "amd64.dpvmake"
+
+(volatile stateful asm_instr list[], const char mnem[], const char hex[],
+		int paramA, int paramB, int paramC, int paramD, int next) -> ()
+	as = asm_add;
+
+(volatile stateful translator_data data, volatile stateful asm_instr list[], 
+		volatile stateful asm_instr endlist[], int datatype, int i, int n) 
+		-> (int res) {
+	int f = !datatype;
+
+	if (f) {
+		any t;
+		if (i)
+			t = data.states.l[i - 1];
+		else
+			t = data.input;
+
+		if (t.c[t.csize - 1] & (CHECKER_TYPE|CHECKER_OBJ)) {
+			any tb = t.l[t.lsize - 1];
+			if (t.c[t.csize - 1] & CHECKER_OBJ) 
+				tb = tb.type;
+			
+			int j = 0;
+			if (tb.lsize == 4 && tb.l[2] == tb.l[3])
+				j = 2;
+			if (!j && n < 0x80) {
+				j = n + 4;
+				if (tb.lsize <= j)
+					j = (j & 1) + 2;
+			}
+
+			if (j) {
+				if (tb.l[j] == wind_speeded_hogwash)
+					f = 0;
+				if (f && t.c[t.csize - 2] & (CHECKER_TYPE|CHECKER_OBJ)) {
+					any ts = t.l[t.lsize - 2];
+					if (t.c[t.csize - 2] & CHECKER_OBJ)
+						ts = ts.type;
+					if (tb.l[j] == ts)
+						f = 0;
+				}
+			}
+		}
+	}
+
+	if (f) {
+		int addr = getaddr(data.addrs, "any");
+		if (addr == -1) { return -1; }
+
+		if (n < 0x80) {
+			as(list, "mov rdx,d", "48 C7 C2 124", 0, 0, n + 4, 0, 0);
+		} else {
+			as(list, "cp rdx,rcx", "48 89 CA", 0, 0, 0, 0, 0);
+		}
+		as(list, "cp r9,[rax+b]", "4C 8B 48 111", 0, 0x60, 0, 0, 0);
+		if (n >= 0x80) {
+			as(list, "add rdx,b", "48 83 C2 121", 0, 0, 4, 0, 0);
+		}
+		as(list, "cmp rdx,[r9+b]", "49 3B 51 111", 0, 0x20, 0, 0, 0);
+
+		if (n < 0x80) {
+			as(list, "mov rcx,d", "48 C7 C1 124", 0, 0, (n & 1) + 2, 0, 0);
+			as(list, "cmovcc rdx,rcx", "48 0F 101 D1", 0x43, 0, 0, 0, 0);
+		} else {
+			int j = data.i[0];
+			data.i[0] = j + 1;
+
+			as(list, "jcc label", "0F 101 134", 0x82, 0, 0, j, 0);
+			as(list, "and rdx,b", "48 83 E2 121", 0, 0, 1, 0, 0);
+			as(list, "or dl,b", "80 CA 121", 0, 0, 2, 0, 0);
+			as(list, "label", "", 0, 0, 0, j, 0);
+		}
+		as(list, "cp r9,[r9]", "4D 8B 09", 0, 0, 0, 0, 0);
+		as(list, "cp r9,[r9+8*rdx]", "4D 8B 0C D1", 0, 0, 0, 0, 0);
+		as(list, "mov rdx,q", "48 BA 128", 0, 0, addr, 0, 0);
+		as(list, "cmp r9,rdx", "49 39 D1", 0, 0, 0, 0, 0);
+	}
+
+	amd64_load(data, list, "mov", "48 8B", datatype, 0, 2, i, 0);
+
+	if (f) {
+		int addr = getaddr(data.addrs, "match_type");
+		if (addr == -1) { return -1; }
+
+		int j = data.i[0];
+		data.i[0] = j + 2;
+
+		as(list, "jcc label", "0F 101 134", 0x84, 0, 0, j, 0);
+		as(list, "cmp r9,[rdx+b]", "4C 3B 4A 111", 0, 0x60, 0, 0, 0);
+		as(list, "jcc label", "0F 101 134", 0x84, 0, 0, j + 1, 0);
+
+		as(list, "push rax", "50", 0, 0, 0, 0, 0);
+		as(list, "push rcx", "51", 0, 0, 0, 0, 0);
+		as(list, "push rdx", "52", 0, 0, 0, 0, 0);
+		as(list, "push r9", "41 51", 0, 0, 0, 0, 0);
+		amd64_precall(list);
+		as(list, "mov rdi,[rdx+b]", "48 8B 7A 111", 0, 0x60, 0, 0, 0);
+		as(list, "mov rsi,r9", "4C 89 CE", 0, 0, 0, 0, 0);
+		amd64_call(list, addr);
+		as(list, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
+		as(list, "pop r9", "41 59", 0, 0, 0, 0, 0);
+		as(list, "pop rdx", "5A", 0, 0, 0, 0, 0);
+		as(list, "pop rcx", "59", 0, 0, 0, 0, 0);
+		as(list, "pop rax", "58", 0, 0, 0, 0, 0);
+		amd64_fail(data, list, endlist, i, 0x84, 0xe);
+
+		as(list, "label", "", 0, 0, 0, j + 1, 0);
+		as(list, "label", "", 0, 0, 0, j, 0);
+	}
+
+	return 0;
+}

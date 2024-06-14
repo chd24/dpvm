@@ -1,0 +1,17 @@
+/* bitwise or long number (1 << bit) to dst, T19.376-T19.376; $DVS:time$ */
+
+(volatile stateful int dst[], int bit) -> () or_exp2_short = {
+	int dsize = dst.isize;
+
+	if (bit >> 6 < dsize) {
+		dst[bit >> 6] |= 1 << (bit & 0x3f);
+		return;
+	}
+
+	for (bit -= dsize << 6; bit & -0x40; bit -= 0x40)
+		dst.ipush(0);
+
+	dst.ipush(1 << bit);
+
+	return;
+};

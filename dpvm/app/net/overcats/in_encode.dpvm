@@ -1,0 +1,48 @@
+/* overcats encode of server output data; T17.470-T17.476; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "../math/crypto/base64/base64.dpvmake"
+#include "overcats.dpvmake"
+
+(const stateful overcats_data data, volatile stateful char dst[], 
+		const stateful char src[]) -> () {
+	strcat(dst, "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: ");
+
+	int ssize = src.csize;
+	int dsize = ssize / 48 * 66;
+
+	ssize %= 48;
+
+	if (ssize) {
+		dsize += ssize / 3 * 4;
+		ssize %= 3;
+		if (ssize) dsize += ssize + 1;
+		dsize += 2;
+	}
+
+	printint(dst, dsize, 1);
+	strcat(dst, "\r\n\r\n");
+
+	int i;
+	ssize = src.csize;
+	for (i = 0; i + 48 <= ssize; i += 48) {
+		char done[] = base64_encode_substr(src, i, i + 48);
+		strcat(dst, done);
+		strcat(dst, "\r\n");
+	}
+
+	if (i != ssize) {
+		char todo[];
+		substrcat(todo, src, i, ssize);
+		ssize -= i;
+		while (todo.csize % 3)
+			todo.cpush(0);
+		char done[] = base64_encode_substr(todo, 0, todo.csize);
+		if (ssize % 3)
+			done.cpop(3 - ssize % 3);
+		strcat(dst, done);
+		strcat(dst, "\r\n");
+	}
+
+	return;
+}

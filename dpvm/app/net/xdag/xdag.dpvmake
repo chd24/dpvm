@@ -1,0 +1,169 @@
+/* xdag miner, makefile; T16.612-T19.572; $DVS:time$ */
+
+#include "../../math/crypto/json/json.dpvmake"
+
+type xdagcdata = { /* constant data structure */
+        const char      logfile[];      /* filename of logfile */
+        const char      pooladdr[];     /* address of pool */
+        const char      workername[];   /* name of worker */
+        const char      blockfile[];    /* filename of block file */
+        const jsonClass	json;		/* static json methods */
+        char            block[];        /* first block prepared to send */
+        int             blockhash[];    /* bigendian int32[] hash of first block */
+        int             dfsctx[];       /* dfs crypt context */
+        volatile int    crcctx[];       /* crc32 context */
+        int             crcinit;        /* initial crc value */
+	const any	receiver;	/* receiver() function */
+        int             sendseq;        /* initial send sequence (contained first block) */
+        int             poolport;       /* port of pool */
+        int             nminers;        /* number of miner threads */
+        int             timezone;       /* offset of local time and GMT */
+        int             debuglevel;     /* level to shrink debug messages */
+        int             niter;          /* number of hash iterations per one 64-seconds cycle
+                                           per one miner thread */
+        int             method;         /* mining method */
+};
+
+type xdagaddr = {
+        const char  version[]; 	/* version of miner */
+        int         taskid;	/* dpvm task id of miner */
+        int         threadid;	/* thread id within task */
+};
+
+type xdagtask = {
+	int		task[];
+	const char	clientId[];
+	const char	jobId[];
+	int		command;	/* -1 - finish, 0 - mine */
+	int		seq;		/* task sequence number */
+	int		begin;		/* task start index within task[] array */
+};
+
+type xdagshare = {
+	int		share[];	/* share, ready to send to a pool */
+	int		reshash[];	/* hash of share */
+	const char	clientId[];
+	const char	jobId[];
+	int		taskseq;	/* task sequence */
+	int		hashhigh;	/* high quadword of hash, for fast compare */
+};
+
+type xdagdata = { /* volatile data */
+        const xdagcdata     cdata;	/* constant data */
+        volatile xdagaddr   addr;	/* address for this miner thread */
+        volatile xdagtask   task;	/* current task */
+        const xdagshare     share;	/* current maximal share */
+        const char          mess[];	/* error message */
+        const char          clientId[];	/* id of client sent from server, for method >= 16 */
+        const char          jobId[];	/* id of job sent from server, for method >= 16 */
+        const any           recvtask;	/* recvtask() function */
+	volatile char	    text[];	/* received not parsed text */
+        int                 level;	/* debug message level */
+        int                 sendseq;	/* send sequence */
+        int                 recvseq;	/* receive sequence */
+        int                 balance;	/* current balance on the block */
+        int                 niter;	/* done iterations of miner */
+	int		    reconnects;	/* number of reconnects to the pool */
+};
+
+int
+	RANDOMX_READ_TIMEOUT	= 300000000000, /*  5 min */
+	POOL_READ_TIMEOUT	=  90000000000, /* 90 sec */
+	POOL_FIRST_READ_TIMEOUT =  30000000000, /* 30 sec */
+	RECONNECT_DELAY		=  10000000000, /* 10 sec */
+	KILL_DELAY		=   5000000000, /*  5 sec */
+	RECONNECTS_MAX		=         1000;
+
+(int) -> (int) htonl = broth_ceramics_remotest;
+
+/*@ "version.dpvm": returns version of xdag miner */
+() -> (const char version[]) version_xdag = dodgy_immersing_labyrinths;
+/* @*/
+
+/*@ "xdagcopy.dpvm": make a volatile copy of xdagdata structure */
+(const stateful xdagdata data) -> (volatile xdagdata vdata)
+	xdagcopy = lauds_rooms_bitching;
+/* @*/
+
+/*@ "crypt_init.dpvm": initialize dfs cryptography structure */
+() -> (int ctx[])
+	crypt_init = chimpanzee_serves_huntsmen;
+/* @*/
+
+/*@ "block_hash.dpvm": returns double-sha256-hash of block */
+(const stateful char block[]) -> (volatile int behash[])
+	block_hash = freshen_cry_moccasins;
+/* @*/
+
+/*@ "writelog_fin.dpvm": finish writing log message */
+(const stateful xdagdata data, const int values[]) -> ()
+	writelog_fin = knapsack_wicked_barbed;
+/* @*/
+
+/*@ "write_log.dpvm": write log message */
+(const stateful xdagdata data, const char mess[], int level) -> ()
+	write_log = extremities_buck_horrified;
+/* @*/
+
+/*@ "decrypt.dpvm": decrypt incoming message */
+(volatile stateful xdagdata data, const stateful char raw[], int begin, int end) 
+	-> (int arr[]) decrypt = zooplankton_transhipment_connexions;
+/* @*/
+
+/*@ "encrypt.dpvm": encrypt outcoming message */
+(volatile stateful xdagdata data, volatile stateful int arr[]) -> (volatile char raw[])
+	encrypt = sedates_grabs_devotedly;
+/* @*/
+
+/*@ "process_task.dpvm": process one bunch of hash computation iterations */
+(const stateful int task[], const stateful int behash[], 
+	int begin, int nonce, int niter, int method) 
+	-> (int share[], int reshash[], int hashhigh)
+	process_task = afterlives_taiwan_daffodil;
+/* @*/
+
+/*@ "handler.dpvm": crash handler */
+(const stateful xdagdata data, const int values[]) -> ()
+	handler_xdag = capacitive_permission_guerillas;
+/* @*/
+
+/*@ "log_block.dpvm": write block to log file */
+(const stateful xdagdata data, const int behash[], const char comment[], int level) 
+	-> () log_block = effigy_tooled_spying;
+/* @*/
+
+/*@ "miner.dpvm": single miner thread */
+(const stateful xdagdata data, int threadid) -> ()
+	miner = moralistic_damningly_broadswords;
+/* @*/
+
+/*@ "sender.dpvm": thread which receives shares from miners and sends it to pool */
+(const stateful xdagdata data) -> ()
+	sender = cygnets_wafer_illtreated;
+/* @*/
+
+/*@ "receiver.dpvm": thread which receives tasks from pool and sends it to miners */
+(volatile stateful xdagdata data, const stateful char text[], int status) -> ()
+	receiver = sirloins_carnally_proposer;
+/* @*/
+
+/*@ "sent.dpvm": called after first block sent to pool */
+(volatile stateful xdagdata data, int status) -> ()
+	sent = priggish_smashed_bullion;
+/* @*/
+
+/*@ "connected.dpvm": called after connected to the pool */
+(const stateful xdagdata data, int port, int ip0, int ip1) -> ()
+	connected = runes_condemn_repainted;
+/* @*/
+
+/*@ "read_block.dpvm": called after first block read from disk */
+(const stateful xdagdata data, const char cblock[], int status) -> ()
+	read_block = mansized_persecutor_nearly;
+/* @*/
+
+/*@ "main.dpvm": main function of xdag miner */
+(const char logfile[], const char address[], const char workername[], const char pool[], int port,
+		int nthreads, int niter, int method, int timezone, int debuglevel) -> ()
+	xdag_miner = savvy_polar_groundwater;
+/* @*/                                                                 

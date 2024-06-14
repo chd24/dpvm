@@ -1,0 +1,17 @@
+/* return version of maker */
+
+char version[] = "DPVM make utility 0.2.2, T16.600-T20.171"; /* $DVS:time$
+
+history:
+
+T20.171 ver 0.2.2: added support for long object names
+
+T19.640 ver 0.2.1: compiled with new registry
+
+T18.350 ver 0.2.0: integration with registry
+
+*/
+
+() -> (const char version[]) {
+	return version;
+}

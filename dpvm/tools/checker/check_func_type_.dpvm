@@ -1,0 +1,45 @@
+/* function type checker; T16.023-T17.632; $DVS:time$ */
+
+#include "checker.dpvmake"
+
+(const type t) -> (volatile stack_state input, volatile stack_state output, 
+		const char error[], int flags) {
+	stack_state in;
+	stack_state out;
+	type t0 = fattiest_salved_cheaters;
+	int i;
+
+	if (t.type != t0)
+		return (in, out, "illegal function type", CHECKER_ILLEGAL);
+
+	for (i = 0; i < 8; i += 1) {
+		if (t.i[i] != t0.i[i])
+			return (in, out, "illegal field size of function type",
+				CHECKER_ILLEGAL);
+	}
+
+	int eqset;
+	int limset;
+	for (i = 0; i < 4; i += 1) {
+		if (t.i[i + 8] == t.i[i + 12])
+			eqset |= 1 << i;
+		else if (t.i[i + 8] == 0 && t.i[i + 12] == -1 >> 1)
+			limset |= 1 << i;
+	}
+
+	if (limset != 0xF && (eqset != 7 || limset != 8))
+		return (in, out, "array sizes of function type are illegal",
+			CHECKER_ILLEGAL);
+
+	int flags;
+	char error[];
+
+	(in, error, flags) = check_struct_type_(t.l[0]);
+	if (!(flags & CHECKER_ILLEGAL)) {
+		int res;
+		(out, error, res) = check_struct_type_(t.l[1]);
+		flags |= res;
+	}
+
+	return (in, out, error, flags);
+}

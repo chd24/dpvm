@@ -1,0 +1,46 @@
+/* reconnect to host; T17.558-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmake"
+
+(const stateful dnet_context ctx, const int values[]) -> () wait_time {
+	dnet_connection c = ctx.conns[0];
+
+	char m[];
+	strcat(m, "Starting reconnection to node ");
+	strcat(m, c.host);
+	strcat(m, ":");
+	printint(m, c.port, 1);
+	write_log(ctx, m, 8);
+	
+	connect(ctx.data.connection, ctx, c.host, 0x4060000 | c.port);
+	return;
+}
+
+(const stateful dnet_context ctx, const int values[]) -> () get_time {
+	int t = values[0];
+	int t0 = ctx.conns[0].last_time;
+
+	if (t - t0 < 60000000000)
+		t += 10000000000;
+	else if (t - t0 < 300000000000)
+		t += 30000000000;
+	else if (t - t0 < 1500000000000)
+		t += 100000000000;
+	else
+		t += 300000000000;
+
+	const int vars[] = {0};
+	int values2[];
+	values2.ipush(t);
+	setsys(wait_time, ctx, vars, values2);
+	return; 
+}
+
+(const stateful dnet_context ctx) -> () {
+	if (ctx.conns[0].flags & DNET_CONN_RECONNECT) {
+		const int vars[] = {0};
+		getsys(get_time, ctx, vars);
+	}
+	return;
+}

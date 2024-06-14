@@ -1,0 +1,26 @@
+/* copy xdagdata structure to volatile; T16.657-T19.553; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "xdag.dpvmake"
+
+(const stateful xdagdata data) -> (volatile xdagdata vdata) {
+	xdagdata d;
+	objcopyto(d, data);
+
+	xdagaddr a;
+	objcopyto(a, data.addr);
+	d.addr = a;
+
+	xdagtask t;
+	objcopyto(t, data.task);
+	d.task = t;
+
+	xdagshare s;
+	objcopyto(s, data.share);
+	d.share = s;
+
+	char text[];
+	d.text = text;
+	
+	return d;
+}

@@ -1,0 +1,44 @@
+/* newslog: error handler; T17.039-T19.591; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "newslog.dpvmake"
+
+(const stateful news_data arg, const stateful int values[]) -> () {
+	char str[];
+
+	strftime(str, "%d.%m.%Y %H:%M:%S  ", values[4], arg.offset);
+	strcat(str, arg.version);
+	strcat(str, " crashed with error ");
+	int cod = values[0] & 0x1f;
+	printhex(str, cod, 2, 0);
+	str.push(' ');
+	str.push('(');
+	print_error(str, cod);
+	strcat(str, ") in ");
+	printobjname(str, values[3]);
+	strcat(str, "() pos ");
+	printhex(str, values[2] & 0xfff, 3, 0);
+
+	strcat(str, " code ");
+	cod = values[1] & 0xff;
+	printhex(str, cod, 2, 0);
+
+	str.push(' ');
+	str.push('(');
+	print_bytecode(str, cod);
+	str.push(')');
+	strcat(str, "\r\n");
+
+	writep("", "", arg.news_file, str, -1);
+
+	news_data data;
+	objcopyto(data, arg);
+
+	any db;
+	any db1;
+	data.feeds_db = db;
+	data.news_db = db1;
+
+	mstat(get_stat, data, data.news_file, 0, 1);
+	return;
+}

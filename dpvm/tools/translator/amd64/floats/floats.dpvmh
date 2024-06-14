@@ -1,0 +1,30 @@
+/* definitions for floats computations translatior; T19.508-T19.668; $DVS:time$ */
+
+#include "../../translator_utils.dpvmake"
+
+int STACK_MAX		= 8;
+
+type floatsData = {
+	volatile stateful translator_data	d;
+	volatile int				links[];
+	volatile int				ints[];
+	int					funcAddr;
+	int					nInputs;
+	int					debugLevel;
+	int					debugOutput;
+	int					wasCode;
+	int					pos;
+};
+
+type asmReg = {
+	const char	name[];
+	int		number;
+	int		save;
+};
+
+asmReg asmRegs[] = {
+	{"rax",  0, 0}, {"rcx",  1, 0}, {"rdx",  2, 0}, {"rsi",  6, 0},
+	{ "r8",  8, 0}, { "r9",  9, 0}, {"r10", 10, 0}, {"r11", 11, 0},
+	{"rbx",  3, 1}, {"rbp",  5, 1}, {"r13", 13, 1}, {"r14", 14, 1},
+	{"r15", 15, 1}, {"rdi",  7, 0}, {"r12", 12, 1}
+};

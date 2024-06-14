@@ -1,0 +1,23 @@
+/* dnet node, encoding function; T17.564-T17.591; $DVS:time$ */
+
+#include "../overcats/overcats.dpvmake"
+#include "dnet.dpvmh"
+
+(volatile stateful char dst[], const stateful char src[], 
+		const stateful dnet_connection c, int decode, int state) -> (int state) {
+	overcats_data data;
+
+	data.out_host = c.host;
+	data.out_port = c.port;
+	data.state = state;
+
+	if (decode) {
+		if (c.flags & DNET_CONN_OVERCATS_CLIENT) in_decode(data, dst, src);
+		else out_decode(data, dst, src);
+	} else {
+		if (c.flags & DNET_CONN_OVERCATS_CLIENT) out_encode(data, dst, src);
+		else in_encode(data, dst, src);
+	}
+
+	return data.state;
+}

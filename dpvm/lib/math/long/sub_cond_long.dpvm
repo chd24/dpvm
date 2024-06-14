@@ -1,0 +1,37 @@
+/* sub long number src from dst if result is not negative; T16.475-T17.526; $DVS:time$ */
+
+int z = 0x8000000000000000;
+
+(volatile stateful int dst[], const stateful int src[]) -> (int res) {
+	int si = src.isize;	
+	if (!si) return 1;
+
+	int di = dst.isize;
+	if (di < si) return 0;
+
+	int i;
+
+	if (di == si) {
+		for (i = di - 1; i >= 0; i -= 1) {
+			if (dst[i] - z < src[i] - z) return 0;
+			if (dst[i] != src[i]) i = 0;
+		}
+	}
+
+	int p;
+	for (i = 0; i < di && (i < si || p); i += 1) {
+		int s;
+		if (i < si) s = src[i];
+		s += p;
+		if (s) p = 0;
+		int d = dst[i];
+		int r = d - s;
+		if (r - z > d - z) p = 1;
+		dst[i] = r;
+	}
+
+	while (dst.isize && !dst[dst.isize - 1])
+		dst.ipop(1);
+
+	return !p;
+}

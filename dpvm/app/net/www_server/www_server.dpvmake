@@ -1,0 +1,175 @@
+/* www server, makefile; T16.604-T18.823; $DVS:time$ */
+
+type www_addr = {
+        const char version[];
+	int taskid;
+	int time;
+	int ipaddr0;
+	int ipaddr1;
+	int port;
+};
+
+type www_mess = {
+	char request[];
+	int close;
+	int reqstart;
+};
+
+type www_data = {
+        const char version[];
+        blip_crazed_electrolytic mime;
+        const char root[];
+        const char index[];
+        const char log[];
+        const char domain[];
+        const char ssl_cert[];
+        const char ssl_pem[];
+        volatile char request[];
+	char path[];
+        const char relpath[];
+        const char query[];
+        volatile char content[];
+	www_addr address;
+        const any after_sleep;
+        const any read_callback;
+	int flags;
+	int offset;
+	int port;
+	int ipaddr0;
+	int ipaddr1;
+	int time;
+	int taskid;
+	int killerid;
+	int reqtype;
+	int status;
+	int length;
+	int pos;
+	int cgi;
+	int partial;
+	int close;
+};
+
+/* flags */
+int USE_SSL = 1;
+int KEEP_ALIVE = 2;
+int LOG_REQUEST = 4;
+
+/* reqtype */
+int REQ_GET = 1;
+int REQ_HEAD = 2;
+int REQ_POST = 3;
+
+/* timeouts */
+int TIMEOUT_CGI = 300000000000; /* 5 min */
+int TIMEOUT_WEB = 300000000000; /* 5 min */
+
+/*@ "version.dpvm": returns version of www server */
+() -> (const char version[]) version_www = Q5BAY9JQXjk_fVozDuefb9v_LKqKN7B7u8S_WWzrSAZzsgq /* sputniks_demist_alleviating */;
+/* @*/
+
+/*@ "cmpfiles.dpvm": compare filenames in stat structures */
+(const any a, const any b, int method) -> (int)
+	cmpfiles = dtswpXnzVy8_mK2NGfFGbkS_PLBgjSiuEVd_WcAcndfXyZ9 /* lute_tulips_deported */;
+/* @*/
+
+/*@ "read_date.dpvm": read date from string in http format */
+(const char date[]) -> (int time)
+	read_date = UXTunQCxye2_beJji1nddXo_Q4G5DsEJXtd_ioiHjXz1ArC /* morals_mealies_muscling */;
+/* @*/
+
+/*@ "addmimetype.dpvm": add mime type to list of types */
+(volatile stateful blip_crazed_electrolytic mime, const char ext[], const char type0[])
+		-> ()
+	addmimetype = Cs3NziqkGWF_crjyzEC6e81_MbkUAvrN7RV_Q717k1ELUWm /* inciting_laptops_biltong */;
+/* @*/
+
+/*@ "mimetypes.dpvm": returns collection of all mime types */
+() -> (blip_crazed_electrolytic mime)
+	mimetypes = mw6wLfVH9ZK_h28GXfm4ugV_K7UYgR36bbB_aJ9BejXVAiP /* neatly_whale_airbrush */;
+/* @*/
+
+blip_crazed_electrolytic mimeTypesTable = poisonings_sander_peptides;
+
+/*@ "mimetype.dpvm": get mime type by file path */
+(const blip_crazed_electrolytic mime, const stateful char path[]) -> (const char res[])
+	mimetype = QBJZB67U1NU_aZfZdk1CKaF_G72pL3WBvXB_RdhZpGc5cyy /* unearthly_demography_fudges */;
+/* @*/
+
+/*@ "rewrite.dpvm": modify url from path-based to cgi-parameters-based */
+(const char relpath[], const char query[]) 
+	-> (const char relpath[], const char query[])
+	rewrite = VNxjwdU1WLK_JKMLssu3x78_nk4jWYoZKhm_PfWQtEYK5Ju /* pretending_furls_speaks */;
+/* @*/
+
+/*@ "getheader.dpvm": return given header of http request/reply */
+(volatile stateful char dst[], const char src[], const char header[]) -> ()
+	getheader = gt8R8SLabBY_Q7nuYunHrye_ST9emYy4dKd_mj5byywUYNi /* gridiron_specificness_ransack */;
+/* @*/
+
+/*@ "getcookie.dpvm": return cookie from http request/reply */
+(volatile stateful char dst[], const char src[]) -> ()
+	getcookie = ZFwqW3JrW1t_fGduznZkjeo_URM92PB4cpD_APRfWXbpKV1 /* degenerated_lank_scandalised */;
+/* @*/
+
+/*@ "read_file.dpvm": called when data from file is read to process it output */
+(volatile stateful www_data arg, const char text[], int status) -> ()
+	read_file = cmcohhGjQhi_d2D9VUMxLnJ_nGLYrtDMuNf_a8qUTit1JaH /* dryly_windowing_abridged */;
+/* @*/
+
+/*@ "handler.dpvm": output message in the case of program crash */
+(const stateful www_data arg, const stateful int values[]) -> ()
+	handler_www = P14CTZhv4DD_i2eJyCjCSjt_JM7FsoZCtxX_jM1ohKJBmnQ /* greyer_bleeder_intractable */;
+/* @*/
+
+/*@ "write_log.dpvm": write log message after request is processed */
+(volatile stateful www_data arg, const int result[]) -> ()
+	write_log = QR6aDDvVD9D_M3bHEjoff8g_TzeNFDZsYnp_NgQvXwaPQjY /* liquidating_workshop_firmed */;
+/* @*/
+
+/*@ "output_handler.dpvm": process output of http response body */
+(volatile stateful www_data arg, int status) -> ()
+	output_handler = Jb8YomfQudH_ayHdSffQHQQ_PcJbSHco1Ei_QzukrWMhJhK /* fiddly_rendezvous_negotiated */;
+/* @*/
+
+/*@ "send_headers.dpvm": send http headers to client */
+(volatile stateful www_data arg, const char content[], int status, int length, 
+		int mtime) -> ()
+	send_headers = X6k6NqxkHn6_kmkf1k4hUrs_aJsaoZvMqvV_Gfcf9AeRA3o /* renegade_twilit_blockbusting */;
+/* @*/
+
+/*@ "read_cgi.dpvm": read cgi output */
+(volatile stateful www_data arg, const char text[], int status) -> ()
+	read_cgi = oVSmNva87GE_FVLJdzvKfAp_TUizugxhCrs_Rg1XJfmFwZy /* polyesters_tied_store */;
+/* @*/
+
+/*@ "handle_cgi.dpvm": called when cgi program is started */
+(const www_data arg, int status) -> ()
+	handle_cgi = EKx1wDLtjBk_XRwfR9tDz8F_CbigesKkjHf_WMUkghiA6KG /* keeled_maximum_cryogenic */;
+/* @*/
+
+/*@ "get_stat.dpvm": called when stat of requested file is ready */
+(volatile www_data arg, const any stats) -> ()
+	get_stat = CyDPXdFxp1g_SLkx9RCofd8_PDoxm27wq35_myZK2Z85oq9 /* futon_breasted_rummages */;
+/* @*/
+
+/*@ "read_request.dpvm": read http request from client */
+(volatile stateful www_data arg, const char text[], int status) -> ()
+	read_request = bXeVThYKJDe_eYGG6iFTrVb_A575JnPW6J5_P8bnkoyXsmj /* tempering_ears_mechanical */;
+/* @*/
+
+/*@ "get_time.dpvm": called to handle timestamp of connection start */
+(volatile www_data data, const stateful int result[]) -> ()
+	get_time = gpHXhHYhT75_aTz4zp7qZKR_dRCJY2UUQXE_NviL2abLxLd /* chuckled_appearance_sumptuously */;
+/* @*/
+
+/*@ "handle_connection.dpvm": main function of tcp connection with client */
+(const www_data arg, int port, int ipaddr0, int ipaddr1) -> ()
+	handle_connection = FwEpiFaDmc4_NyLH4tZYKPf_SAuPqwDZ9ps_d3HGy9XNpdR /* switchboard_simpers_precess */;
+/* @*/
+
+/*@ "main.dpvm": main function of www server */
+(const char root[], const char index[], const char log[], const char domain[],
+		const char ssl_cert[], const char ssl_pem[],
+		const char ipaddr[], int port, int flags, int offset) -> ()
+	www_server = mjP81qZ3tqs_BTPi2C3vKvs_HVucUVv1cgH_p1A8cVA1E7z /* triads_serialising_gingerly */;
+/* @*/

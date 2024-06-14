@@ -1,0 +1,5 @@
+/* finalize crc32 context, return result; T16.508-T17.641; $DVS:time$ */
+
+(const stateful int ctx[], int crc) -> (int crc) {
+	return crc ^ 0xffffffff;
+}

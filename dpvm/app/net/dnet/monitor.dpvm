@@ -1,0 +1,40 @@
+/* dnet node, encoding function; T17.564-T19.640; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "dnet.dpvmh"
+
+type monitor_data = {
+        const dnet_context ctx;
+        const any address;
+        const (const dnet_context ctx, const char text[]) -> () out_handler;
+};
+
+(const any data, const char text[]) -> () out_func {
+	monitor_data d;
+	objcopyto(d, data);
+
+	mrecvp("", "", d.address, 1 << 63);
+
+	d.out_handler(d.ctx, text);	
+	return;
+}
+
+(const dnet_context ctx, const (const dnet_context ctx, const char text[]) -> () out_handler,
+		const char cmd[]) -> () {
+        any addr;
+        addr.lpush(ctx.data.version);
+        addr.ipush(ctx.data.control_port);
+        addr.ipush(ctx.data.task_id);
+        addr.ipush(ctx.conns[0].thread_id);
+        addr.ipush(ctx.last_time);
+
+	monitor_data m;
+	m.ctx = ctx;
+	m.address = addr;
+	m.out_handler = out_handler;
+
+	mrecvp("", "", addr, 0);
+
+	ctx.data.registry.monitor.executeCommand(ctx.data.registry, out_func, m, addr, cmd);
+	return;	
+}

@@ -1,0 +1,236 @@
+/* blog class, readMessageFile method, T18.794-T18.958; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "blog.dpvmake"
+
+int READ_SIZE = 0x10000;
+int READ_MAX = 0x100000;
+
+type readMessageFileData = {
+	volatile stateful blogImpl impl;
+	const (volatile stateful any data, const char file[], const dfsFileAttributes attr, const char error[]) -> () callback;
+	volatile stateful any data;
+	const char path[];
+	const dfsFileAttributes attr;
+	const int runs[];
+	volatile int volume[];
+	int inode;
+	int runsPos;
+	int begin;
+	int end;
+	int pos;
+	int size;
+	int minsize;
+};
+
+(volatile stateful readMessageFileData d, const int arr[]) -> (int res) processFileRun = {
+	if (d.pos == (d.begin & -0x200) && arr.isize >= 0x80) {
+		int begin = d.begin & 0x1ff, end = arr.isize << 2;
+
+		if (d.end - (d.begin & -0x200) < end)
+			end = d.end - (d.begin & -0x200);
+
+		int b = begin >> 2, e = -(-end & -4) >> 2;
+
+		if (begin & 3) {
+			char str[];
+			while (begin & 3 && begin < end)
+				str.cpush(arr[b] >> ((begin & 3) << 3)), begin += 1;
+			d.callback(d.data, str, d.attr, "");
+			d.begin += str.csize;
+			b += 1;
+		}
+
+		if (e > b) {
+			char str[] = ints32_2chars(arr, b, e);
+			if (end & 3)
+				str.cpop(-end & 3);
+			d.callback(d.data, str, d.attr, "");
+			d.begin += str.csize;
+		}
+	}
+
+	if (d.begin == d.end) {
+		if (d.runsPos >= d.runs.isize) {
+			d.callback(d.data, "", d.attr, "");
+			return 0;
+		}
+
+		d.begin = d.runs[d.runsPos];
+		d.end = d.runs[d.runsPos + 1];
+
+		d.runsPos += 2;
+	}
+
+	d.pos = d.begin & -0x200;
+	d.size = -(-d.end & -0x200) - d.pos;
+	if (d.size > READ_MAX)
+		d.size = READ_MAX;
+
+	return 1;
+};
+
+(volatile stateful readMessageFileData d, const char file[], int status) -> () readMessageFileCallback = {
+	blogMessage m = d.impl.data.message;
+	int arr[];
+
+	if (status < 0 || status == file.csize) {
+		if (status <= 0 || status & 0x1ff || (d.path != "volume.bin" && status != d.size && status != READ_MAX && (!d.minsize || status < d.minsize))) {
+			if (d.path == "volume.bin" && !status && d.pos)
+				d.callback(d.data, "", d.attr, "");
+			else {
+				char mess[];
+				printf(mess, "Error reading file '%s' or illegal file (inode=%X, begin=%X, end=%X, pos=%X, size=%X, minsize= %X, status=%X)",
+						{m.path, d.inode, d.begin, d.end, d.pos, d.size, d.minsize, status});
+				d.callback(d.data, "", d.attr, mkError(mess, "readMessageFileCallback"));
+			}
+			return;
+		}
+
+		arr = chars2ints32(file, 0, status);
+
+		int i, nSector = d.pos >> 9, nSectors = status >> 9;
+
+		if (!d.pos) {
+			if (!m.inited)
+				dfs_set_data(m.dfsCtx, chars2ints32(file, 0, 0x200));
+			i = 1;
+		}
+
+		for (i = i; i < nSectors; i += 1)
+			dfs_decrypt(m.dfsCtx, arr, i << 7, 0x80, nSector + i);
+	}
+
+	d.minsize = 0;
+
+	if (!d.runs.isize && d.path != "volume.bin") {
+		dfsClass dfs = m.dfsObj;
+		char error[];
+
+		if (status == file.csize) {
+			int volume[] = ints32_2ints(arr, 0, arr.isize);
+
+			if (d.volume.isize || (d.size != status && status == READ_MAX)) {
+				if (d.volume.isize)
+					copyints(d.volume, volume, 0, volume.isize);
+				else
+					d.volume = volume;
+
+				if (d.size != status) {
+					d.pos += status;
+					d.size -= status;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+
+				volume = d.volume;
+				int v[];
+				d.volume = v;
+			}
+
+			error = dfs.methods.addVolumePart(dfs, volume, d.pos >> 3);
+			if (error.csize) {
+				d.callback(d.data, "", d.attr, error);
+				return;
+			}
+
+			if (!d.pos)
+				m.inited = 1;
+		}
+
+		if (!d.inode) {
+			dfsFileAttributes attr;
+			(attr, error) = dfs.methods.findPath(dfs, d.path);
+			int inode = attr.inode;
+			if (error.csize) {
+				if (strstr(error, "need more") >= 0) {
+					d.pos = inode << 5 & -READ_SIZE;
+					d.size = READ_SIZE;
+					d.minsize = (inode >> 4 << 9) + 0x200 - d.pos;
+					read(code, d, m.path, d.pos, d.size);
+					return;
+				}
+				d.callback(d.data, "", d.attr, error);
+				return;
+			}
+			if ((attr.mode & DFS_IFMT) != DFS_IFREG) {
+				d.callback(d.data, "", d.attr, mkError("item is not a file", "readMessageFileCallback"));
+				return;
+			}
+
+			d.attr = attr;
+			d.inode = inode;
+		}
+
+		int runs[], begin, end, arr0[];
+		(runs, error, begin, end) = dfs.methods.getFileRuns(dfs, d.inode, d.begin, d.end);
+		if (error.csize) {
+			if (strstr(error, "need more") >= 0 && begin < end) {
+				d.pos = begin << 3 & -0x200;
+				d.size = -(-end << 3 & -0x200) - d.pos;
+				if (d.size <= 0x200) {
+					d.minsize = d.size;
+					d.size += (end - begin) << 9;
+				}
+				read(code, d, m.path, d.pos, d.size);
+				return;
+			}
+			d.callback(d.data, "", d.attr, error);
+			return;
+		}
+
+		arr = arr0;
+		d.runs = runs;
+		d.begin = 0;
+		d.end = 0;
+
+	} else if (!d.pos && d.path == "volume.bin") {
+		int i;
+		for (i = 0x80; i < 0x100; i += 8)
+			if ((arr[i] & 0xff) == 4) {
+				dfsFileAttributes attr;
+				attr.size = ((arr[i | 6] | arr[i | 7] << 32) + 1) << 9;
+				d.attr = attr;
+				i = 0x100;
+			}
+	}
+
+	if (processFileRun(d, arr))
+		read(code, d, m.path, d.pos, d.size);
+
+	return;
+};
+
+(volatile stateful any blogObj, volatile stateful any data,
+		const (volatile stateful any data, const char file[], const dfsFileAttributes attr, const char error[]) -> () callback,
+		const char path[], int begin, int end) -> () readMessageFile = {
+	blogImpl impl;
+	dfsFileAttributes attr;
+	char err[] = convertObjToImpl(impl, blogObj, "readMessageFile");
+	if (err.csize) return callback(data, "", attr, err);
+
+	if (!impl.data.message.path.csize)
+		return callback(data, "", attr, mkError("message is not set", "readMessageFile"));
+
+	if (begin < 0 || begin > end)
+		return callback(data, "", attr, mkError("illegal begin/end parameters", "readMessageFile"));
+
+	if (begin == end)
+		return callback(data, "", attr, "");
+
+	readMessageFileData d = {impl, callback, data, path};
+	d.begin = begin;
+	d.end = end;
+
+	if (!impl.data.message.inited) {
+		if (path == "volume.bin")
+			d.size = 0x400;
+		else
+			d.size = READ_SIZE, d.minsize = 0x400;
+		read(readMessageFileCallback, d, impl.data.message.path, 0, d.size);
+	} else
+		readMessageFileCallback(d, "", 1);
+	return;
+};

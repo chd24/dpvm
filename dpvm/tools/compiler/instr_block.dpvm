@@ -1,0 +1,244 @@
+/* dpvm: block of instructions; T15.437-T20.056; $DVS:time$ */
+
+/* { <instructions> } | [ <instructions> ] */
+
+int _Z = 0;
+#include "../../common/bytecodes.dpvmh"
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "lexems.dpvmh"
+#include "compiler.dpvmake"
+
+(volatile stateful compdata data, const int instr(volatile stateful compdata))
+                -> (int status, int pos) sequence_block {
+        int pos;
+        int end;
+        int status;
+
+        do {
+                /* read closing } */
+                (pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+                if (status != 5) {
+                        status = instr(data);
+                        if (status < -1) return (status, pos);
+                }
+        } while (!status);
+
+        return (status, pos);
+}
+
+(volatile stateful compdata data, const int instr(volatile stateful compdata))
+                -> (int status, int pos) parallel_block {
+        char tails[][];
+        any dst = data.dst;
+        int pos;
+        int end;
+        int status;
+        int i;
+
+        do {
+                /* read closing ] */
+                (pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
+
+                if (status != LEX_SQUARE_R) {
+                        int ndst0 = data.ndst;
+                        if (ndst0 != dst.csize) {
+				char mess[];
+				printf(mess, "internal error: ndst0 (%d) != dst.csize (%d) in parallel_block()",
+					{ndst0, dst.csize});
+				data.mess = mess;
+				return (-2, pos);
+                        }
+
+                        status = instr(data);
+                        if (status < -1) return (status, pos);
+
+                        int call_index = -1;
+                        int ndst = data.ndst;
+                        if (ndst != dst.csize) {
+				char mess[];
+				printf(mess, "internal error: ndst (%d) != dst.csize (%d) in parallel_block()",
+					{ndst, dst.csize});
+				data.mess = mess;
+				return (-2, pos);
+                        }
+
+                        char tail[];
+                        for (i = ndst0; i < ndst; i += 1) {
+                                int c = dst.c[i];
+                                if (c == DPVM_CODE_CALL) {
+                                        if (call_index >= 0) {
+						tail.cpop(tail.csize);
+                                        }
+                                        call_index = i;
+                                } else if (c == DPVM_CODE_RET) {
+                                        data.mess = "return can't be used in [ ... ] block";
+                                        return (-2, pos);
+                                } else if (c >= DPVM_CODE_LB && c <= DPVM_CODE_JNZF) {
+                                        data.mess = "branching can't be used in [ ... ] block";
+                                        return (-2, pos);
+                                } else if (c >= DPVM_CODE_IO_MIN) {
+                                        data.mess = "I/O operations can't be used in [ ... ] block";
+                                        return (-2, pos);
+                                } else if (call_index >= 0) {
+                                        tail.cpush(c);
+                                }
+                        }
+                        if (call_index < 0) {
+                                data.mess = "function call must be in [ ... ] block";
+                                return (-2, pos);
+                        }
+
+                        tails.lpush(tail);
+                        dst.cpop(ndst - call_index);
+                        dst.cpush(DPVM_CODE_RUN);
+                        data.ndst = call_index + 1;
+                        data.links.ipush((1 << 63) - 1);
+                }
+        } while (!status);
+
+        int j;
+
+        for (i = tails.lsize - 1; i >= 0; i -= 1) {
+                dst.cpush(DPVM_CODE_WAIT);
+                char tail[] = tails[i];
+                int n = tail.csize;
+                for (j = 0; j < n; j += 1)
+                        dst.cpush(tail[j]);
+                data.ndst += n + 1;
+        }
+
+        data.links.ipop(tails.lsize);
+
+        return (status, pos);
+}
+
+(volatile stateful compdata data, const int instr(volatile stateful compdata))
+		-> (int status) {
+	compdata olddata;
+	any consts;
+	int iold[];
+	int inew[];
+	int ptrs[];
+	int pos;
+	int end;
+	int status;
+        int status0;
+	int size;
+	int n;
+	int i;
+	int j;
+	char c;
+
+
+        /* read opening { or [ */
+
+        (pos, end, status0) = getlexem(data.src, lexems, data.pos, data.end);
+
+        if (status0 != 4 && status0 != 2)
+		return -1;
+
+	data.pos = pos;
+
+
+	/* save old stack values */
+
+	iold = olddata.l[0]; inew = data.l[0]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+	iold = olddata.l[1]; inew = data.l[1]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+	iold = olddata.l[2]; inew = data.l[2]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+	iold = olddata.l[3]; inew = data.l[3]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+
+	iold = olddata.l[8]; inew = data.l[8]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+	iold = olddata.l[9]; inew = data.l[9]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+	iold = olddata.l[10]; inew = data.l[10]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+	iold = olddata.l[11]; inew = data.l[11]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+
+	iold = olddata.l[12]; inew = data.l[12]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+	iold = olddata.l[13]; inew = data.l[13]; size = inew.isize;
+	for (i = 0; i < size; i = i + 1) iold.push(inew.i[i]);
+
+	consts = data.l[6];
+	ptrs.push(consts.lsize);
+	ptrs.push(consts.isize);
+	ptrs.push(consts.fsize);
+	ptrs.push(consts.csize);
+	ptrs.push(data.l[14].lsize);
+	ptrs.push(data.l[15].lsize);
+
+
+	/* compile instructions */
+
+        if (status0 == 4)
+                (status, pos) = sequence_block(data, instr);
+        else
+                (status, pos) = parallel_block(data, instr);
+
+        if (status < -1)
+                return status;
+        else if (status != status0 + 1) {
+                if (status0 == 4)
+                        data.mess = "} expected at the end of sequence block";
+                else
+                        data.mess = "] expected at the end of parallel block";
+		return -2;
+	}
+
+	data.pos = pos;
+
+
+	/* stack cleanup of newer declarations */
+
+	const (volatile stateful compdata data, int i, int n) -> () closestack {
+		if (n == 1) {
+			data.dst.cpush(0xA8 + i); /* *pops */
+			data.ndst = data.ndst + 1;
+		} else if (n > 1) {
+			putint(data, n);
+			data.dst.cpush(0xAC + i); /* *popn */
+			data.ndst = data.ndst + 1;
+		}
+		return;
+	}
+
+	n = data.l[0].isize - olddata.l[0].isize;
+	if (n) data.l[0] = olddata.l[0], closestack(data, 0, n);
+	n = data.l[1].isize - olddata.l[1].isize;
+	if (n) data.l[1] = olddata.l[1], closestack(data, 1, n);
+	n = data.l[2].isize - olddata.l[2].isize;
+	if (n) data.l[2] = olddata.l[2], closestack(data, 2, n);
+	n = data.l[3].isize - olddata.l[3].isize;
+	if (n) data.l[3] = olddata.l[3], closestack(data, 3, n);
+
+	n = data.l[8].isize - olddata.l[8].isize;
+	if (n) data.l[8] = olddata.l[8];
+	n = data.l[9].isize - olddata.l[9].isize;
+	if (n) data.l[9] = olddata.l[9];
+	n = data.l[10].isize - olddata.l[10].isize;
+	if (n) data.l[10] = olddata.l[10];
+	n = data.l[11].isize - olddata.l[11].isize;
+	if (n) data.l[11] = olddata.l[11];
+
+	n = data.l[12].isize - olddata.l[12].isize;
+	if (n) data.l[12] = olddata.l[12];
+	n = data.l[13].isize - olddata.l[13].isize;
+	if (n) data.l[13] = olddata.l[13];
+
+	consts.lpop(consts.lsize - ptrs.i[0]);
+	consts.ipop(consts.isize - ptrs.i[1]);
+	consts.fpop(consts.fsize - ptrs.i[2]);
+	consts.cpop(consts.csize - ptrs.i[3]);
+	data.l[14].lpop(data.l[14].lsize - ptrs.i[4]);
+	data.l[15].lpop(data.l[15].lsize - ptrs.i[5]);
+
+
+	return 0;
+}

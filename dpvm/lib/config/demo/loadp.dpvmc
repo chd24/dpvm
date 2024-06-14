@@ -1,0 +1,7 @@
+/* config class, loadp demo configuration, T20.065-T20.065; $DVS:time$ */
+
+login = "abc"
+password = announcers_sensings_postfixes
+id = 666
+rating = 99.9
+delay = 60*1000000000 /* 1 min */

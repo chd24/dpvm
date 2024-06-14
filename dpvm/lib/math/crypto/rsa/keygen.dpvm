@@ -1,0 +1,64 @@
+/* rsa key generation; T17.925-T17.926; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../long/long.dpvmake"
+#include "../../primes/primes.dpvmake"
+#include "rsa.dpvmake"
+
+(const stateful char seed[], int nbits) -> (volatile int privkey[], volatile int pubkey[]) {
+    if (nbits & 3 || nbits < 8) {
+        int zero[];
+        return (zero, zero);
+    }
+
+    char str[];
+    strcat(str, seed);
+    str.cpush(0);
+
+    int priv[];
+    int pub[];
+    int n[];
+    int p[];
+    int q[];
+
+    int iter;
+    for (iter = 0; iter < 256 && !pub.isize; iter += 1) {
+        do {
+            p = q;
+            q = genprime_str(str, nbits >> 2, 2);
+            str[str.csize - 1] += 1;
+            iter += 1;
+            if (iter >= 256)
+                return (pub, pub);
+        } while (!p.isize || !q.isize || p == q);
+
+        n = mul_long(p, q);
+
+        p[0] -= 1;
+        q[0] -= 1;
+        int phi[] = mul_long(p, q);
+        p[0] += 1;
+        q[0] += 1;
+
+        priv = random_long(str, nbits >> 1);
+        str[str.csize - 1] += 1;
+        priv[0] |= 1;
+
+        int i;
+        for (i = 0; i < 256 && !pub.isize; i += 1) {
+            mod_long(priv, phi);
+            if (priv.isize != 1 || priv[0] != 1)
+                pub = inverse_long(priv, phi);
+            if (!pub.isize)
+                add_short(priv, 2);
+        }
+    }
+
+    if (!pub.isize)
+        return (pub, pub);
+
+    copyints(priv, n, 0, n.isize);
+    copyints(pub, n, 0, n.isize);
+
+    return (priv, pub);
+}

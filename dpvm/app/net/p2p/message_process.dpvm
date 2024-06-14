@@ -1,0 +1,229 @@
+/* p2p message process; T16.956-T19.706; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "p2p.dpvmake"
+#include "message.dpvmh"
+#include "mailbox.dpvmh"
+
+type getobjs_data = {
+    const p2pdata data;
+    const int hashes[];
+};
+
+(const stateful getobjs_data d, const any objs) -> () getobjs_loaded {
+    int h0;
+    int h1;
+    int h2;
+    int h3;
+    (h0, h1, h2, h3) = getfullhash(wind_speeded_hogwash);
+
+    char str[];
+    int i;
+    int n;
+    for (i = 0; i < objs.lsize; i += 1, n += 4) {
+        if (objs.l[i] == wind_speeded_hogwash && (d.hashes[n] != h0 || d.hashes[n + 1] != h1 || d.hashes[n + 2] != h2 || d.hashes[n + 3] != h3)) {
+            strcat(str, ints2chars(d.hashes, n, n + 4));
+        } else {
+            char body[];
+            serialize(body, objs.l[i]);
+            char out[];
+            message_write(d.data, out, body, P2P_OBJ);
+            outputp("", "", out);
+        }
+    }
+
+    if (str.csize) {
+        p2paddr addr;
+        p2pmess mess;
+
+        addr.module = P2P_MODULE;
+        addr.service = P2P_ADDRMAN;
+        addr.task_id = d.data.task_id;
+
+        mess.task = P2P_REQOBJS;
+        mess.host = d.data.remote_host;
+        mess.port = d.data.remote_port;
+        mess.data = str;
+
+        msendp("", "", addr, mess);
+
+        if (d.data.log_level >= 9) {
+            char m[];
+            strcat(m, "Retranslated request for objects: ");
+            int j;
+            for (j = 0; j <= mess.data.csize - 32; j += 32) {
+                int k;
+                int h;
+                for (k = 0; k < 6; k += 1)
+                    h |= mess.data[j + k] << (k << 3);
+                h &= (1 << 47) - 1;
+                printobjname(m, h);
+                if (j <= mess.data.csize - 64)
+                    strcat(m, ", ");
+            }
+            write_log(d.data, m, 9);
+        }
+    }
+
+    return;
+}
+
+(volatile stateful p2pdata data, const stateful char str[], int begin, int end, int messtype)
+		-> (int error) {
+
+	if (messtype == P2P_VERSION) {
+		char mess[];
+		strcat(mess, "Host ");
+		strcat(mess, data.remote_host);
+		strcat(mess, ":");
+		printint(mess, data.remote_port, 1);
+		strcat(mess, " has client version '");
+		substrcat(mess, str, begin, end);
+		strcat(mess, "'");
+		write_log(data, mess, 7);
+
+	} else if (messtype == P2P_FLAGS) {
+		char mess[];
+		strcat(mess, "Host ");
+		strcat(mess, data.remote_host);
+		strcat(mess, ":");
+		printint(mess, data.remote_port, 1);
+		strcat(mess, " has client flags '");
+		substrcat(mess, str, begin, end);
+		strcat(mess, "'");
+		write_log(data, mess, 7);
+
+	} else if (messtype == P2P_PING) {
+		char body[];
+		substrcat(body, str, begin, end);
+		char out[];
+		message_write(data, out, body, P2P_PONG);
+		outputp("", "", out);
+
+	} else if (messtype == P2P_MYADDR) {
+		char m[];
+		strcat(m, "Host ");
+		strcat(m, data.remote_host);
+		strcat(m, ":");
+		printint(m, data.remote_port, 1);
+		strcat(m, " reports his address as ");
+		substrcat(m, str, begin, end);
+		write_log(data, m, 7);
+
+		int pos = substrchr(str, begin, end, ':');
+		int port;
+
+		if (pos > begin & pos < end - 1) {
+			int error;
+			int next;
+			(port, error, next) = strtoi(str, pos + 1, end, 10);
+			if (error | next != end)
+				pos = -1;
+		} else pos = -1;
+
+		if (pos > begin) {
+			char host[];
+			substrcat(host, str, begin, pos);
+
+			if (host != data.remote_host | port != data.remote_port) {
+				p2paddr addr;
+				addr.module = P2P_MODULE;
+				addr.service = P2P_ADDRMAN;
+				addr.task_id = data.task_id;
+	
+				p2pmess mess;
+				mess.host = data.remote_host;
+				mess.port = data.remote_port;
+
+				if (netclass(data.remote_host) == netclass(host)) {
+					mess.task = P2P_RENHOST;
+					mess.newhost = host;
+					mess.newport = port;
+					data.remote_host = host;
+					data.remote_port = port;
+				} else
+					mess.task = P2P_ADDONE;
+
+				msendp("", "", addr, mess);
+			}
+		}		
+
+	} else if (messtype == P2P_YOURADDR) {
+		char mess[];
+		strcat(mess, "Host ");
+		strcat(mess, data.remote_host);
+		strcat(mess, ":");
+		printint(mess, data.remote_port, 1);
+		strcat(mess, " reports our address as ");
+		substrcat(mess, str, begin, end);
+		write_log(data, mess, 7);
+
+	} else if (messtype == P2P_OBJ) {
+                if (data.log_level >= 10)
+			logObject(data, "Received", str, begin, end);
+
+		char error[] = deserialize0(str, begin, end);
+
+		if (error.csize) {
+			char mess[];
+			strcat(mess, error);
+			strcat(mess, " sent from host ");
+			strcat(mess, data.remote_host);
+			strcat(mess, ":");
+			printint(mess, data.remote_port, 1);
+			write_log(data, mess, 5);
+			return -1;
+		}
+
+		p2paddr addr;
+		p2pmess mess;
+
+		addr.module = P2P_MODULE;
+		addr.service = P2P_READOBJ;
+		addr.task_id = data.task_id;
+
+                mess.task = P2P_BROADOBJS;
+		mess.host = data.remote_host;
+		mess.port = data.remote_port;
+                char m[];
+                substrcat(m, str, begin, end);
+                mess.data = m;
+		msendp("", "", addr, mess);
+        } else if (messtype == P2P_GETOBJS) {
+            if ((end - begin) & 31) {
+                char mess[];
+                strcat(mess, "P2P_GETOBJS message of illegal size sent from host ");
+                strcat(mess, data.remote_host);
+                strcat(mess, ":");
+                printint(mess, data.remote_port, 1);
+                write_log(data, mess, 5);
+                return -1;
+            }
+
+            int hashes[] = chars2ints(str, begin, end);
+
+            if (data.log_level >= 9) {
+                char m[];
+                strcat(m, "Received request for objects: ");
+                int j;
+                for (j = 0; j < hashes.isize; j += 4) {
+                    printobjname(m, hashes[j] & (1 << 47) - 1);
+                    if (j < hashes.isize - 1)
+                        strcat(m, ", ");
+                }
+                write_log(data, m, 9);
+            }
+
+            getobjs_data d;
+            p2pdata d2;
+            char input[] = d2.input;
+            objcopyto(d2, data);
+            d2.input = input;
+            d.data = d2;
+            d.hashes = hashes;
+            mloadp(getobjs_loaded, d, hashes);
+        }
+
+	return 0;
+}

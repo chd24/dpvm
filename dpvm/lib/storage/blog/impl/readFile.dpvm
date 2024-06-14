@@ -1,0 +1,80 @@
+/* blog class, readFile internal method, T18.721-T18.901; $DVS:time$ */
+
+#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../math/crypto/dfs/dfs.dpvmake"
+#include "blog.dpvmake"
+
+type readFileData = {
+	volatile stateful blogImpl impl;
+	const (volatile stateful any data, volatile int file[], const char error[]) -> () callback;
+	volatile stateful any data;
+	volatile blogUser user;
+	const char fileName[];
+	int mask;
+	int decrypt;
+};
+
+(volatile stateful readFileData d, const char file[], int status) -> () readFileCallback = {
+    if (status < d.decrypt || status & d.mask) {
+        char mess[];
+        printf(mess, "Error reading file '%s' or illegal file (result = %d)", {d.fileName, status});
+        int arr[];
+        d.callback(d.data, arr, mkError(mess, "readFileCallback"));
+        return;
+    }
+
+    int arr[] = chars2ints32(file, 0, status);
+
+    if (d.decrypt && d.user.dfsCtx.isize) {
+        int i;
+
+        dfs_set_data(d.user.dfsCtx, chars2ints32(file, 0, 0x200));
+        status >>= 9;
+
+        for (i = 1; i < status; i += 1)
+            dfs_decrypt(d.user.dfsCtx, arr, i << 7, 0x80, i);
+    }
+
+    d.callback(d.data, arr, "");
+    return;
+};
+
+(volatile stateful any blogObj, volatile stateful any data,
+        const (volatile stateful any data, volatile int file[], const char error[]) -> () callback,
+        const char userName[], const char fileType[]) -> () readFile = {
+    blogImpl impl;
+    char err[] = convertObjToImpl(impl, blogObj, "readFile");
+    if (err.csize) {
+        int res[];
+        callback(data, res, err);
+        return;
+    }
+
+    if (!impl.data.root.csize) {
+        int res[];
+        callback(data, res, mkError("blog root is not set", "readFile"));
+        return;
+    }
+
+    blogUser user;
+    (user, err) = findUser(impl.data, userName);
+    if (err.csize) {
+        int res[];
+        callback(data, res, err);
+        return;
+    }
+
+    char fileName[];
+    printf(fileName, "%s/%s.%s", {impl.data.root, userName, fileType});
+
+    readFileData d = {impl, callback, data, user, fileName, 0x1ff, 1};
+
+    if (fileType == "inbox")
+	d.mask = 0x1f, d.decrypt = 0;
+    else if (fileType == "tipbox")
+	d.mask = 0x3f, d.decrypt = 0;
+
+    read(readFileCallback, d, fileName, 0, 0x100000);
+    return;
+};

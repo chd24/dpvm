@@ -1,0 +1,14 @@
+/* connect to site, get page and save it in the given file; T16.505-T17.596; $DVS:time$ */
+
+#include "wget.dpvmake"
+
+(char host[], char path[], char file[], int port) -> () {
+	wget_data data;
+
+	data.host = host;
+	data.path = path;
+	data.file = file;
+
+	connect(connected, data, host, 0x406 << 16 | port);
+	return;
+}

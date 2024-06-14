@@ -1,0 +1,43 @@
+/* debugger class, report call/ret bytecode to further handler, T19.651-T20.133; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../common/bytecodes.dpvmh"
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "debugger.dpvmake"
+
+(volatile stateful thread t, const type stackType) -> () report = {
+	debuggerMessage m;
+	m.function = t.function;
+	m.pointer = t.pointer - 1;
+	m.threadId = t.threadId;
+
+	any from = t.stack, to;
+	int i, begin, end, iscall = (m.pointer >= 0 && m.function.c[m.pointer] == DPVM_CODE_CALL);
+
+	end = from.lsize - iscall, begin = end - stackType.i[8];
+	for (i = begin; i < end; i += 1)
+		to.lpush({+from.l[i]});
+
+	if (iscall)
+		to.lpush(from.l[i]);
+	else if (m.pointer < 0)
+		to.lpush(m.function);
+
+	end = from.isize, begin = end - stackType.i[9];
+	for (i = begin; i < end; i += 1)
+		to.ipush(from.i[i]);
+
+	end = from.fsize, begin = end - stackType.i[10];
+	for (i = begin; i < end; i += 1)
+		to.fpush(from.f[i]);
+
+	end = from.csize, begin = end - stackType.i[11];
+	for (i = begin; i < end; i += 1)
+		to.cpush(from.c[i]);
+
+	m.args = to;
+
+	msendp("", "", t.reportAddress, m);
+	return;
+};

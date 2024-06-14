@@ -1,0 +1,15 @@
+/* new method for x86-64; T17.668-T17.668; $DVS:time$ */
+
+#include "amd64/graphs/test.dpvmake"
+
+(volatile stateful translator_data data) -> (int res) translate {
+	int level = getaddr(data.addrs, "debug");
+	if (level < 0)
+		return amd64_graphs(data.machcode, data.func);
+ 	return graphs_test(data.func, level);
+}
+
+translator_method amd64_graphs_ = {
+	"amd64",
+	translate
+};

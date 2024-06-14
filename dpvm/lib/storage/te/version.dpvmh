@@ -1,0 +1,26 @@
+/* te version and history, header */
+
+char teVersion[] = "te 0.2.1, T18.319-T18.765"; /* $DVS:time$
+
+history:
+
+T18.765 - ver. 0.2.1: added external methods time2teTime and teTime2Time
+
+T18.336 - ver. 0.2.0: added commands view, end, back, 1, 0, L, E
+
+T18.338 - ver. 0.1.5: added info and help commands; first real used version
+
+T18.328 - ver. 0.1.4: added home and prev and dump commands,
+		      fixed bugs, turned on no-history input mode
+
+T18.326 - ver. 0.1.3: added 'new' command; implemented T18.319 TE extension
+
+T18.323 - ver. 0.1.2: added edit and save commands
+
+T18.320 - ver. 0.1.1: first working version of viewer; added show and next commands
+
+T18.320 - ver. 0.1.0: first version with exit command
+
+T18.319 - ver. 0.0.1: project started
+
+*/

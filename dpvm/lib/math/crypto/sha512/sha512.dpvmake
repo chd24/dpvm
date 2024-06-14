@@ -1,0 +1,42 @@
+/* sha512 cryptography, makefile; T17.687-T19.991; $DVS:time$ */
+
+/*@ "init.dpvm": initialize context */
+(volatile stateful int ctx[]) -> ()
+	sha512_init = humiliation_bill_atoms;
+/* @*/
+
+/*@ "genProcessChunk.dpvm": generate text of process_chunk() */
+() -> (volatile char text[])
+	sha512_genProcessChunk = frighten_sketchiest_regulates;
+/* @*/
+
+/*@ "process_chunk.dpvm": process chunk of 64 ints */
+(volatile stateful int ctx[], const stateful int chunk[], int begin) -> ()
+	sha512_processChunk = clergyman_rationale_peatland;
+/* @*/
+
+/*@ "add_substr.dpvm": add substring to hash */
+(volatile stateful int ctx[], const stateful char text[], int begin, int end) -> ()
+	sha512_addSubstr = criterion_applepie_spite;
+/* @*/
+
+/*@ "add_ints.dpvm": add subarray of integers to hash */
+(volatile stateful int ctx[], const stateful int data[], int begin, int end) -> ()
+	sha512_addInts = milky_diabolically_galleon;
+/* @*/
+
+/*@ "finalize.dpvm": finalize hash counting, return hash in context */
+(volatile stateful int ctx[]) -> ()
+	sha512_finalize = monstrously_maintainer_greece;
+/* @*/
+
+/*@ "substr_hash.dpvm": count hash of substring */
+(const stateful char str[], int begin, int end) -> (volatile int hash[])
+	sha512_substrHash = acquitted_cleaves_changeless;
+/* @*/
+
+/*@ "testProcessChunk.dpvm": test given implementation of precess_chunk() */
+(const (volatile stateful int ctx[], const stateful int chunk[], int begin) -> () 
+		process_chunk, int niter) -> (volatile int ctx[])
+	sha512_testProcessChunk = gosh_geared_replies;
+/* @*/                                                                 

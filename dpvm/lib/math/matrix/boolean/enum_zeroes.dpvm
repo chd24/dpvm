@@ -1,0 +1,29 @@
+/* enumerate zeroes in sub-matrix; T16.064-T16.065; $DVS:time$ */
+
+(int rows[], int cols[], int matrix[], int rowmask, int colmask) -> (int angle_zeroes) {
+	int res;
+	int i;
+	int j;
+
+	if (!rowmask | !colmask) { return (res); }
+
+	i = -1; do {
+		i = i + 1;
+	} while (!(rowmask & 1 << i));
+	
+	j = 0; do {
+		if ((1 << j) & colmask & ~matrix.i[i]) {
+			rows.push(i);
+			cols.push(j);
+			res = res + 1;
+		}
+		j = j + 1;
+	} while (1 << j <= colmask);
+
+	(j) = code(rows, cols, matrix, rowmask & ~(1 << i), colmask & ~matrix.i[i]);
+	res = res + j;
+
+	(j) = code(rows, cols, matrix, rowmask & ~(1 << i), colmask & matrix.i[i]);
+
+	return (res);
+}

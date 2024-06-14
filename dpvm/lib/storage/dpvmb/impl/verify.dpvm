@@ -1,0 +1,130 @@
+/* dpvmb class, verify() method implementation, T20.139-T20.155; $DVS:time$ */
+
+int _Z = 0;
+#include "../../../../common/bytecodes.dpvmh"
+#include "../../../../lib/stdlib/stdlib.dpvmake"
+#include "dpvmb.dpvmake"
+
+(const stateful char db[], int pos) -> (int n) readInt = {
+	int res, i;
+	for (i = DPVMB_LINK_SIZE - 1; i >= 0; i--)
+		res <<= 8, res |= db[pos + i];
+	return res;
+};
+
+(const stateful char db[], int hash, int bit) -> (int n) getBit = {
+	return db[hash + (bit >> 3)] >> (bit & 7) & 1;
+};
+
+(const char mess[], int header) -> (const char err[]) mkErr = {
+	char err[];
+	printf(err, "%s, header = 0x%x", {mkError(mess, "verify"), header});
+	return err;
+};
+
+(volatile stateful any dpvmbObj) -> (const char error[]) verify = {
+	dpvmbImpl impl;
+	char err[] = convertObjToImpl(impl, dpvmbObj, "verify");
+	if (err.csize) return err;
+
+	char db[] = impl.data.db;
+
+	if (!db.csize)
+		return mkError("empty database", "verify");
+
+	int i, end, header, objSize, alignedSize, verifyHash, nlinks, links, hash, object;
+
+	for (end = db.csize; end > 0; end = object) {
+
+		/* verify header */
+
+		header = end - DPVMB_HEAD_SIZE;
+		if (header < 0 || header & (DPVMB_LINK_SIZE - 1) || db[header + DPVMB_HEAD_MARKER] != DPVM_CODE_ILL)
+			return mkErr("illegal header", header);
+
+
+		/* verify node sizes */
+
+		objSize = readInt(db, header + DPVMB_HEAD_OBJ_SIZE);
+		alignedSize = ((objSize - 1) | (DPVMB_OBJ_ALIGN - 1)) + 1;
+		verifyHash = readInt(db, header + DPVMB_HEAD_SHORT_HASH) << 17 >> 17;
+		nlinks = db[header + DPVMB_HEAD_N_LINKS];
+		if (!nlinks && header != alignedSize + DPVMB_HASH_SIZE)
+			nlinks = 0x100;
+		links = header - nlinks * DPVMB_LINK_SIZE;
+		hash = links - DPVMB_HASH_SIZE;
+		object = hash - alignedSize;
+		if (object < 0 || object > hash || object && object < DPVMB_HEAD_SIZE || objSize < 12 * 8)
+			return mkErr("illegal object size", header);
+
+
+		/* verify short hash of node */
+
+		Archiver obj;
+		if (object) {
+			for (i = object - DPVMB_HEAD_SIZE; i < object; i++)
+				obj.cpush(db[i]);
+		}
+
+		for (i = hash; i < end; i++)
+			obj.cpush(i >= header + DPVMB_HEAD_SHORT_HASH && i < header + DPVMB_HEAD_N_LINKS ? (char)0 : db[i]);
+
+		if (obj != verifyHash)
+			return mkErr("hash of node not matched", header);
+
+
+		/* verify links to child nodes */
+
+		for (i = 0; i < nlinks; i++) {
+			int offset = readInt(db, links + i * DPVMB_LINK_SIZE);
+			if (offset) {
+				int header1 = hash - offset * DPVMB_LINK_SIZE;
+				if (offset >> 61 || header1 >= hash || header1 < 0 || db[header1 + DPVMB_HEAD_MARKER] != DPVM_CODE_ILL)
+					return mkErr("illegal child node header", header);
+
+				int nlinks1 = db[header1 + DPVMB_HEAD_N_LINKS];
+				int objSize1 = readInt(db, header1 + DPVMB_HEAD_OBJ_SIZE);
+				int alignedSize1 = ((objSize1 - 1) | (DPVMB_OBJ_ALIGN - 1)) + 1;
+				if (!nlinks1 && header1 != alignedSize1 + DPVMB_HASH_SIZE)
+					nlinks1 = 0x100;
+				int hash1 = header1 - nlinks1 * DPVMB_LINK_SIZE - DPVMB_HASH_SIZE;
+				if (hash1 < 0 || hash1 > header1 - DPVMB_HASH_SIZE)
+					return mkErr("illegal child node sizes", header);
+
+				int j;
+				for (j = 0; j <= i; j++) {
+					if (getBit(db, hash1, j) != getBit(db, hash, j) ^ (j == i))
+						return mkErr("illegal hash of child node object", header);
+				}
+
+				/* TODO: verify that header1 sometimes become header in this cycles */
+			}
+		}
+
+
+		/* verify object header and size */
+
+		int h[8..];
+		for (i = 0; i < 8; i++)
+			h[i] = readInt(db, object + i * 8);
+
+		int sum = 8 * 12, ill;
+		for (i = 0; i < 4; i++) {
+			if (h[i] != obj.type.i[i])
+				return mkErr("illegal dimension of objects's stack", header);
+
+			int n = h[i] * h[i + 4];
+			ill |= h[i + 4] < 0 || n < h[i + 4] || n / h[i] != h[i + 4] || sum + n < sum;
+			sum += n;
+		}
+
+		if (ill || sum != objSize)
+			return mkErr("object size not matched the size from header", header);
+
+
+		/* TODO: find object type in the database, construct object and verify object hash */
+	}
+
+	impl.data.dbInited = 1;
+	return "";
+};

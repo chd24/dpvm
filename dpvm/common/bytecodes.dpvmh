@@ -1,0 +1,160 @@
+/* dpvm: list of bytecodes for use both in dpvm source and programs; T15.395-T19.541; $DVS:time$ */
+
+int DPVM_CODE_ZERO      = 0x00 + _Z;
+int DPVM_CODE_NUM_MIN   = 0x00 + _Z;
+int DPVM_CODE_NUM_MAX   = 0x7f + _Z;
+
+
+int DPVM_CODE_ILL       = 0x80 + _Z;
+int DPVM_CODE_NOP       = 0x81 + _Z;
+int DPVM_CODE_CODE      = 0x82 + _Z;
+int DPVM_CODE_UNFIX	= 0x83 + _Z;
+int DPVM_CODE_INFO      = 0x84 + _Z;
+int DPVM_CODE_NEW       = 0x85 + _Z;
+int DPVM_CODE_HASH      = 0x86 + _Z;
+int DPVM_CODE_FIX       = 0x87 + _Z;
+
+int DPVM_CODE_RET       = 0x88 + _Z;
+int DPVM_CODE_WAIT      = 0x89 + _Z;
+int DPVM_CODE_CALL      = 0x8a + _Z;
+int DPVM_CODE_RUN       = 0x8b + _Z;
+int DPVM_CODE_RESERVED1 = 0x8c + _Z;
+int DPVM_CODE_RESERVED2 = 0x8d + _Z;
+int DPVM_CODE_RESERVED3 = 0x8e + _Z;
+int DPVM_CODE_RESERVED4 = 0x8f + _Z;
+
+int DPVM_CODE_LB        = 0x90 + _Z;
+int DPVM_CODE_JB        = 0x91 + _Z;
+int DPVM_CODE_JZB       = 0x92 + _Z;
+int DPVM_CODE_JNZB      = 0x93 + _Z;
+int DPVM_CODE_LF        = 0x94 + _Z;
+int DPVM_CODE_JF        = 0x95 + _Z;
+int DPVM_CODE_JZF       = 0x96 + _Z;
+int DPVM_CODE_JNZF      = 0x97 + _Z;
+
+int DPVM_CODE_EQ        = 0x98 + _Z;
+int DPVM_CODE_LT        = 0x99 + _Z;
+int DPVM_CODE_GT        = 0x9a + _Z;
+int DPVM_CODE_NEG       = 0x9b + _Z;
+int DPVM_CODE_FEQ       = 0x9c + _Z;
+int DPVM_CODE_FLT       = 0x9d + _Z;
+int DPVM_CODE_FGT       = 0x9e + _Z;
+int DPVM_CODE_FNEG      = 0x9f + _Z;
+
+
+int DPVM_CODE_LLOAD     = 0xa0 + _Z;
+int DPVM_CODE_ILOAD     = 0xa1 + _Z;
+int DPVM_CODE_FLOAD     = 0xa2 + _Z;
+int DPVM_CODE_CLOAD     = 0xa3 + _Z;
+int DPVM_CODE_LSTORE    = 0xa4 + _Z;
+int DPVM_CODE_ISTORE    = 0xa5 + _Z;
+int DPVM_CODE_FSTORE    = 0xa6 + _Z;
+int DPVM_CODE_CSTORE    = 0xa7 + _Z;
+
+int DPVM_CODE_LPOPS     = 0xa8 + _Z;
+int DPVM_CODE_IPOPS     = 0xa9 + _Z;
+int DPVM_CODE_FPOPS     = 0xaa + _Z;
+int DPVM_CODE_CPOPS     = 0xab + _Z;
+int DPVM_CODE_LPOPN     = 0xac + _Z;
+int DPVM_CODE_IPOPN     = 0xad + _Z;
+int DPVM_CODE_FPOPN     = 0xae + _Z;
+int DPVM_CODE_CPOPN     = 0xaf + _Z;
+
+int DPVM_CODE_LGET      = 0xb0 + _Z;
+int DPVM_CODE_IGET      = 0xb1 + _Z;
+int DPVM_CODE_FGET      = 0xb2 + _Z;
+int DPVM_CODE_CGET      = 0xb3 + _Z;
+int DPVM_CODE_LSET      = 0xb4 + _Z;
+int DPVM_CODE_ISET      = 0xb5 + _Z;
+int DPVM_CODE_FSET      = 0xb6 + _Z;
+int DPVM_CODE_CSET      = 0xb7 + _Z;
+
+int DPVM_CODE_LPUSH     = 0xb8 + _Z;
+int DPVM_CODE_IPUSH     = 0xb9 + _Z;
+int DPVM_CODE_FPUSH     = 0xba + _Z;
+int DPVM_CODE_CPUSH     = 0xbb + _Z;
+int DPVM_CODE_LPOP      = 0xbc + _Z;
+int DPVM_CODE_IPOP      = 0xbd + _Z;
+int DPVM_CODE_FPOP      = 0xbe + _Z;
+int DPVM_CODE_CPOP      = 0xbf + _Z;
+
+
+int DPVM_CODE_ADD       = 0xc0 + _Z;
+int DPVM_CODE_SUB       = 0xc1 + _Z;
+int DPVM_CODE_MUL       = 0xc2 + _Z;
+int DPVM_CODE_DIV       = 0xc3 + _Z;
+int DPVM_CODE_FADD      = 0xc4 + _Z;
+int DPVM_CODE_FSUB      = 0xc5 + _Z;
+int DPVM_CODE_FMUL      = 0xc6 + _Z;
+int DPVM_CODE_FDIV      = 0xc7 + _Z;
+
+int DPVM_CODE_SHL       = 0xc8 + _Z;
+int DPVM_CODE_SHR       = 0xc9 + _Z;
+int DPVM_CODE_SSHR      = 0xca + _Z;
+int DPVM_CODE_UDIV      = 0xcb + _Z;
+int DPVM_CODE_AND       = 0xcc + _Z;
+int DPVM_CODE_OR        = 0xcd + _Z;
+int DPVM_CODE_XOR       = 0xce + _Z;
+int DPVM_CODE_NOT       = 0xcf + _Z;
+
+int DPVM_CODE_ITOF      = 0xd0 + _Z;
+int DPVM_CODE_ITOC      = 0xd1 + _Z;
+int DPVM_CODE_FTOI      = 0xd2 + _Z;
+int DPVM_CODE_CTOI      = 0xd3 + _Z;
+int DPVM_CODE_FSPLIT    = 0xd4 + _Z;
+int DPVM_CODE_FMERGE    = 0xd5 + _Z;
+int DPVM_CODE_FFLOOR    = 0xd6 + _Z;
+int DPVM_CODE_FCEIL     = 0xd7 + _Z;
+
+int DPVM_CODE_FABS      = 0xd8 + _Z;
+int DPVM_CODE_FMOD      = 0xd9 + _Z;
+int DPVM_CODE_FSQRT     = 0xda + _Z;
+int DPVM_CODE_FEXP      = 0xdb + _Z;
+int DPVM_CODE_FLOG      = 0xdc + _Z;
+int DPVM_CODE_FSINCOS   = 0xdd + _Z;
+int DPVM_CODE_FTAN      = 0xde + _Z;
+int DPVM_CODE_FATAN     = 0xdf + _Z;
+
+
+int DPVM_CODE_IO_MIN    = 0xe0 + _Z;
+
+int DPVM_CODE_INPUT     = 0xe0 + _Z;
+int DPVM_CODE_OUTPUT    = 0xe1 + _Z;
+int DPVM_CODE_READ      = 0xe2 + _Z;
+int DPVM_CODE_WRITE     = 0xe3 + _Z;
+int DPVM_CODE_BIND      = 0xe4 + _Z;
+int DPVM_CODE_CONNECT   = 0xe5 + _Z;
+int DPVM_CODE_GETSYS    = 0xe6 + _Z;
+int DPVM_CODE_SETSYS    = 0xe7 + _Z;
+
+int DPVM_CODE_MLOAD     = 0xe8 + _Z;
+int DPVM_CODE_MSAVE     = 0xe9 + _Z;
+int DPVM_CODE_MSTAT     = 0xea + _Z;
+int DPVM_CODE_MCNTL     = 0xeb + _Z;
+int DPVM_CODE_MRECV     = 0xec + _Z;
+int DPVM_CODE_MSEND     = 0xed + _Z;
+int DPVM_CODE_MPOPEN    = 0xee + _Z;
+int DPVM_CODE_MEXT      = 0xef + _Z;
+
+int DPVM_CODE_IO_MAX    = 0xef + _Z;
+int DPVM_CODE_IOP_MIN   = 0xf0 + _Z;
+
+int DPVM_CODE_INPUTP    = 0xf0 + _Z;
+int DPVM_CODE_OUTPUTP   = 0xf1 + _Z;
+int DPVM_CODE_READP     = 0xf2 + _Z;
+int DPVM_CODE_WRITEP    = 0xf3 + _Z;
+int DPVM_CODE_BINDP     = 0xf4 + _Z;
+int DPVM_CODE_CONNECTP  = 0xf5 + _Z;
+int DPVM_CODE_GETSYSP   = 0xf6 + _Z;
+int DPVM_CODE_SETSYSP   = 0xf7 + _Z;
+
+int DPVM_CODE_MLOADP    = 0xf8 + _Z;
+int DPVM_CODE_MSAVEP    = 0xf9 + _Z;
+int DPVM_CODE_MSTATP    = 0xfa + _Z;
+int DPVM_CODE_MCNTLP    = 0xfb + _Z;
+int DPVM_CODE_MRECVP    = 0xfc + _Z;
+int DPVM_CODE_MSENDP    = 0xfd + _Z;
+int DPVM_CODE_MPOPENP   = 0xfe + _Z;
+int DPVM_CODE_MEXTP     = 0xff + _Z;
+
+int DPVM_CODE_IOP_MAX   = 0xff + _Z;

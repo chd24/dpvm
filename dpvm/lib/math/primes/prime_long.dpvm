@@ -1,0 +1,96 @@
+/* is long number prime, Miller-Rabin method; T17.919-T17.923; $DVS:time$ */
+
+#include "../long/long.dpvmake"
+#include "primes.dpvmake"
+
+(const int n[], const int nminus1[], const int exp[], const int primes[], int start, int max_rounds) -> (int res) worker {
+    int base[];
+    base.ipush(0);
+
+    int i;
+    for (i = start; i < max_rounds; i += 8) {
+        base[0] = primes[i];
+        int res[] = pow_mod_long(base, exp, n);
+        if (!(res.isize == 1 && res[0] == 1) && res != nminus1)
+            return i * 10 + 5;
+    }
+
+    return 0;
+}
+
+/* Probabilistic Miller-Rabin method, works for numbers of the form 4k + 3,
+   returns 0 if probably prime, != 0 if composite or inacceptable;
+   max_rounds - maximum Miller-Rabin rounds i.e. first primes p for
+   which p^d (mod n) computed; number of rounds also <= number of bits in n
+*/
+(const stateful int n[], int max_rounds) -> (int res) {
+	if (!n.isize)
+                return 1;
+
+        if (n.isize == 1 && n[0] >= 0) {
+                int res = prime(n[0]);
+                if (res) return 0;
+                return 2;
+        }
+
+        if ((n[0] & 3) != 3)
+                return 3;
+
+        int nbits = n.isize - 1;
+        int last = n[nbits];
+        nbits <<= 6;
+        while (last) { last >>= 1; nbits += 1; }
+
+        int primes[];
+        primes.ipush(2);
+        int i;
+        int d;
+
+        for (d = 3, i = 1; i < nbits; d += 2) {
+            if (prime(d)) {
+                if (!mod_short(n, d))
+                    return i * 10 + 4;
+                primes.ipush(d);
+                i += 1;
+            }
+        }
+
+        int w[] = copy_long(n);
+        int nminus1[] = copy_long(n);
+        nminus1[0] -= 1;
+        int exp[] = copy_long(nminus1);
+        shr_1(exp);
+
+        if (nbits < max_rounds)
+            max_rounds = nbits;
+
+        if (max_rounds <= 0)
+            return 0;
+
+        int res = worker(w, nminus1, exp, primes, 0, 1);
+        if (res)
+            return res;
+
+        if (max_rounds == 1)
+            return 0;
+
+        int r[8];
+
+        [
+            r[0] = worker(w, nminus1, exp, primes, 1, max_rounds);
+            r[1] = worker(w, nminus1, exp, primes, 2, max_rounds);
+            r[2] = worker(w, nminus1, exp, primes, 3, max_rounds);
+            r[3] = worker(w, nminus1, exp, primes, 4, max_rounds);
+            r[4] = worker(w, nminus1, exp, primes, 5, max_rounds);
+            r[5] = worker(w, nminus1, exp, primes, 6, max_rounds);
+            r[6] = worker(w, nminus1, exp, primes, 7, max_rounds);
+            r[7] = worker(w, nminus1, exp, primes, 8, max_rounds);
+        ]
+
+        for (i = 0; i < 8; i += 1) {
+            if (r[i] && (!res || r[i] < res))
+                res = r[i];
+        }
+
+        return res;
+}

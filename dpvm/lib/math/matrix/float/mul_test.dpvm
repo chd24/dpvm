@@ -1,0 +1,17 @@
+/* test multiplication of large matrixes; T17.915-T17.917; $DVS:time$ */
+
+#include "matrix.dpvmake"
+
+(int size, int parallel_cut) -> (int hash) {
+    int rand[4];
+    matrix src1 = matrix_rand(rand, size, size, -100.0, 100.0);
+    matrix src2 = matrix_rand(rand, size, size, -100.0, 100.0);
+    matrix dst;
+    dst.rows = size;
+    dst.columns = size;
+
+    int status = matrix_mul(dst, src1, src2, parallel_cut);
+    if (status)
+        return -1;
+    return dst;
+}

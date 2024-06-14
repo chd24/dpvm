@@ -1,0 +1,28 @@
+/* make error message; T16.025-T20.097; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "checker.dpvmake"
+
+(const char error[], const stateful any func, int pos) -> (volatile char mess[]) {
+	char mess[];
+	
+	strcat(mess, version_check());
+	strcat(mess, ": error: ");
+	strcat(mess, error);
+	strcat(mess, " in ");
+	printobjname(mess, func);
+	strcat(mess, "(), pos ");
+	printint(mess, pos, 1);
+
+	if (pos < 0 || pos >= func.csize)
+		return mess;
+
+	strcat(mess, ", code ");
+	int cod = func.c[pos];
+	printhex(mess, cod, 2, 0);
+	strcat(mess, " (");
+	print_bytecode(mess, cod);
+	strcat(mess, ")");
+
+	return mess;
+}

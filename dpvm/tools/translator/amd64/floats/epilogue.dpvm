@@ -1,0 +1,18 @@
+/* epilogue of asm function; T19.509-T19.511; $DVS:time$ */
+
+#include "floats.dpvmake"
+
+(volatile stateful floatsData data) -> () epilogue = {
+	int i;
+
+	if (data.wasCode && asmRegs[asmRegs.lsize - 1].save)
+		doAsm(data, "pop r", "41?R==1 58+r*1", asmRegs.lsize - 1, 0);
+
+	for (i = data.nInputs - 1; i >= 0; i -= 1)
+		if (asmRegs[i].save)
+			doAsm(data, "pop r", "41?R==1 58+r*1", i, 0);
+
+	doAsm(data, "xor rax,rax", "48 31 C0", 0, 0);
+	doAsm(data, "ret", "C3", 0, 0);
+	return;
+};
