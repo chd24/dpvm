@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.229; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.237; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "input.dpvmake"
@@ -8,11 +8,20 @@ int T_ECHO	=   1;
 int T_SUPP_GA	=   3;
 int T_LINEMODE	=  34;
 int T_SUPP_ECHO	=  45;
+int T_SE	= 240;
+int T_SB	= 250;
 int T_WILL	= 251;
 int T_WONT	= 252;
 int T_DO	= 253;
 int T_DONT	= 254;
 int T_IAC	= 255;
+
+/* states */
+int S_NORM	= 0;
+int S_IAC	= 1;	/* IAC received */
+int S_WD	= 2;	/* WILL/WONT/DO/DONT after IAC */
+int S_SB	= 3;	/* SB received */
+int S_SE	= 4;	/* SE awaited */
 
 type inputExtData = {
 	volatile stateful char line[];
@@ -21,6 +30,7 @@ type inputExtData = {
 	volatile stateful any data;
 	int maxSize;
 	int timeout;
+	int state;
 	int offset;
 };
 
@@ -29,17 +39,52 @@ type inputExtData = {
 	int i;
 	for (i = 0; i < text.csize; i++) {
 		int c = text[i];
-		if (c == '\r' || c == '\n') {
-			data.callback(data.data, "");
-			return;
-		}
-		if (data.line.csize < data.maxSize) {
-			data.line.cpush(c);
-			out.cpush(c);
-			if (c < 0x80 || c >= 0xc0)
-				data.offset++;
+
+		if (data.state == S_NORM) {
+			if (c == T_IAC)
+				data.state = S_IAC;
+
+			else if (c == '\r' || c == '\n') {
+				out.cpush(c);
+				out.cpush(T_IAC), out.cpush(T_DO), out.cpush(T_LINEMODE);
+				out.cpush(T_IAC), out.cpush(T_SB), out.cpush(T_LINEMODE), out.cpush(1), out.cpush(1),
+					out.cpush(T_IAC), out.cpush(T_SE);
+				out.cpush(T_IAC), out.cpush(T_WONT), out.cpush(T_ECHO);
+				if (out.csize)
+					outputp("", "", out);
+				data.callback(data.data, "");
+				return;
+
+			} else if (data.line.csize < data.maxSize) {
+				data.line.cpush(c);
+				out.cpush(c);
+				if (c < 0x80 || c >= 0xc0)
+					data.offset++;
+			}
+
+		} else if (data.state == S_IAC) {
+			if (c == T_WILL || c == T_WONT || c == T_DO || c == T_DONT)
+				data.state = S_WD;
+			else if (c == T_SB)
+				data.state = S_SB;
+			else
+				data.state = S_NORM;
+
+		} else if (data.state == S_WD) {
+			data.state = S_NORM;
+
+		} else if (data.state == S_SB) {
+			if (c == T_IAC)
+				data.state = S_SE;
+
+		} else if (data.state == S_SE) {
+			if (c == T_SE)
+				data.state = S_NORM;
+			else
+				data.state = S_SB;
 		}
 	}
+
 	if (out.csize)
 		outputp("", "", out);
 	input(code, data, data.maxSize, data.timeout);
@@ -56,10 +101,9 @@ type inputExtData = {
 	inputExtData d = {line, impl, callback, data, maxSize, timeout};
 
 	char cntl[];
+	cntl.cpush(T_IAC), cntl.cpush(T_DO), cntl.cpush(T_LINEMODE);
+	cntl.cpush(T_IAC), cntl.cpush(T_SB), cntl.cpush(T_LINEMODE), cntl.cpush(1), cntl.cpush(0), cntl.cpush(T_IAC), cntl.cpush(T_SE);
 	cntl.cpush(T_IAC), cntl.cpush(T_WILL), cntl.cpush(T_ECHO);
-	cntl.cpush(T_IAC), cntl.cpush(T_WILL), cntl.cpush(T_SUPP_GA);
-	cntl.cpush(T_IAC), cntl.cpush(T_WONT), cntl.cpush(T_LINEMODE);
-	cntl.cpush(T_IAC), cntl.cpush(T_DO), cntl.cpush(T_SUPP_ECHO);
 	outputp("", "", cntl);
 
 	input(inputCallback, d, maxSize, timeout);
