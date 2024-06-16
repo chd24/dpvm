@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.240; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.243; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "input.dpvmake"
@@ -31,7 +31,8 @@ type inputExtData = {
 	int maxSize;
 	int timeout;
 	int state;
-	int offset;
+	int lineOffset;
+	int outOffset;
 };
 
 (volatile stateful inputExtData data, const char text[], int status) -> () inputCallback = {
@@ -56,11 +57,35 @@ type inputExtData = {
 				data.callback(data.data, "");
 				return;
 
+			} else if (c == 0x7f) { /* backspace */
+				if (data.lineOffset && data.outOffset) {
+					int oldLineOffset = data.lineOffset;
+					do
+						data.lineOffset--;
+					while (data.lineOffset && data.line[data.lineOffset] >> 6 == 2);
+					data.outOffset--;
+					int from, to, todo;
+					out.cpush('\b');
+					for (from = oldLineOffset, to = data.lineOffset; from < data.line.csize; from++, to++) {
+						data.line[to] = data.line[from];
+						out.cpush(data.line[to]);
+						if (data.line[to] >> 6 != 2)
+							todo++;
+					}
+					data.line.cpop(from - to);
+					out.cpush(' ');
+					do {
+						out.cpush('\b');
+						todo--;
+					} while (todo >= 0);
+				}
+
 			} else if (data.line.csize < data.maxSize) {
 				data.line.cpush(c);
 				out.cpush(c);
+				data.lineOffset++;
 				if (c < 0x80 || c >= 0xc0)
-					data.offset++;
+					data.outOffset++;
 			}
 
 		} else if (data.state == S_IAC) {

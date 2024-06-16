@@ -1,4 +1,4 @@
-/* input class, queryHistory demo, T20.212-T20.240; $DVS:time$ */
+/* input class, queryHistory demo, T20.212-T20.242; $DVS:time$ */
 
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
@@ -30,7 +30,11 @@ type demoData = {
 	int i;
 	for (i = 0; i < data.lines.lsize; i++) {
 		char mess[];
-		printf(mess, "[%d] '%s'", {data.lines.l[i].text, data.lines.l[i].posInFile});
+		printf(mess, "[pos=%d:", {data.lines.l[i].posInFile});
+		int j;
+		for (j = 0; j < data.lines.l[i].text.csize; j++)
+			printf(mess, " %02x", {+data.lines.l[i].text[j]});
+		printf(mess, "] '%s'", {data.lines.l[i].text});
 		printError(mess);
 	}
 
