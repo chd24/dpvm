@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.237; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.240; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "input.dpvmake"
@@ -45,7 +45,8 @@ type inputExtData = {
 				data.state = S_IAC;
 
 			else if (c == '\r' || c == '\n') {
-				out.cpush(c);
+				out.cpush('\r');
+				out.cpush('\n');
 				out.cpush(T_IAC), out.cpush(T_DO), out.cpush(T_LINEMODE);
 				out.cpush(T_IAC), out.cpush(T_SB), out.cpush(T_LINEMODE), out.cpush(1), out.cpush(1),
 					out.cpush(T_IAC), out.cpush(T_SE);

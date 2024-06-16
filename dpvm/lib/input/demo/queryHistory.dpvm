@@ -1,15 +1,17 @@
-/* input class, queryHistory demo, T20.212-T20.218; $DVS:time$ */
+/* input class, queryHistory demo, T20.212-T20.240; $DVS:time$ */
 
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
 #include "../../config/config.dpvmake"
 #include "../input.dpvmake"
+#include "demo.dpvmake"
 
 type demoData = {
 	const configClass configObj;
 	volatile inputClass inputObj;
 	const any inputCallback;
 	volatile historyLine lines[];
+	int flags;
 };
 
 (const char error[]) -> () printError = {
@@ -33,7 +35,10 @@ type demoData = {
 	}
 
 	outputp("", "", "last, prev, next, end, <text>: ");
-	input(data.inputCallback, data, 256, -1);
+	if (data.flags & INPUT_FLAG_USE_EXT)
+		inputExt(data.inputCallback, data, 256, -1);
+	else
+		input(data.inputCallback, data, 256, -1);
 	return;
 };
 
@@ -71,6 +76,13 @@ type demoData = {
 	return;
 };
 
+(volatile any data, const char text[], int status) -> () inputExtCallback = {
+	demoData arr[];
+	pushObject(data, arr);
+	inputCallback(arr[0], text, status);
+	return;
+};
+
 (const any cfg, const char error[]) -> () loadpCallback = {
 	if (error.csize)
 		return printError(error);
@@ -88,14 +100,18 @@ type demoData = {
 	pushObject(config.configObj, configObjs);
 	configClass configObj = configObjs[0];
 
-	demoData data = {configObj, inputCreate(), inputCallback};
+	demoData data = {configObj, inputCreate(), config.flags & INPUT_FLAG_USE_EXT ? inputExtCallback : inputCallback,
+			(volatile historyLine[]){}, config.flags};
 	error = data.inputObj.methods.setFlags(data.inputObj, config.flags);
 	if (error.csize) return printError(error);
 
 	outputp("", "", "Demo for input.queryHistory() method.\r\n");
 	outputp("", "", "last, prev, next, end, <text>: ");
 
-	input(inputCallback, data, 256, -1);
+	if (config.flags & INPUT_FLAG_USE_EXT)
+		inputExt(data.inputCallback, data, 256, -1);
+	else
+		input(data.inputCallback, data, 256, -1);
 	return;
 };
 
