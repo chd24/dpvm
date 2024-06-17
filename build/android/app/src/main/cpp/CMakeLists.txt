@@ -24,8 +24,6 @@ add_library( # Sets the name of the library.
         native-lib.cpp
         blake2/blake2b-ref.c
         linenoise/linenoise.c
-        lmdb/mdb.c
-        lmdb/midl.c
         src/bytecode.c
         src/cache.c
         src/config.c
@@ -35,6 +33,7 @@ add_library( # Sets the name of the library.
         src/io.c
         src/launch.c
         src/mailbox.c
+        src/malloc.c
         src/module.c
         src/name.c
         src/object.c

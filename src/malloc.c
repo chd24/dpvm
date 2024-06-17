@@ -546,7 +546,7 @@ void *realloc(void *ptr, size_t size) {
 	return mem + 1;
 }
 
-size_t malloc_usable_size(void *ptr) {
+size_t malloc_usable_size(const void *ptr) {
 	struct magic_header *mem;
 	size_t size;
 
