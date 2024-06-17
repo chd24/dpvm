@@ -1,8 +1,24 @@
-/* monitor: input new command; T16.469-T17.178; $DVS:time$ */
+/* monitor: input new command; T16.469-T20.244; $DVS:time$ */
 
+#include "../../lib/utils/utils.dpvmake"
+#include "../../lib/input/demo/demo.dpvmake"
 #include "monitor.dpvmake"
 
-(volatile stateful mondata data, int status) -> () {
-	input(data.command, data, 0x10000, -1);
+(volatile stateful any d, const char text[], int status) -> () commandHelper = {
+	mondata arr[];
+	pushObject(d, arr);
+	mondata data = arr[0];
+
+	const type commandFunc = (volatile stateful mondata data, const char text[], int status) -> ();
+	commandFunc farr[];
+	pushObject(data.command, farr);
+	return farr[0](data, text, status);
+};
+
+(volatile stateful mondata data, int status) -> () input_cmd = {
+	if (data.address.i[1])
+		inputExt(commandHelper, data, 0x10000, -1);
+	else
+		input(data.command, data, 0x10000, -1);
 	return;
-}
+};

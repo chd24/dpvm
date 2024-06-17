@@ -1,4 +1,4 @@
-/* input class, queryHistory demo, T20.212-T20.242; $DVS:time$ */
+/* input class, queryHistory demo, T20.212-T20.244; $DVS:time$ */
 
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
@@ -80,7 +80,7 @@ type demoData = {
 	return;
 };
 
-(volatile any data, const char text[], int status) -> () inputExtCallback = {
+(volatile stateful any data, const char text[], int status) -> () inputExtCallback = {
 	demoData arr[];
 	pushObject(data, arr);
 	inputCallback(arr[0], text, status);

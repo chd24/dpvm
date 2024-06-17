@@ -7,11 +7,11 @@
 /* @*/
 
 /*@ "inputExt.dpvm": replacement of input bytecode to input text via line editor */
-(const any callback, volatile any data, int maxSize, int timeout) -> ()
-	inputExt = ji4bJuf4GnH_JAz34PByEBo_nJUGbu6DRz5_Hbf5CRvaeR5 /* osmium_tinpot_overripe */;
+(const any callback, volatile stateful any data, int maxSize, int timeout) -> ()
+	inputExt = QDFzeoATwEa_psha6tEJiXn_MMWMFVf7p6y_BrSUwyVqLEY /* flick_scientists_mobilise */;
 /* @*/
 
 /*@ "queryHistory.dpvm": demo allows to enter commands which correspond to history queries */
 (const any registry, int flags) -> ()
-	queryHistory = q2avxy5XKfG_cGCuy5LHXRz_byTk9KyU2vf_bgYs3xHX6tD /* naomi_repays_inoculations */;
-/* @*/                
+	queryHistory = WBTdvffACsd_qnPFFXp8z1q_qReR9QJNzg4_YfDdo2RzVVT /* deposit_plagiarise_stilted */;
+/* @*/              

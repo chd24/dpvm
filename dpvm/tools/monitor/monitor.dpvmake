@@ -47,57 +47,57 @@ monitorRegistryClass monitorRegistryObj = spiQ7i2Qz2B_g8Q9xjcsAGX_jm8UGeZAbuU_bT
 
 /*@ "input_cmd.dpvm": inputs next command */
 (volatile stateful mondata data, int status) -> ()
-	input_cmd = UWjo9CcfezY_LhXDjByuZSe_g3tDoc49Hwv_N6V9f2y18N2 /* loins_dejectedly_employable */;
+	input_cmd = RJeM3SMXZmJ_KaF21CeKhsE_Vb5aXeYaHAm_kXPuaAjSdNu /* falcons_burgundy_showcasing */;
 /* @*/
 
 /*@ "out_result.dpvm": output command's result and go to input next command */
 (volatile stateful mondata data, const char text[]) -> ()
-	out_result = t5zg5SQ6QUw_q1mfnYh2DLa_MSLALmPsE7b_Ku6jgo8pjNA /* misplacing_deifies_mammary */;
+	out_result = GehgZudLqai_TPQBtgrG3TE_BT1BYhJQAsd_hME18kATgLD /* creeks_gyroscope_apologia */;
 /* @*/
 
 /*@ "save_object.dpvm": called after result of expression was saved to database */
 (volatile stateful mondata data, const stateful any objs) -> ()
-	save_object = hWxGmK21RVW_kgxwE339dTF_DY2mFcxTpss_Hsy3tdMm15H /* outwards_airtight_dribbled */;
+	save_object = cnCoBWHmZKR_USdX5QzFN1X_SeVFBUpdjiY_GruCrSvSy22 /* outshine_millibars_soaringly */;
 /* @*/
 
 /*@ "handler.dpvm": called after program crashes */
 (const stateful mondata data, const stateful int values[]) -> ()
-	handler = LyWAYHYpWbA_gnpCbZgbbSk_fm5FYjM1LqF_abewc1Kfnwq /* gallium_subjects_independent */;
+	handler = PUcTxd3vbvV_aYFynE8G9V7_MBCcvoqcRoo_GZhxNCSYSug /* tectonic_neglects_sabre */;
 /* @*/
 
 /*@ "stats.dpvm": output statistics */
 (volatile stateful mondata data) -> ()
-	outStats = jP9m2jQj3PU_Q251EQqj5dR_hsHe92ztuMM_m58M6jckV1W /* sonorities_gestured_montage */;
+	outStats = npeJYhh8TpK_BstX618dDV1_spdDsqeW3Ma_DpQg3vg8Yit /* caravel_snoopy_clergymen */;
 /* @*/
 
 /*@ "tasks.dpvm": output task list */
 (volatile stateful mondata data, const int values[]) -> ()
-	tasks = oiY588nTQiJ_WcNPMo4zaYn_M83kdqeKgEi_dE82fYgDJBP /* curtsy_hiving_septet */;
+	tasks = iJrFfwrGSR1_mbAcucaDq6h_D7AFiPLeTm2_rbL6H6eB3Pv /* monkeys_judged_kneeled */;
 /* @*/
 
 /*@ "type_cmd.dpvm": construct and save type */
 (volatile stateful mondata arg, const any objs) -> ()
-	type_cmd = K2z9cqDPhBy_LRmiEh8BVzS_e5jQxVgpZjZ_Tw3aEe6iq6c /* zoological_glowing_conurbation */;
+	type_cmd = eu879J6huNQ_dqQmqoLvBF4_ZeABpWDwsPp_CWAm7LGxvUn /* tidal_navigation_concretions */;
 /* @*/
 
 /*@ "object.dpvm": construct and save object */
 (volatile stateful mondata arg, const any objs) -> ()
-	object = UjHD4acc7DG_M637yPdQ33Z_mrtQVfRzHWn_FAPTYvZhjbw /* hanging_reapply_crunchier */;
+	object = JQ5PQAhbcFZ_Ujzjz3x3ALp_NJ84q8VCPuK_f1wZw1a4AYM /* assistants_assizes_custards */;
 /* @*/
 
 /*@ "compile.dpvm": compile file using compiler */
 (volatile stateful mondata arg, const any objs) -> ()
-	compile = b2X9dkzekWw_Au5XHbU88Pe_AFmEkE4UGgh_KK6raijTGmK /* adduced_gall_fritters */;
+	compile = Jf1QAUcUWTN_Aet7iEQ9KeP_D9xWTugXpRp_ajKntxaQT2c /* amplify_exigencies_demure */;
 /* @*/
 
 /*@ "read_file.dpvm": called after file read to save it or compile */
 (volatile stateful mondata arg, const stateful char text[], int status) -> ()
-	read_file_m = TGFNvBbycvc_UYz5chawX9D_RNUMjhDVeqT_k763WkZibUj /* smoking_slain_judiciary */;
+	read_file_m = P2o4RPBSWWD_eXFipQkQQDu_qmF4cmDyJcu_WozZAJoWfJD /* statics_zees_dunked */;
 /* @*/
 
 /*@ "interpret.dpvm": interpret expression */
 (volatile stateful mondata arg, const any objs) -> ()
-	interpret = ReWYbWmVsqW_LzrRUGKYDua_sZVdseNnTev_pSVBAKWn146 /* tweaking_cracking_epidemic */;
+	interpret = NdgE2qg3jBS_a7DnWRaZGXq_dxpnNDDoiDp_D793Bjfy4ss /* disquieting_deterrents_cripplingly */;
 /* @*/
 
 /*@ "debug.dpvm": prepare debugger class */
@@ -107,5 +107,5 @@ monitorRegistryClass monitorRegistryObj = spiQ7i2Qz2B_g8Q9xjcsAGX_jm8UGeZAbuU_bT
 
 /*@ "command.dpvm": performs commands */
 (volatile stateful mondata data, const char text[], int status) -> ()
-	command = ewPvRaTHiLa_Fe97kBuUW36_UAEXJVj7ewh_H41zwGcdVKW /* dorsal_pulsated_canvasser */;
+	command = Ad6CL3PeDz7_t7C7QvLgPRR_d1B6mui7DUn_ksjqte5adGM /* encircled_bastion_osteopath */;
 /* @*/

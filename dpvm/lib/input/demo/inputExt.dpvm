@@ -1,4 +1,4 @@
-/* input class, dump demo, T20.229-T20.240; $DVS:time$ */
+/* input class, dump demo, T20.229-T20.244; $DVS:time$ */
 
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
@@ -7,7 +7,7 @@
 type demoData = {
 	volatile stateful inputClass inputObj;
 	const any callback;
-	volatile any data;
+	volatile stateful any data;
 	volatile char line[];
 	int maxSize;
 	int timeout;
@@ -21,9 +21,9 @@ type
 	typeVS	= (volatile stateful any data, const char text[], int status) -> ();
 
 (volatile stateful demoData d) -> ()
-	finC	= { typeC  arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); },
+	/* finC	= { typeC  arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); }, */
 	finCS	= { typeCS arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); },
-	finV	= { typeV  arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); },
+	/* finV	= { typeV  arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); }, */
 	finVS	= { typeVS arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); };
 
 type finFunc = {
@@ -32,9 +32,9 @@ type finFunc = {
 };
 
 finFunc finFuncs[] = {
-	{ typeC	 , finC  },
+	/* { typeC	 , finC  }, */
 	{ typeCS , finCS },
-	{ typeV	 , finV  },
+	/* { typeV	 , finV  }, */
 	{ typeVS , finVS }
 };
 
@@ -69,7 +69,7 @@ finFunc finFuncs[] = {
 	return;
 };
 
-(const any callback, volatile any data, int maxSize, int timeout) -> () inputExt = {
+(const any callback, volatile stateful any data, int maxSize, int timeout) -> () inputExt = {
 	inputClass inputObj = inputCreate();
 
 	demoData d = {inputObj, callback, data, (volatile char[]){}, maxSize, timeout};

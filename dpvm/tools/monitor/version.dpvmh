@@ -1,8 +1,10 @@
 /* return version of monitor */
 
-char version[] = "DPVM monitor version 0.8.0, T15.570-T20.171"; /* $DVS:time$
+char version[] = "DPVM monitor version 0.8.1, T15.570-T20.244"; /* $DVS:time$
 
 history:
+
+T20.244 ver 0.8.1: for telnet connections used input library
 
 T20.171 ver 0.8.0: added support for long object names
 
