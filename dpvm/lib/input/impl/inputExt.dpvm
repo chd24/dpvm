@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.243; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.251; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "input.dpvmake"
@@ -22,6 +22,8 @@ int S_IAC	= 1;	/* IAC received */
 int S_WD	= 2;	/* WILL/WONT/DO/DONT after IAC */
 int S_SB	= 3;	/* SB received */
 int S_SE	= 4;	/* SE awaited */
+int S_ESC	= 5;	/* ^[ */
+int S_ESC_BR	= 6;	/* ^[[ */
 
 type inputExtData = {
 	volatile stateful char line[];
@@ -44,6 +46,9 @@ type inputExtData = {
 		if (data.state == S_NORM) {
 			if (c == T_IAC)
 				data.state = S_IAC;
+
+			else if (c == 0x1b)
+				data.state = S_ESC;
 
 			else if (c == '\r' || c == '\n') {
 				out.cpush('\r');
@@ -87,6 +92,26 @@ type inputExtData = {
 				if (c < 0x80 || c >= 0xc0)
 					data.outOffset++;
 			}
+
+		} else if (data.state == S_ESC) {
+			if (c == '[')
+				data.state = S_ESC_BR;
+			else
+				data.state = S_NORM;
+
+		} else if (data.state == S_ESC_BR) {
+				data.state = S_NORM;
+
+				if (c == 'A') { /* Up */
+
+				} else if (c == 'B') { /* Down */
+
+				} else if (c == 'C' && data.lineOffset < data.line.csize) { /* Right */
+					
+
+				} else if (c == 'D') { /* Left */
+
+				}
 
 		} else if (data.state == S_IAC) {
 			if (c == T_WILL || c == T_WONT || c == T_DO || c == T_DONT)
