@@ -5,33 +5,33 @@
 
 /*@ "mkError.dpvm": compose error message */
 (const char mess[], const char func[]) -> (const char err[])
-	mkError = Bt6UXDRcX1C_SRX7coTgE1p_XgoYTRcTmYk_hrpzRp2fNwz /* infatuation_pawing_monoplane */;
+	mkError = eBqdhmoD7i3_UrtETcy6Bjb_had221UXkH3_NmW2fGNpcuq /* recourse_unknown_eyelash */;
 /* @*/
 
 /*@ "convertObjToImpl.dpvm": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
 (volatile stateful inputImpl impl, const stateful any inputObj, const char func[]) -> (const char error[])
-	convertObjToImpl = AR8QsYMqBZY_tcLEL7QEVCh_R9PCz3xT7YU_Hb8SHP9wHGD /* epicure_likeness_fittings */;
+	convertObjToImpl = VD7DWPW7YQw_N9z2E4PkiMv_suoHvZdbuiA_j86bLPdi3sY /* repertoire_sweltry_seduce */;
 /* @*/
 
 /*@ "dump.dpvm": dump internal content of inputObj object */
 (volatile stateful char out[], volatile stateful any inputObj) -> (const char error[])
-	dump = aEhdJRU994h_ggWdcdxMv4T_gZrvsS6vZVW_p1WYyqV4Ai7 /* newfangled_finalised_corollaries */;
+	dump = jqLNhEBQkPv_R5iWqaVUQcq_cTohEDZfaG3_J7mEVxkFNMh /* timed_vexing_hypnotising */;
 /* @*/
 
 /*@ "queryHistory.dpvm": runs global history server if not yet runned, send query to server and put answer tp lines[] */
 (volatile stateful historyLine lines[], volatile stateful any inputObj,
 		const (volatile stateful any data, const char error[]) -> () callback,
 		volatile stateful any data, int query) -> ()
-	queryHistory = m5xeWFFVcJc_UHfscWg4wpB_CV7yyzVBGSq_ovHG67nwKua /* nettles_preparations_gassiest */;
+	queryHistory = UdFdU6K7Hva_FymTheoNuqG_bk5b2RgHdSF_foiDnbyuHFh /* hecklers_intelligibly_cadmium */;
 /* @*/
 
 /*@ "inputExt.dpvm": input using line editor, pushed inputted text fo line[] */
 (volatile stateful char line[], volatile stateful any inputObj,
 		const (volatile stateful any data, const char error[]) -> () callback,
 		volatile stateful any data, int maxSize, int timeout) -> ()
-	inputExt = GXB11UgEftU_omgCykBqNEA_bcJsTJGFECo_YtvQf6GSfiC /* certified_hare_ostentation */;
+	inputExt = GHw2wuVJpuy_k1mnwL1VgRn_GBdd6q97XpP_GBkQHFSDUwj /* refusing_pooled_scrollable */;
 /* @*/
 
 /*@ "methods.dpvm": public methods implementation */
-inputMethods inputMethodsImpl = AYpkQM4A1rR_Fc3LwyoRdaS_Vb1PXsQD5KJ_TE6ADWC5WJp /* wrinkling_webfoot_insolvent */;
-/* @*/          
+inputMethods inputMethodsImpl = kZhEnmYZv3p_YrJ7ZTwAtug_Kd76GxBHGpK_FHJdE4PAnTf /* dictatorship_thieving_blaming */;
+/* @*/                    

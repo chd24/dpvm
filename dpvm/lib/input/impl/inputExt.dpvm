@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.251; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.295; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "input.dpvmake"
@@ -107,9 +107,22 @@ type inputExtData = {
 				} else if (c == 'B') { /* Down */
 
 				} else if (c == 'C' && data.lineOffset < data.line.csize) { /* Right */
-					
+					c = data.line[data.lineOffset];
+					do {
+						out.cpush(c);
+						data.lineOffset++;
+						if (data.lineOffset < data.line.csize)
+							c = data.line[data.lineOffset];
+					} while (data.lineOffset < data.line.csize && c >= 0x80 && c < 0xc0);
+					data.outOffset++;
 
-				} else if (c == 'D') { /* Left */
+				} else if (c == 'D' && data.lineOffset && data.outOffset) { /* Left */
+					do {
+						data.lineOffset--;
+						c = data.line[data.lineOffset];
+					} while (data.lineOffset && c >= 0x80 && c < 0xc0);
+					data.outOffset--;
+					out.cpush('\b');
 
 				}
 
