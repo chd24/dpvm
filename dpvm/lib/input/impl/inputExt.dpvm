@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.295; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.297; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "input.dpvmake"
@@ -27,6 +27,7 @@ int S_ESC_BR	= 6;	/* ^[[ */
 
 type inputExtData = {
 	volatile stateful char line[];
+	volatile stateful char symbol[];
 	volatile stateful inputImpl impl;
 	const (volatile stateful any data, const char error[]) -> () callback;
 	volatile stateful any data;
@@ -45,9 +46,11 @@ type inputExtData = {
 
 		if (data.state == S_NORM) {
 			if (c == T_IAC)
+				data.symbol.cpop(data.symbol.csize),
 				data.state = S_IAC;
 
 			else if (c == 0x1b)
+				data.symbol.cpop(data.symbol.csize),
 				data.state = S_ESC;
 
 			else if (c == '\r' || c == '\n') {
@@ -63,6 +66,7 @@ type inputExtData = {
 				return;
 
 			} else if (c == 0x7f) { /* backspace */
+				data.symbol.cpop(data.symbol.csize);
 				if (data.lineOffset && data.outOffset) {
 					int oldLineOffset = data.lineOffset;
 					do
@@ -85,12 +89,34 @@ type inputExtData = {
 					} while (todo >= 0);
 				}
 
-			} else if (data.line.csize < data.maxSize) {
-				data.line.cpush(c);
-				out.cpush(c);
-				data.lineOffset++;
+			} else if (data.line.csize + (c < 0x80 || c >= 0xc0 ? 0 : data.symbol.csize) < data.maxSize) {
 				if (c < 0x80 || c >= 0xc0)
+					data.symbol.cpop(data.symbol.csize);
+				data.symbol.cpush(c);
+				int uni, next;
+				(uni, next) = scanutf8(data.symbol, 0, data.symbol.csize);
+				if (uni >= 0 && next == data.symbol.csize) {
+					int j, size0 = data.line.csize, count;
+					for (j = 0; j < next; j++) {
+						data.line.cpush(0);
+						out.cpush(data.symbol[j]);
+					}
+					for (j = data.lineOffset; j < size0; j++) {
+						c = data.line[j];
+						out.cpush(c);
+						count += c < 0x80 || c >= 0xc0;
+					}
+					for (j = size0 - 1; j >= data.lineOffset; j--)
+						data.line[j + next] = data.line[j];
+					for (j = 0; j < next; j++) {
+						data.line[data.lineOffset] = data.symbol[j];
+						data.lineOffset++;
+					}
+					for (j = 0; j < count; j++)
+						out.cpush('\b');
 					data.outOffset++;
+					data.symbol.cpop(next);
+				}
 			}
 
 		} else if (data.state == S_ESC) {
@@ -162,7 +188,7 @@ type inputExtData = {
 	char err[] = convertObjToImpl(impl, inputObj, "inputExt");
 	if (err.csize) return callback(data, err);
 
-	inputExtData d = {line, impl, callback, data, maxSize, timeout};
+	inputExtData d = {line, (volatile char[]){}, impl, callback, data, maxSize, timeout};
 
 	char cntl[];
 	cntl.cpush(T_IAC), cntl.cpush(T_DO), cntl.cpush(T_LINEMODE);

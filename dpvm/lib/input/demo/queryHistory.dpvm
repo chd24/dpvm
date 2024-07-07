@@ -1,4 +1,4 @@
-/* input class, queryHistory demo, T20.212-T20.244; $DVS:time$ */
+/* input class, queryHistory demo, T20.212-T20.297; $DVS:time$ */
 
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
@@ -70,7 +70,9 @@ type demoData = {
 		data.inputObj.methods.queryHistory(data.lines, data.inputObj, queryCallback, data, HISTORY_QUERY_NEXT);
 
 	} else {
-		historyLine line = {cmd, 0};
+		char cmd1[];
+		strcat(cmd1, text);
+		historyLine line = {cmd1, 0};
 		data.lines.lpop(data.lines.lsize);
 		data.lines.lpush(line);
 		data.inputObj.methods.queryHistory(data.lines, data.inputObj, queryCallback, data, HISTORY_QUERY_ADD);

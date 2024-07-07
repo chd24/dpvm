@@ -47,57 +47,57 @@ monitorRegistryClass monitorRegistryObj = spiQ7i2Qz2B_g8Q9xjcsAGX_jm8UGeZAbuU_bT
 
 /*@ "input_cmd.dpvm": inputs next command */
 (volatile stateful mondata data, int status) -> ()
-	input_cmd = RJeM3SMXZmJ_KaF21CeKhsE_Vb5aXeYaHAm_kXPuaAjSdNu /* falcons_burgundy_showcasing */;
+	input_cmd = ZGZMXXy869Q_Eies7tJ5zCP_ZNrmNfQ9Usv_XB3zQiAHeSF /* bleakness_zeniths_composed */;
 /* @*/
 
 /*@ "out_result.dpvm": output command's result and go to input next command */
 (volatile stateful mondata data, const char text[]) -> ()
-	out_result = GehgZudLqai_TPQBtgrG3TE_BT1BYhJQAsd_hME18kATgLD /* creeks_gyroscope_apologia */;
+	out_result = AyK6TARMquT_REC9rQrSJf1_QgZDdAMQTVM_KsWcrBuyWoS /* remasters_guarding_starts */;
 /* @*/
 
 /*@ "save_object.dpvm": called after result of expression was saved to database */
 (volatile stateful mondata data, const stateful any objs) -> ()
-	save_object = cnCoBWHmZKR_USdX5QzFN1X_SeVFBUpdjiY_GruCrSvSy22 /* outshine_millibars_soaringly */;
+	save_object = Nwjj4Ag7vZT_Np22ybFNY4P_rf41CLkDf1Z_pPMTSurKrEK /* rigid_mitosis_fobbing */;
 /* @*/
 
 /*@ "handler.dpvm": called after program crashes */
 (const stateful mondata data, const stateful int values[]) -> ()
-	handler = PUcTxd3vbvV_aYFynE8G9V7_MBCcvoqcRoo_GZhxNCSYSug /* tectonic_neglects_sabre */;
+	handler = QWXsMwGNniq_AAqdc1mLtg8_o1fvuMMFSaP_A7bhbmF12ys /* endorses_contentment_discountable */;
 /* @*/
 
 /*@ "stats.dpvm": output statistics */
 (volatile stateful mondata data) -> ()
-	outStats = npeJYhh8TpK_BstX618dDV1_spdDsqeW3Ma_DpQg3vg8Yit /* caravel_snoopy_clergymen */;
+	outStats = fKVPykMgPhB_kdmSGtkm9WE_DzL1HuzhEzr_jW8ybDamEkn /* inference_costar_converge */;
 /* @*/
 
 /*@ "tasks.dpvm": output task list */
 (volatile stateful mondata data, const int values[]) -> ()
-	tasks = iJrFfwrGSR1_mbAcucaDq6h_D7AFiPLeTm2_rbL6H6eB3Pv /* monkeys_judged_kneeled */;
+	tasks = fDCaXtCk1c4_bm639h3R6RM_sN7AMcFTLeU_i3Qm5RDWDDg /* vowed_winker_deaths */;
 /* @*/
 
 /*@ "type_cmd.dpvm": construct and save type */
 (volatile stateful mondata arg, const any objs) -> ()
-	type_cmd = eu879J6huNQ_dqQmqoLvBF4_ZeABpWDwsPp_CWAm7LGxvUn /* tidal_navigation_concretions */;
+	type_cmd = piuisfLqW8m_ZrQK7KzSNBJ_euVw6cquAXY_ei8NCNH1ziQ /* glides_unabashed_moored */;
 /* @*/
 
 /*@ "object.dpvm": construct and save object */
 (volatile stateful mondata arg, const any objs) -> ()
-	object = JQ5PQAhbcFZ_Ujzjz3x3ALp_NJ84q8VCPuK_f1wZw1a4AYM /* assistants_assizes_custards */;
+	object = BhHop3CTSJi_kMMYjax7SCb_g1MjLY4G4E4_Y8NxxHq3Gwo /* piercer_shipyard_frictionless */;
 /* @*/
 
 /*@ "compile.dpvm": compile file using compiler */
 (volatile stateful mondata arg, const any objs) -> ()
-	compile = Jf1QAUcUWTN_Aet7iEQ9KeP_D9xWTugXpRp_ajKntxaQT2c /* amplify_exigencies_demure */;
+	compile = mB2NrMgv1rM_Xg1WPvp3W5V_odFAuph81CL_sQQTx2xw58q /* horde_atonal_pacemakers */;
 /* @*/
 
 /*@ "read_file.dpvm": called after file read to save it or compile */
 (volatile stateful mondata arg, const stateful char text[], int status) -> ()
-	read_file_m = P2o4RPBSWWD_eXFipQkQQDu_qmF4cmDyJcu_WozZAJoWfJD /* statics_zees_dunked */;
+	read_file_m = VgjP7KX2Yx7_iuLC1342sg9_ULeeKqKxDVS_eYHv448Fbh8 /* loneliness_excitements_printable */;
 /* @*/
 
 /*@ "interpret.dpvm": interpret expression */
 (volatile stateful mondata arg, const any objs) -> ()
-	interpret = NdgE2qg3jBS_a7DnWRaZGXq_dxpnNDDoiDp_D793Bjfy4ss /* disquieting_deterrents_cripplingly */;
+	interpret = H1oxiocjMVA_kdB9AoirfvM_VRNXToKLQBX_EiQYfqYS7G4 /* safety_lolled_aweless */;
 /* @*/
 
 /*@ "debug.dpvm": prepare debugger class */
@@ -107,5 +107,5 @@ monitorRegistryClass monitorRegistryObj = spiQ7i2Qz2B_g8Q9xjcsAGX_jm8UGeZAbuU_bT
 
 /*@ "command.dpvm": performs commands */
 (volatile stateful mondata data, const char text[], int status) -> ()
-	command = Ad6CL3PeDz7_t7C7QvLgPRR_d1B6mui7DUn_ksjqte5adGM /* encircled_bastion_osteopath */;
-/* @*/
+	command = seEwFgYnVd5_nZQLHo1hRCr_qyj8Jx1Dvht_S3VrNCEg8px /* contractible_amok_flagships */;
+/* @*/     
