@@ -1,4 +1,4 @@
-/* input class, runServer method implementation, T20.193-T20.219; $DVS:time$ */
+/* input class, runServer method implementation, T20.193-T20.317; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -23,12 +23,18 @@ type Message = {
 	int query;
 };
 
+type serverConstData = {
+	const Address addr;		/* address of server */
+	const Address returnAddr;	/* address of client part which run the server */
+};
+
 type serverData = {
-	const Address addr;		/* hash of create function for the class */
+	const serverConstData cdata;
 	volatile hashData hash;		/* hash table to find line index by pos in file */
 	volatile historyLine old[];	/* lines from existing history file in descending order (indexes -1, -2, ,,,) */
 	volatile historyLine new[];	/* new added lines to history in ascending order (indexes 0, 1, ... ) */
 	int fileLength;			/* history file length */
+	int stage;
 };
 
 type queryData = {
@@ -52,8 +58,18 @@ type queryData = {
 };
 
 (volatile stateful serverData data, const any objs, int status) -> () serverMain = {
-	Address addr = data.addr;
-	debug(addr, 102);
+	Address addr = data.cdata.addr;
+	debug(addr, 100);
+	if (!data.stage) {
+		debug(addr, 101);
+		msendp("", "", data.cdata.returnAddr, (Message){});
+		if (status) {
+			debug(addr, 102);
+			return;
+		}
+		hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
+		data.stage = 1;
+	}
 	if (status) {
 		debug(addr, 103);
 		char mess[];
@@ -88,9 +104,16 @@ type queryData = {
 				else {
 					debug(addr, 112);
 					historyLine l = {m.lines[0].text, data.fileLength};
+					int j;
+					debug(addr, data.fileLength);
+					debug(addr, l.text.csize);
+					for (j = 0; j < l.text.csize; j++)
+						debug(addr, l.text[j]);
 					data.fileLength += l.text.csize + 2;
 					data.new.lpush(l);
 					hashObj.findAddKeyValue(data.hash, {l.posInFile}, {data.new.lsize - 1});
+					debug(addr, l.posInFile);
+					debug(addr, data.new.lsize - 1);
 				}
 
 			} else if (m.query == HISTORY_QUERY_PREV || m.query == HISTORY_QUERY_NEXT) {
@@ -111,6 +134,8 @@ type queryData = {
 						debug(addr, 119), error = mkError("line not found in arrays", "queryHistory:serverMain");
 					else {
 						debug(addr, 120);
+						debug(addr, value.i[0]);
+						debug(addr, data.new.lsize);
 						int n = value.i[0] + (m.query == HISTORY_QUERY_PREV ? -1 : 1);
 						if (n >= data.new.lsize || ~n >= data.old.lsize)
 							debug(addr, 121), error = mkError("end of history", "queryHistory:serverMain");
@@ -136,28 +161,28 @@ type queryData = {
 		}
 	}
 	debug(addr, 128);
-	mrecv(code, data, data.addr, -1);
+	mrecv(code, data, addr, -1);
 	return;
 };
 
-(const Address addr, const int values[]) -> () serverStart = {
-	debug(addr, 100);
-	serverData data = {addr};
-	hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
-	debug(addr, 101);
-	mrecv(serverMain, data, data.addr, -1);
+(const serverConstData cdata, const int values[]) -> () serverStart = {
+	debug(cdata.addr, 90);
+	debug(cdata.addr, values[0]);
+	serverData data = {cdata};
+	mrecv(serverMain, data, cdata.addr, 0);
 	return;
 };
 
 (volatile stateful queryData data, const any objs, int status) -> () queryMain = {
 	if (!data.stage) {
 		debug(data.addr, 4);
-		if (!status) {
+		if (status || !objs.lsize) {
 			debug(data.addr, 5);
-			data.impl.data.serverRunned = 1;
-			getsysp(serverStart, data.addr, (int[]){});
+			mrecvp("", "", data.returnAddr, 1 << 63);
+			return data.callback(data.data, mkError("timeout expired, no response from history server", "queryHistory:queryMain"));
 		}
 
+		data.impl.data.serverRunned = 1;
 		data.stage = 1;
 
 		historyLine lines[];
@@ -166,7 +191,6 @@ type queryData = {
 			lines.lpush(data.lines[i]);
 		data.lines.lpop(data.lines.lsize);
 		Message m = {data.returnAddr, lines, "", data.query};
-		mrecvp("", "", data.returnAddr, 0);
 		msendp("", "", data.addr, m);
 		debug(data.addr, 6);
 		mrecv(code, data, data.returnAddr, TIMEOUT);
@@ -186,9 +210,10 @@ type queryData = {
 		if (m.error.csize)
 			return data.callback(data.data, m.error);
 		debug(data.addr, 11);
+		debug(data.addr, m.lines.lsize);
 		int i;
 		for (i = 0; i < m.lines.lsize; i++)
-			data.lines.lpush(m.lines[i]);
+			debug(data.addr, m.lines[i].posInFile), data.lines.lpush(m.lines[i]);
 		debug(data.addr, 12);
 		data.callback(data.data, "");
 	}
@@ -199,13 +224,15 @@ type queryData = {
 	int h[4];
 	(h[0], h[1], h[2], h[3]) = getfullhash({data.addr, values[0], values[1]});
 	data.returnAddr = (Address){h, data.addr.flags};
+	mrecvp("", "", data.returnAddr, 0);
 
 	if (data.impl.data.serverRunned) {
 		debug(data.addr, 2);
-		queryMain(data, {}, -1);
+		queryMain(data, (Message []){(Message){}}, 0);
 	} else {
 		debug(data.addr, 3);
-		mrecv(queryMain, data, data.addr, 0);
+		setsysp(serverStart, (serverConstData){data.addr, data.returnAddr}, (const int[]){DPVM_SYS_PARAM_ID}, (const int[]){0});
+		mrecv(queryMain, data, data.returnAddr, TIMEOUT);
 	}
 	return;
 };
@@ -222,7 +249,12 @@ type queryData = {
 	Address addr = {h, impl.data.flags};
 	queryData d = {lines, impl, callback, data, addr, addr, query};
 
-	debug(addr, 1);
+	debug(addr, 777);
+	debug(addr, impl.data.flags);
+	debug(addr, h[0]);
+	debug(addr, h[1]);
+	debug(addr, h[2]);
+	debug(addr, h[3]);
 
 	getsys(queryStart, d, (int[]){DPVM_SYS_PARAM_TIME, DPVM_SYS_PARAM_ID});
 	return callback(data, "");

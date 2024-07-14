@@ -1,4 +1,4 @@
-/* input class, dump demo, T20.229-T20.244; $DVS:time$ */
+/* input class, dump demo, T20.229-T20.306; $DVS:time$ */
 
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
@@ -72,9 +72,15 @@ finFunc finFuncs[] = {
 (const any callback, volatile stateful any data, int maxSize, int timeout) -> () inputExt = {
 	inputClass inputObj = inputCreate();
 
+	int flags;
+	while (maxSize < 0) {
+		maxSize += 1 << 32;
+		flags++;
+	}
+
 	demoData d = {inputObj, callback, data, (volatile char[]){}, maxSize, timeout};
 
-	char error[] = inputObj.methods.setFlags(inputObj, 0);
+	char error[] = inputObj.methods.setFlags(inputObj, flags);
 	if (error.csize) return inputCallback(d, error);
 
 	inputObj.methods.inputExt(d.line, inputObj, inputCallback, d, maxSize, timeout);

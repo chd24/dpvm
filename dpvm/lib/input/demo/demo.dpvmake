@@ -3,15 +3,15 @@
 
 /*@ "dump.dpvm": creates input object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = Uv5F85Ka4d2_PsFy4iq2aoS_SnsJKJWgQAq_rf1RZNqewYJ /* patrician_decayed_seizures */;
+	dump = g6CQe2EvANq_P6iXqAT7pZv_VKaFcQ9snTy_qzURtHcPg9q /* dons_spottiest_pampas */;
 /* @*/
 
 /*@ "inputExt.dpvm": replacement of input bytecode to input text via line editor */
 (const any callback, volatile stateful any data, int maxSize, int timeout) -> ()
-	inputExt = Pf9ekQophM4_o5rYHJEtrG4_KSFdwy3qkWw_dL9hKYiFnQe /* mover_illiterates_acquited */;
+	inputExt = BexefYzz3zm_dTbZJd2YCiZ_VhXBXZHJSTj_RMBM68AdHR2 /* angular_fervid_gawky */;
 /* @*/
 
 /*@ "queryHistory.dpvm": demo allows to enter commands which correspond to history queries */
 (const any registry, int flags) -> ()
-	queryHistory = pDWWpQGi1Sp_oULA6rzRPdj_qsW9ocB4XE7_ETc8XDDfn1v /* choosier_biographer_abashed */;
-/* @*/                  
+	queryHistory = k2gBpyMH22R_X1jpHgg297a_MpGZ9umnKQ8_a2sdN3gysaL /* infarct_prominences_averages */;
+/* @*/                            

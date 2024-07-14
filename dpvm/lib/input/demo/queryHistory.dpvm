@@ -1,4 +1,4 @@
-/* input class, queryHistory demo, T20.212-T20.297; $DVS:time$ */
+/* input class, queryHistory demo, T20.212-T20.306; $DVS:time$ */
 
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
@@ -40,7 +40,7 @@ type demoData = {
 
 	outputp("", "", "last, prev, next, end, <text>: ");
 	if (data.flags & INPUT_FLAG_USE_EXT)
-		inputExt(data.inputCallback, data, 256, -1);
+		inputExt(data.inputCallback, data, 256 - (data.flags << 32), -1);
 	else
 		input(data.inputCallback, data, 256, -1);
 	return;
@@ -115,7 +115,7 @@ type demoData = {
 	outputp("", "", "last, prev, next, end, <text>: ");
 
 	if (config.flags & INPUT_FLAG_USE_EXT)
-		inputExt(data.inputCallback, data, 256, -1);
+		inputExt(data.inputCallback, data, 256 - (config.flags << 32), -1);
 	else
 		input(data.inputCallback, data, 256, -1);
 	return;
