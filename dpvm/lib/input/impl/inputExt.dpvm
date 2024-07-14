@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.305; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.319; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "../../../lib/utils/utils.dpvmake"
@@ -147,8 +147,8 @@ type inputExtData = {
 				if (c == 'A' && (!data.historyQuery || data.lines.lsize)
 						|| (c == 'B' && data.lines.lsize)) { /* Up, Down */
 					substrcat(data.text, text, i + 1, text.csize);
-					data.historyQuery = c == 'B' ? HISTORY_QUERY_PREV : data.historyQuery
-							? HISTORY_QUERY_NEXT : HISTORY_QUERY_LAST;
+					data.historyQuery = c == 'B' ? HISTORY_QUERY_NEXT : data.historyQuery
+							? HISTORY_QUERY_PREV : HISTORY_QUERY_LAST;
 					data.impl.methods.queryHistory(data.lines, data.impl, data.historyCallback,
 							data, data.historyQuery);
 					return;

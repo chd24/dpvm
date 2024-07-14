@@ -1,4 +1,4 @@
-/* input class, runServer method implementation, T20.193-T20.317; $DVS:time$ */
+/* input class, runServer method implementation, T20.193-T20.319; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -136,7 +136,10 @@ type queryData = {
 						debug(addr, 120);
 						debug(addr, value.i[0]);
 						debug(addr, data.new.lsize);
+						debug(addr, data.old.lsize);
+						debug(addr, m.query);
 						int n = value.i[0] + (m.query == HISTORY_QUERY_PREV ? -1 : 1);
+						debug(addr, n);
 						if (n >= data.new.lsize || ~n >= data.old.lsize)
 							debug(addr, 121), error = mkError("end of history", "queryHistory:serverMain");
 						else if (n >= 0)
