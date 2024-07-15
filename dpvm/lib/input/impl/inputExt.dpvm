@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.319; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.322; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
 #include "../../../lib/utils/utils.dpvmake"
@@ -36,12 +36,14 @@ type inputExtData = {
 	const (volatile stateful any data, const char error[]) -> () historyCallback;
 	volatile stateful any data;
 	volatile stateful historyLine lines[];
+	const stateful historyLine lastLine;
 	int maxSize;
 	int timeout;
 	int state;
 	int lineOffset;
 	int outOffset;
 	int historyQuery;
+	int lastLineSet;
 };
 
 (volatile stateful inputExtData data, const char text[], int status) -> () inputCallback = {
@@ -78,6 +80,7 @@ type inputExtData = {
 				char txt[];
 				strcat(txt, data.line);
 				historyLine line = {txt, 0}, lines[] = {line};
+				strcat(data.line, "\r\n");
 				data.impl.methods.queryHistory(lines, data.impl, data.callback, data.data, HISTORY_QUERY_ADD);
 				return;
 
@@ -149,6 +152,10 @@ type inputExtData = {
 					substrcat(data.text, text, i + 1, text.csize);
 					data.historyQuery = c == 'B' ? HISTORY_QUERY_NEXT : data.historyQuery
 							? HISTORY_QUERY_PREV : HISTORY_QUERY_LAST;
+					if (data.lines.lsize) {
+						data.lastLine = data.lines[0];
+						data.lastLineSet = 1;
+					}
 					data.impl.methods.queryHistory(data.lines, data.impl, data.historyCallback,
 							data, data.historyQuery);
 					return;
@@ -219,18 +226,26 @@ type inputExtData = {
 	if (error.csize && strstr(error, "history is empty") < 0 && strstr(error, "end of history") < 0)
 		return data.callback(data.data, error);
 
-	if (data.lines.lsize || data.historyQuery == HISTORY_QUERY_PREV) {
-		char line[], out[];
-		if (data.lines.lsize)
-			strcat(line, data.lines[0].text);
-		else {
-			strcat(line, data.line0);
+	if (data.lines.lsize || data.historyQuery == HISTORY_QUERY_NEXT) {
+		int oldsize = outputSize(data.line);
+		if (data.lines.lsize) {
+			if (data.historyQuery == HISTORY_QUERY_LAST) {
+				data.line0.cpop(data.line0.csize);
+				strcat(data.line0, data.line);
+			}
+			data.line.cpop(data.line.csize);
+			strcat(data.line, data.lines[0].text);
+		} else {
+			data.line.cpop(data.line.csize);
+			strcat(data.line, data.line0);
 			data.line0.cpop(data.line0.csize);
+			data.historyQuery = 0;
 		}
-		int oldsize = outputSize(data.line), newsize = outputSize(line), i;
+		int newsize = outputSize(data.line), i;
+		char out[];
 		for (i = 0; i < data.outOffset; i++)
 			out.cpush('\b');
-		strcat(out, line);
+		strcat(out, data.line);
 		for (i = 0; i < oldsize - newsize; i++)
 			out.cpush(' ');
 		for (i = 0; i < oldsize - newsize; i++)
@@ -238,13 +253,9 @@ type inputExtData = {
 		if (out.csize)
 			outputp("", "", out);
 		data.outOffset = newsize;
-		data.lineOffset = line.csize;
-		if (data.historyQuery == HISTORY_QUERY_LAST && !data.line0.csize)
-			data.line0 = data.line;
-		else if (data.historyQuery == HISTORY_QUERY_PREV && !data.lines.lsize)
-			data.historyQuery = 0;
-		data.line = line;
-	}
+		data.lineOffset = data.line.csize;
+	} else if (data.historyQuery == HISTORY_QUERY_PREV && data.lastLineSet)
+		data.lines.lpush(data.lastLine);
 
 	return inputCallback(data, "", 0);
 };
@@ -257,7 +268,7 @@ type inputExtData = {
 	if (err.csize) return callback(data, err);
 
 	inputExtData d = {line, (volatile char[]){}, (volatile char[]){}, (volatile char[]){}, impl, callback, historyCallback,
-			data, (volatile historyLine[]){}, maxSize, timeout};
+			data, (volatile historyLine[]){}, (const historyLine){}, maxSize, timeout};
 
 	char cntl[];
 	cntl.cpush(T_IAC), cntl.cpush(T_DO), cntl.cpush(T_LINEMODE);

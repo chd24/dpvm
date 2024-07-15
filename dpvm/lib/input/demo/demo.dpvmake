@@ -3,15 +3,15 @@
 
 /*@ "dump.dpvm": creates input object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = jGGfuJHADeK_onymZUWKzVR_Btc7GARcYso_hkNpBK41658 /* reroute_lobbies_hypermarket */;
+	dump = ZkbAfRA9uYL_ZHbV4EzMCTg_FdVBrzKuWZk_YLUQLVbkj97 /* ameliorates_crowbars_loudness */;
 /* @*/
 
 /*@ "inputExt.dpvm": replacement of input bytecode to input text via line editor */
 (const any callback, volatile stateful any data, int maxSize, int timeout) -> ()
-	inputExt = Xyk8zjW1DBq_bgApr7bW9sX_hFUf2oEo6Lo_HQm5sWuQtbd /* incremental_delivered_potato */;
+	inputExt = REthm2RfKHT_Cg25ru9D6Tm_cWtVKZzjpw9_pvWS7DwGXDL /* cynically_dodgy_rumours */;
 /* @*/
 
 /*@ "queryHistory.dpvm": demo allows to enter commands which correspond to history queries */
 (const any registry, int flags) -> ()
-	queryHistory = A9HtSNn41FN_oypjnfRqETe_tBZGKEVwioD_XpscvueS7fS /* attrition_dendritic_lily */;
-/* @*/                  
+	queryHistory = J3Y2MMXK1QL_ce31nd2FT4y_Zy6TYgnNrbQ_hNMcLqLBmN7 /* digestive_transpired_choirboy */;
+/* @*/                

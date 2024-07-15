@@ -1,4 +1,4 @@
-/* input class, runServer method implementation, T20.193-T20.319; $DVS:time$ */
+/* input class, runServer method implementation, T20.193-T20.322; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -24,6 +24,7 @@ type Message = {
 };
 
 type serverConstData = {
+	const char version[];
 	const Address addr;		/* address of server */
 	const Address returnAddr;	/* address of client part which run the server */
 };
@@ -57,6 +58,42 @@ type queryData = {
 	return;
 };
 
+(const stateful char name[]) -> () setTaskName = {
+	int vars[], values[], i, size = name.csize, value, shift, var = DPVM_SYS_PARAM_NAME, stop;
+
+	while (size && !stop) {
+		int c = name[size - 1];
+		if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+			size -= 1;
+		else
+			stop = 1;
+	}
+
+	stop = 0;
+	while (i < size && !stop) {
+		int c = name[i];
+		if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+			i += 1;
+		else
+			stop = 1;
+	}
+
+	for (0; i < size; i += 1) {
+		value |= name[i] << shift;
+		shift += 8;
+		if (shift == 64 || i == size - 1) {
+			vars.ipush(var);
+			values.ipush(value);
+			var += 1;
+			value = 0;
+			shift = 0;
+		}
+	}
+
+	setsysp("", "", vars, values);
+	return;
+};
+
 (volatile stateful serverData data, const any objs, int status) -> () serverMain = {
 	Address addr = data.cdata.addr;
 	debug(addr, 100);
@@ -67,6 +104,11 @@ type queryData = {
 			debug(addr, 102);
 			return;
 		}
+		char name[];
+		printf(name, "history server for %s (", {data.cdata.version});
+		printobjname(name, addr.hash[0] << 17 >> 17);
+		printf(name, ", flags %x)", {addr.flags});
+		setTaskName(name);
 		hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
 		data.stage = 1;
 	}
@@ -234,7 +276,8 @@ type queryData = {
 		queryMain(data, (Message []){(Message){}}, 0);
 	} else {
 		debug(data.addr, 3);
-		setsysp(serverStart, (serverConstData){data.addr, data.returnAddr}, (const int[]){DPVM_SYS_PARAM_ID}, (const int[]){0});
+		setsysp(serverStart, (serverConstData){data.impl.methods.version, data.addr, data.returnAddr},
+				(const int[]){DPVM_SYS_PARAM_ID}, (const int[]){0});
 		mrecv(queryMain, data, data.returnAddr, TIMEOUT);
 	}
 	return;
