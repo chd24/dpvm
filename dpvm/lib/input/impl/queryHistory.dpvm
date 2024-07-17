@@ -1,4 +1,4 @@
-/* input class, runServer method implementation, T20.193-T20.322; $DVS:time$ */
+/* input class, runServer method implementation, T20.193-T20.327; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -9,6 +9,7 @@ int _Z = 0;
 
 char historyFile[]	= ".dpvm_history.txt";
 int HASH_SIZE		= 0x1000;
+int READ_SIZE		= 0x100000;
 int TIMEOUT		= 1000000000;
 
 type Address = {
@@ -34,8 +35,8 @@ type serverData = {
 	volatile hashData hash;		/* hash table to find line index by pos in file */
 	volatile historyLine old[];	/* lines from existing history file in descending order (indexes -1, -2, ,,,) */
 	volatile historyLine new[];	/* new added lines to history in ascending order (indexes 0, 1, ... ) */
+	volatile char history[];	/* history file body */
 	int fileLength;			/* history file length */
-	int stage;
 };
 
 type queryData = {
@@ -55,6 +56,146 @@ type queryData = {
 		printf(mess, "[%d]", {n});
 		outputp("", "", mess);
 	}
+	return;
+};
+
+(volatile stateful serverData data, const any objs, int status) -> () serverMain = {
+	Address addr = data.cdata.addr;
+	debug(addr, 100);
+	if (status) {
+		debug(addr, 101);
+		char mess[];
+		printf(mess, "error %d while receiving messages on address %p.\r\n", {Message, status});
+		outputp("", "", mkError(mess, "queryHistory:serverMain"));
+		return;
+	}
+	int i;
+	for (i = 0; i < objs.lsize; i++) {
+		debug(addr, 102);
+		if (objs.l[i].type == Message) {
+			debug(addr, 103);
+			Message arr[];
+			pushObject(objs.l[i], arr);
+			Message m = arr[0], r;
+			historyLine lines[];
+			char error[] = "";
+
+			if (m.query == HISTORY_QUERY_ADD) {
+				debug(addr, 104);
+				if (!m.lines.lsize)
+					debug(addr, 105), error = mkError("line is not given", "queryHistory:serverMain");
+				else {
+					debug(addr, 106);
+					char line[];
+					strcat(line, m.lines[0].text);
+					while (line.csize && line[line.csize - 1] <= ' ')
+						line.cpop(1);
+					if (line.csize) {
+						debug(addr, 107);
+						historyLine l = {line, data.fileLength};
+						int j;
+						debug(addr, data.fileLength);
+						debug(addr, l.text.csize);
+						for (j = 0; j < l.text.csize; j++)
+							debug(addr, l.text[j]);
+						data.fileLength += l.text.csize + 1;
+						data.new.lpush(l);
+						hashObj.findAddKeyValue(data.hash, {l.posInFile}, {data.new.lsize - 1});
+						debug(addr, l.posInFile);
+						debug(addr, data.new.lsize - 1);
+						char text[];
+						printf(text, "%s\n", {l.text});
+						writep({}, {}, historyFile, text, -1);
+					}
+				}
+
+			} else if (m.query == HISTORY_QUERY_PREV || m.query == HISTORY_QUERY_NEXT || m.query == HISTORY_QUERY_LAST) {
+				debug(addr, 108);
+				debug(addr, m.query);
+				debug(addr, data.old.lsize);
+				debug(addr, data.new.lsize);
+
+				int n;
+				if (m.query == HISTORY_QUERY_LAST)
+					debug(addr, 109), n = data.new.lsize - 1;
+
+				else if (m.lines.lsize) {
+					any value;
+					int res;
+					(value, res) = hashObj.findGetValue(data.hash, {m.lines[0].posInFile});
+					debug(addr, 110);
+					if (!res)
+						debug(addr, 111), error = mkError("line not found in hash table", "queryHistory:serverMain");
+					else if (!value.isize)
+						debug(addr, 112), error = mkError("incorrect object in hash table", "queryHistory:serverMain");
+					else if (value.i[0] >= data.new.lsize || ~value.i[0] >= data.old.lsize)
+						debug(addr, 113), error = mkError("line not found in arrays", "queryHistory:serverMain");
+					else {
+						debug(addr, 114);
+						debug(addr, value.i[0]);
+						n = value.i[0] + (m.query == HISTORY_QUERY_PREV ? -1 : 1);
+					}
+
+				} else
+					debug(addr, 115), error = mkError("line is not given", "queryHistory:serverMain");
+
+				if (!error.csize) {
+					debug(addr, 116);
+					debug(addr, n);
+					if (~n == data.old.lsize && data.history.csize) {
+						debug(addr, 117);
+						if (data.history[data.history.csize - 1] == '\n')
+							data.history.cpop(1);
+						if (data.history.csize && data.history[data.history.csize - 1] == '\r')
+							data.history.cpop(1);
+						int pos = strrchr(data.history, '\n') + 1;
+						char line[];
+						substrcat(line, data.history, pos, data.history.csize);
+						data.history.cpop(data.history.csize - pos);
+						historyLine l = {line, pos};
+						hashObj.findAddKeyValue(data.hash, {l.posInFile}, {~data.old.lsize});
+						data.old.lpush(l);
+					}
+
+					if (n >= data.new.lsize || ~n >= data.old.lsize)
+						debug(addr, 118), error = mkError("end of history", "queryHistory:serverMain");
+					else if (n >= 0)
+						debug(addr, 119), lines.lpush(data.new[n]);
+					else
+						debug(addr, 120), lines.lpush(data.old[~n]);
+				}
+			}
+
+			if (lines.lsize)
+				debug(addr, 121), r.lines = lines;
+			if (error.csize)
+				debug(addr, 122), r.error = error;
+			msendp("", "", m.returnAddr, r);
+			debug(addr, 123);
+		} else {
+			debug(addr, 124);
+			char mess[];
+			printf(mess, "type of received message %p equals %p, expected %p.\r\n", {objs.l[i], objs.l[i].type, Message});
+			outputp("", "", mkError(mess, "queryHistory:serverMain"));
+		}
+	}
+	debug(addr, 125);
+	mrecv(code, data, addr, -1);
+	return;
+};
+
+(volatile stateful serverData data, const char text[], int status) -> () readHistory = {
+	Address addr = data.cdata.addr;
+	strcat(data.history, text);
+	debug(addr, 92);
+	debug(addr, status);
+	if (status != READ_SIZE) {
+		debug(addr, 93);
+		data.fileLength = data.history.csize;
+		serverMain(data, {}, 0);
+		return;
+	}
+	read(code, data, historyFile, data.history.csize, READ_SIZE);
 	return;
 };
 
@@ -94,119 +235,21 @@ type queryData = {
 	return;
 };
 
-(volatile stateful serverData data, const any objs, int status) -> () serverMain = {
+(volatile stateful serverData data, const any objs, int status) -> () serverInit = {
 	Address addr = data.cdata.addr;
-	debug(addr, 100);
-	if (!data.stage) {
-		debug(addr, 101);
-		msendp("", "", data.cdata.returnAddr, (Message){});
-		if (status) {
-			debug(addr, 102);
-			return;
-		}
-		char name[];
-		printf(name, "history server for %s (", {data.cdata.version});
-		printobjname(name, addr.hash[0] << 17 >> 17);
-		printf(name, ", flags %x)", {addr.flags});
-		setTaskName(name);
-		hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
-		data.stage = 1;
-	}
+	debug(addr, 91);
+	msendp("", "", data.cdata.returnAddr, (Message){});
 	if (status) {
-		debug(addr, 103);
-		char mess[];
-		printf(mess, "error %d while receiving messages on address %p.\r\n", {Message, status});
-		outputp("", "", mkError(mess, "queryHistory:serverMain"));
+		debug(addr, 92);
 		return;
 	}
-	int i;
-	for (i = 0; i < objs.lsize; i++) {
-		debug(addr, 104);
-		if (objs.l[i].type == Message) {
-			debug(addr, 105);
-			Message arr[];
-			pushObject(objs.l[i], arr);
-			Message m = arr[0], r;
-			historyLine lines[];
-			char error[] = "";
-
-			if (m.query == HISTORY_QUERY_LAST) {
-				debug(addr, 106);
-				if (data.new.lsize)
-					debug(addr, 107), lines.lpush(data.new[data.new.lsize - 1]);
-				else if (data.old.lsize)
-					debug(addr, 108), lines.lpush(data.old[0]);
-				else
-					debug(addr, 109), error = mkError("history is empty", "queryHistory:serverMain");
-
-			} else if (m.query == HISTORY_QUERY_ADD) {
-				debug(addr, 110);
-				if (!m.lines.lsize)
-					debug(addr, 111), error = mkError("line is not given", "queryHistory:serverMain");
-				else {
-					debug(addr, 112);
-					historyLine l = {m.lines[0].text, data.fileLength};
-					int j;
-					debug(addr, data.fileLength);
-					debug(addr, l.text.csize);
-					for (j = 0; j < l.text.csize; j++)
-						debug(addr, l.text[j]);
-					data.fileLength += l.text.csize + 2;
-					data.new.lpush(l);
-					hashObj.findAddKeyValue(data.hash, {l.posInFile}, {data.new.lsize - 1});
-					debug(addr, l.posInFile);
-					debug(addr, data.new.lsize - 1);
-				}
-
-			} else if (m.query == HISTORY_QUERY_PREV || m.query == HISTORY_QUERY_NEXT) {
-				debug(addr, 113);
-				if (!m.lines.lsize)
-					debug(addr, 114), error = mkError("line is not given", "queryHistory:serverMain");
-				else {
-					debug(addr, 115);
-					any value;
-					int res;
-					(value, res) = hashObj.findGetValue(data.hash, {m.lines[0].posInFile});
-					debug(addr, 116);
-					if (!res)
-						debug(addr, 117), error = mkError("line not found in hash table", "queryHistory:serverMain");
-					else if (!value.isize)
-						debug(addr, 118), error = mkError("incorrect object in hash table", "queryHistory:serverMain");
-					else if (value.i[0] >= data.new.lsize || ~value.i[0] >= data.old.lsize)
-						debug(addr, 119), error = mkError("line not found in arrays", "queryHistory:serverMain");
-					else {
-						debug(addr, 120);
-						debug(addr, value.i[0]);
-						debug(addr, data.new.lsize);
-						debug(addr, data.old.lsize);
-						debug(addr, m.query);
-						int n = value.i[0] + (m.query == HISTORY_QUERY_PREV ? -1 : 1);
-						debug(addr, n);
-						if (n >= data.new.lsize || ~n >= data.old.lsize)
-							debug(addr, 121), error = mkError("end of history", "queryHistory:serverMain");
-						else if (n >= 0)
-							debug(addr, 122), lines.lpush(data.new[n]);
-						else
-							debug(addr, 123), lines.lpush(data.old[~n]);
-					}
-				}
-			}
-
-			if (lines.lsize)
-				debug(addr, 124), r.lines = lines;
-			if (error.csize)
-				debug(addr, 125), r.error = error;
-			msendp("", "", m.returnAddr, r);
-			debug(addr, 126);
-		} else {
-			debug(addr, 127);
-			char mess[];
-			printf(mess, "type of received message %p equals %p, expected %p.\r\n", {objs.l[i], objs.l[i].type, Message});
-			outputp("", "", mkError(mess, "queryHistory:serverMain"));
-		}
-	}
-	debug(addr, 128);
-	mrecv(code, data, addr, -1);
+	char name[];
+	printf(name, "history server for %s (", {data.cdata.version});
+	printobjname(name, addr.hash[0] << 17 >> 17);
+	printf(name, ", flags %x)", {addr.flags});
+	setTaskName(name);
+	hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
+	readHistory(data, "", READ_SIZE);
 	return;
 };
 
@@ -214,7 +257,7 @@ type queryData = {
 	debug(cdata.addr, 90);
 	debug(cdata.addr, values[0]);
 	serverData data = {cdata};
-	mrecv(serverMain, data, cdata.addr, 0);
+	mrecv(serverInit, data, cdata.addr, 0);
 	return;
 };
 

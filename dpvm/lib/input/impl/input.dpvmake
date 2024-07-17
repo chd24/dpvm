@@ -5,33 +5,33 @@
 
 /*@ "mkError.dpvm": compose error message */
 (const char mess[], const char func[]) -> (const char err[])
-	mkError = dRBMz84G3fv_fVPrT87tAX6_Wj82oGRf5eo_kW6ijGCbdKZ /* toying_gravitate_facilitated */;
+	mkError = EozXsFL8ALx_RLcwEUptbxg_RmEZ5VtWC2h_oy4XZhte4Z3 /* infarct_uppermost_deteriorate */;
 /* @*/
 
 /*@ "convertObjToImpl.dpvm": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
 (volatile stateful inputImpl impl, const stateful any inputObj, const char func[]) -> (const char error[])
-	convertObjToImpl = dTeJhMW4n1e_X9o2Fi7MP3j_oEkREoUDKgA_F6myRyZr9bn /* enquirer_acoustical_goalkeeping */;
+	convertObjToImpl = JCsBAKQzsb3_kcrDSpvVvXa_DgHUMB94QPB_R6Fmizdocc6 /* accusingly_linchpin_litters */;
 /* @*/
 
 /*@ "dump.dpvm": dump internal content of inputObj object */
 (volatile stateful char out[], volatile stateful any inputObj) -> (const char error[])
-	dump = WTBFFEvDqo5_WKcAHudj7Dh_JSJivz3vtCP_RDx8MD97h95 /* recomputing_espied_hillwalking */;
+	dump = NauodE2if5v_rtWefDDbyqo_efKpQqVMcag_aBLc6siHtsS /* grinders_headings_defied */;
 /* @*/
 
 /*@ "queryHistory.dpvm": runs global history server if not yet runned, send query to server and put answer tp lines[] */
 (volatile stateful historyLine lines[], volatile stateful any inputObj,
 		const (volatile stateful any data, const char error[]) -> () callback,
 		volatile stateful any data, int query) -> ()
-	queryHistory = CtucCQ1gN5k_UNACUWVsAL8_X2W1hjdfzmY_DHco77MKAeB /* medicinal_sojourned_libidinous */;
+	queryHistory = UmbLhCfyXBv_YeVP3FwYjFs_P5BZxQftvoR_NcsnGHX3foE /* revenges_crying_discussion */;
 /* @*/
 
 /*@ "inputExt.dpvm": input using line editor, pushed inputted text fo line[] */
 (volatile stateful char line[], volatile stateful any inputObj,
 		const (volatile stateful any data, const char error[]) -> () callback,
 		volatile stateful any data, int maxSize, int timeout) -> ()
-	inputExt = JzfnUUqNp6C_HwYyYBJ857S_joZfsXyVkee_j4nHjGtk2Cu /* clever_unregarded_spindle */;
+	inputExt = FhFkNYjqnLP_kpY8T4XZD5B_VAXsRCDDzGv_KXrh2dKF9EG /* panders_halibut_perversions */;
 /* @*/
 
 /*@ "methods.dpvm": public methods implementation */
-inputMethods inputMethodsImpl = GZeLKRvz4d9_hSAmAZv8YJh_PAx75pUtiGD_cSAiYbMnzNj /* invertebrate_stipulation_borstals */;
-/* @*/  
+inputMethods inputMethodsImpl = jooLtTAVepQ_ZteeXpdtauX_biwEEBvGHGX_nq7xWS2vNAH /* peruvian_nonsmoker_hologram */;
+/* @*/                   
