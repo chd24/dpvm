@@ -2,9 +2,11 @@
 #ifndef DPVM_HISTORY
 #define DPVM_HISTORY
 
-#define DPVM_VERSION	"dpvm T15.395-T20.174" /* $DVS:time$
+#define DPVM_VERSION	"dpvm T15.395-T20.329" /* $DVS:time$
 
 *** history ***
+
+T20.329 - removed linenoise library and special input handling for stdin
 
 T20.174 - added support for long object names in profile
 

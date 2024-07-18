@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.328; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.329; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -285,11 +285,16 @@ type inputExtData = {
 	inputExtData d = {line, (volatile char[]){}, (volatile char[]){}, (volatile char[]){}, impl, callback, historyCallback,
 			data, (volatile historyLine[]){}, (const historyLine){}, maxSize, timeout};
 
-	char cntl[];
-	cntl.cpush(T_IAC), cntl.cpush(T_DO), cntl.cpush(T_LINEMODE);
-	cntl.cpush(T_IAC), cntl.cpush(T_SB), cntl.cpush(T_LINEMODE), cntl.cpush(1), cntl.cpush(0), cntl.cpush(T_IAC), cntl.cpush(T_SE);
-	cntl.cpush(T_IAC), cntl.cpush(T_WILL), cntl.cpush(T_ECHO);
-	outputp("", "", cntl);
+	char out[];
+	out.cpush(T_IAC), out.cpush(T_DO), out.cpush(T_LINEMODE);
+	out.cpush(T_IAC), out.cpush(T_SB), out.cpush(T_LINEMODE), out.cpush(1), out.cpush(0), out.cpush(T_IAC), out.cpush(T_SE);
+	out.cpush(T_IAC), out.cpush(T_WILL), out.cpush(T_ECHO);
+	if (line.csize) {
+		strcat(out, line);
+		d.outOffset = outputSize(line);
+		d.lineOffset = line.csize;
+	}
+	outputp("", "", out);
 
 	getsys(taskFlagsCallback, d, (const int[]){DPVM_SYS_PARAM_FLAGS});
 	return;

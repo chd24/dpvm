@@ -1,4 +1,4 @@
-/* edit current entry command, T18.320-T20.328; $DVS:time$ */
+/* edit current entry command, T18.320-T20.329; $DVS:time$ */
 
 #include "../../../stdlib/stdlib.dpvmake"
 #include "../../../utils/utils.dpvmake"
@@ -149,7 +149,7 @@ type editData = {
 
 	d.n += 1;
 
-	char res[];
+	char res[], line[];
 	res.cpush("10LE"[d.n]);
 	strcat(res, "> ");
 
@@ -165,20 +165,14 @@ type editData = {
 			if (uni < ' ')
 				uni = '.';
 		}
-		printutf8(res, uni);
+		printutf8(line, uni);
 	}
 
 	if (lastSpaces)
-		res.cpop(lastSpaces);
-
-	int size = res.csize - 3;
-	while (size) {
-		res.cpush('\b');
-		size -= 1;
-	}
+		line.cpop(lastSpaces);
 
 	outputp("", "", res);
-	inputExt(code, d, 0x100, -1);
+	editLine(code, d, line, 0x100, -1);
 	return;
 }
 
@@ -186,7 +180,7 @@ type editData = {
 	if (data.pos + 144 > data.file.isize)
 		return "End of database.\r\n";
 
-	outputp("", "", "Press Arrow Uo to start editing, or press Enter to remain the field unchanged.\r\n");
+	outputp("", "", "Start editing, or press Enter to remain the field unchanged.\r\n");
 
 	editData d;
 	d.data = data;

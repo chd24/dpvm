@@ -1,4 +1,4 @@
-/* dpvm: io; T15.530-T20.029; $DVS:time$ */
+/* dpvm: io; T15.530-T20.329; $DVS:time$ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,7 +21,6 @@
 #include "bytecode.h"
 #include "cache.h"
 #include "init.h"
-#include "input.h"
 #include "io.h"
 #include "mailbox.h"
 #include "object.h"
@@ -29,35 +28,13 @@
 #include "thread.h"
 
 #define MAX_READ_SIZE		0x100000
-#define INPUT_BUF_SIZE		0x1000
-#define OUTPUT_BUF_SIZE		0x1000
-#define PROMPT_MAX		0x200
-
-struct dpvm_io {
-	char input_buf[INPUT_BUF_SIZE];
-	char output_buf[OUTPUT_BUF_SIZE];
-	char prompt[PROMPT_MAX];
-        pthread_mutex_t stdin_mutex;
-        pthread_mutex_t stdout_mutex;
-	int input_buf_size;
-	int output_buf_size;
-};
 
 int dpvm_io_init(struct dpvm *dpvm) {
 	int err;
 
-	dpvm->io = calloc(sizeof(struct dpvm_io), 1);
-	if (!dpvm->io)
-		return -1;
-
 	err = dpvm_mailbox_init(dpvm);
 	if (err)
 		return err * 10 - 2;
-
-        pthread_mutex_init(&dpvm->io->stdin_mutex, NULL);
-        pthread_mutex_init(&dpvm->io->stdout_mutex, NULL);
-
-        dpvm_input_init();
 
 	return 0;
 }
@@ -86,20 +63,6 @@ void dpvm_sleep_until(int64_t t) {
 	}
 }
 
-void dpvm_io_set_input_buf(struct dpvm *dpvm, const char *buf) {
-	struct dpvm_io *io = dpvm->io;
-	size_t size = strlen(buf);
-	if (!size)
-		return;
-	if (size > INPUT_BUF_SIZE)
-		size = INPUT_BUF_SIZE;
-
-	pthread_mutex_lock(&io->stdin_mutex);
-	memcpy(io->input_buf, buf, size);
-	io->input_buf_size = size;
-	pthread_mutex_unlock(&io->stdin_mutex);
-}
-
 static struct dpvm_object *input_run(struct dpvm_object *thread) {
 	struct dpvm_object *tmp = 0, *data = 0, *func = thread->links[DPVM_THREAD_LINK_FUNC];
 	int64_t err = -1, size = thread->ints[DPVM_THREAD_INT_SIZE], timeout = thread->ints[DPVM_THREAD_INT_EXT];
@@ -114,89 +77,27 @@ static struct dpvm_object *input_run(struct dpvm_object *thread) {
 	if (!data) goto end;
 
 	if (size) {
-		if (size && thread->ints[DPVM_THREAD_INT_INPUT] == fileno(stdin)) {
-                        struct dpvm_io *io = thread->dpvm->io;
-                        char prompt[PROMPT_MAX];
-			int promptSize;
-			int editSize = 0;
+		struct pollfd pfd;
+		int64_t delay, last = timeout + dpvm_get_time();
+		pfd.fd = thread->ints[DPVM_THREAD_INT_INPUT];
+		pfd.events = POLLIN;
 
-                        pthread_mutex_lock(&io->stdout_mutex);
-                        strcpy(prompt, io->prompt);
-                        io->prompt[0] = 0;
-                        pthread_mutex_unlock(&io->stdout_mutex);
+		do {
+			if (timeout < 0) delay = 1000000000;
+			else delay = last - dpvm_get_time();
+			if (delay < 0) delay = 0;
+			else if (delay > 1000000000) delay = 1000000000;
+			poll(&pfd, 1, delay / 1000000);
+			if (thread->links[DPVM_THREAD_LINK_TASK]->ints[DPVM_TASK_INT_FLAGS] & DPVM_TASK_FLAG_FINISH)
+				goto end;
+		} while (!pfd.revents && delay);
 
-			promptSize = strlen(prompt);
-			while (editSize < promptSize && prompt[promptSize - editSize - 1] == '\b')
-				editSize++;
-			if (editSize) {
-				promptSize -= editSize;
-				if (editSize > promptSize)
-					editSize = promptSize;
-				promptSize -= editSize;
-				if (editSize > size - 1)
-					editSize = size - 1;
-				prompt[promptSize + editSize] = 0;
-			}
-			if (editSize) {
-				strcpy((char *)data->codes, prompt + promptSize);
-				prompt[promptSize] = 0;
-			} else
-				data->codes[0] = 0;
-
-			if (thread->dpvm->flags & DPVM_INIT_FLAG_IO_BUF) {
-				int done = 0;
-				while (!done) {
-					pthread_mutex_lock(&io->stdin_mutex);
-					if (io->input_buf_size) {
-						size_t todo = io->input_buf_size;
-						if (todo > size - 1)
-							todo = size - 1;
-						if (todo)
-							memcpy((char *)data->codes, io->input_buf, todo);
-						data->codes[todo] = 0;
-						if (todo < (size_t)io->input_buf_size) {
-							memmove(io->input_buf, io->input_buf + todo, io->input_buf_size - todo);
-						}
-						io->input_buf_size -= todo;
-						done = 1;
-					}
-					pthread_mutex_unlock(&io->stdin_mutex);
-
-					if (!done)
-						usleep(100000);
-					if (thread->links[DPVM_THREAD_LINK_TASK]->ints[DPVM_TASK_INT_FLAGS] & DPVM_TASK_FLAG_FINISH)
-						goto end;
-				}
-			} else {
-				pthread_mutex_lock(&io->stdin_mutex);
-				dpvm_input_read(&thread->links[DPVM_THREAD_LINK_TASK]->ints[DPVM_TASK_INT_FLAGS],
-					prompt, (char *)data->codes, size);
-				pthread_mutex_unlock(&io->stdin_mutex);
-			}
-
-                        size = strlen((char *)data->codes);
-                } else {
-			struct pollfd pfd;
-			int64_t delay, last = timeout + dpvm_get_time();
-			pfd.fd = thread->ints[DPVM_THREAD_INT_INPUT];
-			pfd.events = POLLIN;
-
-			do {
-				if (timeout < 0) delay = 1000000000;
-				else delay = last - dpvm_get_time();
-				if (delay < 0) delay = 0;
-				else if (delay > 1000000000) delay = 1000000000;
-				poll(&pfd, 1, delay / 1000000);
-				if (thread->links[DPVM_THREAD_LINK_TASK]->ints[DPVM_TASK_INT_FLAGS]
-						& DPVM_TASK_FLAG_FINISH) goto end;
-			} while (!pfd.revents && delay);
-
-			if (pfd.revents & POLLIN)
-				size = read(pfd.fd, data->codes, size);
-			else
-				size = -1ll;
-		}
+		if (pfd.revents & POLLIN)
+			size = read(pfd.fd, data->codes, size);
+		else
+			size = -1ll;
 	}
+
 	if (size < 0)
 		data->ncodes = 0;
 	else
@@ -211,64 +112,11 @@ end:
 	return tmp;
 }
 
-size_t dpvm_io_get_output_buf(struct dpvm *dpvm, char *buf, size_t buf_size) {
-	struct dpvm_io *io = dpvm->io;
-	size_t todo = 0;
-
-	if (dpvm->flags & DPVM_INIT_FLAG_IO_BUF) {
-		todo = buf_size;
-		pthread_mutex_lock(&io->stdout_mutex);
-		if (todo > io->output_buf_size)
-			todo = io->output_buf_size;
-		if (todo) {
-			memcpy(buf, io->output_buf, todo);
-			if (todo < io->output_buf_size)
-				memmove(io->output_buf, io->output_buf + todo, io->output_buf_size - todo);
-			io->output_buf_size -= todo;
-		}
-		pthread_mutex_unlock(&io->stdout_mutex);
-	}
-
-	return todo;
-}
-
 static struct dpvm_object *output_run(struct dpvm_object *thread) {
 	struct dpvm_object *tmp = 0, *data = thread->links[DPVM_THREAD_LINK_DATA],
 			*func = thread->links[DPVM_THREAD_LINK_FUNC];
 	int64_t done = 0, res;
 	int out = thread->ints[DPVM_THREAD_INT_OUTPUT];
-
-        if (out == fileno(stdout) && data->ncodes) {
-                struct dpvm_io *io = thread->dpvm->io;
-                ssize_t i, len, slen;
-
-                for (i = data->ncodes - 1; i >= 0 && data->codes[i] != '\n'; i--);
-                i++;
-                len = data->ncodes - i;
-
-                pthread_mutex_lock(&io->stdout_mutex);
-                if (i)
-                        io->prompt[0] = 0;
-                slen = strlen(io->prompt);
-                if (slen + len >= PROMPT_MAX)
-                        len = PROMPT_MAX - 1 - slen;
-                if (len)
-                        memcpy(io->prompt + slen, data->codes + i, len),
-                        io->prompt[slen + len] = 0;
-
-		if (thread->dpvm->flags & DPVM_INIT_FLAG_IO_BUF) {
-			if (io->output_buf_size < OUTPUT_BUF_SIZE) {
-				size_t todo = OUTPUT_BUF_SIZE - io->output_buf_size;
-				if (todo > data->ncodes)
-					todo = data->ncodes;
-				memcpy(io->output_buf + io->output_buf_size, data->codes, todo);
-				io->output_buf_size += todo;
-			}
-			done = data->ncodes;
-		}
-
-                pthread_mutex_unlock(&io->stdout_mutex);
-        }
 
 	while (done < data->ncodes) {
 		struct pollfd pfd;

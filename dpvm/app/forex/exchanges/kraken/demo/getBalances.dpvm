@@ -5,9 +5,10 @@ int _Z = 0;
 #include "../../../../../common/taskFlags.dpvmh"
 #include "../../../../../lib/stdlib/stdlib.dpvmake"
 #include "../../../../../lib/utils/utils.dpvmake"
+#include "../../../../../lib/input/demo/demo.dpvmake"
 #include "../kraken.dpvmake"
 
-char version[] = "getBalances demo 0.1.1, T19.996-T20.002"; /* $DVS:time$ */
+char version[] = "getBalances demo 0.1.2, T19.996-T20.329"; /* $DVS:time$ */
 
 type getBalancesData = {
 	const char publicKey[];
@@ -53,6 +54,12 @@ type getBalancesData = {
 	return;
 };
 
+(volatile stateful any data, const char text[], int status) -> () inputCallbackHelper = {
+	getBalancesData arr[];
+	pushObject(data, arr);
+	return inputCallback(arr[0], text, status);
+};
+
 (const char publicKey[], const char currencies[][]) -> () getBalances = {
 	krakenClass krakenObj = krakenCreate();
 	getBalancesData data = {publicKey, currencies, krakenObj};
@@ -64,6 +71,6 @@ type getBalancesData = {
 
 	outputp("", "", "Private key: ");
 
-	input(inputCallback, data, 256, -1);
+	inputExt(inputCallbackHelper, data, 256, -1);
 	return;
 };

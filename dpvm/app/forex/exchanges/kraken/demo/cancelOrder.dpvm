@@ -5,9 +5,10 @@ int _Z = 0;
 #include "../../../../../common/taskFlags.dpvmh"
 #include "../../../../../lib/stdlib/stdlib.dpvmake"
 #include "../../../../../lib/utils/utils.dpvmake"
+#include "../../../../../lib/input/demo/demo.dpvmake"
 #include "../kraken.dpvmake"
 
-char version[] = "cancelOrder demo 0.1.0, T19.996-T20.029"; /* $DVS:time$ */
+char version[] = "cancelOrder demo 0.1.1, T19.996-T20.329"; /* $DVS:time$ */
 
 type demoData = {
 	const char publicKey[];
@@ -47,6 +48,12 @@ type demoData = {
 	return;
 };
 
+(volatile stateful any data, const char text[], int status) -> () inputCallbackHelper = {
+	demoData arr[];
+	pushObject(data, arr);
+	return inputCallback(arr[0], text, status);
+};
+
 (const char publicKey[], const char txid[]) -> () cancelOrder = {
 	krakenClass krakenObj = krakenCreate();
 	demoData data = {publicKey, krakenObj, txid};
@@ -58,6 +65,6 @@ type demoData = {
 
 	outputp("", "", "Private key: ");
 
-	input(inputCallback, data, 256, -1);
+	inputExt(inputCallbackHelper, data, 256, -1);
 	return;
 };

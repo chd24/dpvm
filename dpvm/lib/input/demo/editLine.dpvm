@@ -1,0 +1,90 @@
+/* input class, editLine demo, T20.229-T20.329; $DVS:time$ */
+
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
+#include "../input.dpvmake"
+
+type demoData = {
+	volatile stateful inputClass inputObj;
+	const any callback;
+	volatile stateful any data;
+	volatile char line[];
+	const char demoName[];
+	int maxSize;
+	int timeout;
+	int status;
+};
+
+type
+	typeC	= (const any data, const char text[], int status) -> (),
+	typeCS	= (const stateful any data, const char text[], int status) -> (),
+	typeV	= (volatile any data, const char text[], int status) -> (),
+	typeVS	= (volatile stateful any data, const char text[], int status) -> ();
+
+(volatile stateful demoData d) -> ()
+	/* finC	= { typeC  arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); }, */
+	finCS	= { typeCS arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); },
+	/* finV	= { typeV  arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); }, */
+	finVS	= { typeVS arr[]; pushObject(d.callback, arr); return arr[0](d.data, d.line, d.status); };
+
+type finFunc = {
+	const type callbackType;
+	const (volatile stateful demoData d) -> () func;
+};
+
+finFunc finFuncs[] = {
+	/* { typeC	 , finC  }, */
+	{ typeCS , finCS },
+	/* { typeV	 , finV  }, */
+	{ typeVS , finVS }
+};
+
+(volatile stateful any data, const char error[]) -> () inputCallback = {
+	demoData arr[];
+	pushObject(data, arr);
+	demoData d = arr[0];
+
+	d.status = d.line.csize;
+	if (error.csize) {
+		char mess[];
+		printf(mess, "[%s: Error: %s]\r\n", {d.demoName, error});
+		outputp("", "", mess);
+		d.status = -1;
+	}
+
+	int i;
+	for (i = 0; i < finFuncs.lsize; i++) {
+		if (finFuncs[i].callbackType == d.callback.type)
+			return finFuncs[i].func(d);
+	}
+
+	/*
+	 *  TODO: add compilation of finFunc for arbitrary callback type; store this function to hash, send to history server and then
+	 *  search in hash
+	 */
+
+	char mess[];
+	printf(mess, "[%s: Error: unsupported input callback type %p]\r\n", {d.demoName, d.callback.type});
+	outputp("", "", mess);
+
+	return;
+};
+
+(const any callback, volatile stateful any data, const char initialText[], int maxSize, int timeout) -> () editLine = {
+	inputClass inputObj = inputCreate();
+
+	int flags;
+	while (maxSize < 0) {
+		maxSize += 1 << 32;
+		flags++;
+	}
+
+	demoData d = {inputObj, callback, data, (volatile char[]){}, initialText.csize ? "editLine" : "inputExt", maxSize, timeout};
+	strcat(d.line, initialText);
+
+	char error[] = inputObj.methods.setFlags(inputObj, flags);
+	if (error.csize) return inputCallback(d, error);
+
+	inputObj.methods.inputExt(d.line, inputObj, inputCallback, d, maxSize, timeout);
+	return;
+};

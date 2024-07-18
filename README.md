@@ -8,7 +8,7 @@ The name is acronym of Deterministic Parallel Virtual Machine. The main principl
 ### Download
 ```
 <Install cmake, make and gcc>
-$ git clone https://github.com/cdy21/dpvm.git
+$ git clone https://github.com/chd24/dpvm.git
 ```
 
 ### Build

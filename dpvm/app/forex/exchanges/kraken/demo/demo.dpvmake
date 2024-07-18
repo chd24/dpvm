@@ -3,40 +3,40 @@
 
 /*@ "dump.dpvm": creates kraken object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = negativeness_hiving_stagnate;
+	dump = GQNmKMcBbik_UFmfKKqzVd1_hkEZWUABdDk_gLuCFPPceHn /* negativeness_hiving_stagnate */;
 /* @*/
 
 /*@ "logData.dpvm": periodically writes currency pair rates to log file using given interval */
 (const any registry, const char logFile[], const char currencyPair[], int interval) -> ()
-	logData = stagnation_decors_played;
+	logData = mZPn83nv5qm_sbv2jPCn79A_ksyC8sadNc6_d6d58mqu4Gw /* unrequested_faecal_demists */;
 /* @*/
 
 /*@ "getBalances.dpvm": query balances from exchange and show them */
 (const char publicKey[], const char currencies[][]) -> ()
-	getBalances = confiscate_brim_hunkers;
+	getBalances = UC8UsdiF94S_bnXc9b964Nf_n4xLH822t78_ircazH1wkdq /* fulsomely_ruination_copyable */;
 /* @*/
 
 /*@ "addOrder.dpvm": add order */
 (const char publicKey[], const char currencyPair[], int orderType, int direction, float volume, float price) -> ()
-	addOrder = invitingly_callowness_sanity;
+	addOrder = bSUkezQLTmE_PFypRsrAaJA_Mg2wrvPbfbf_CUCnht7jCzR /* poinsettias_menace_sanddune */;
 /* @*/
 
 /*@ "listOrders.dpvm": list open orders for given currency pair */
 (const char publicKey[], const char currencyPair[]) -> ()
-	listOrders = joysticks_mumbojumbo_preterite;
+	listOrders = n5hp32bqhvZ_aTCzXsvh1Nb_HTNrywyd36U_DHVhapksB84 /* disallows_duchesses_strategy */;
 /* @*/
 
 /*@ "getOrderStatus.dpvm": get status of order by its txid */
 (const char publicKey[], const char txid[]) -> ()
-	getOrderStatus = smouldering_mafia_pass;
+	getOrderStatus = qvrw4JynieX_S2xU84eqwq4_qChz4emgfq1_A3Ao6tggkiA /* stumped_nourishment_helps */;
 /* @*/
 
 /*@ "cancelOrder.dpvm": cancel order */
 (const char publicKey[], const char txid[]) -> ()
-	cancelOrder = generation_marvels_scoreless;
+	cancelOrder = VGggMtmU3Du_SXD1Rsf9TJ4_nQ75DQuR9Sz_fqB3cGzMrjQ /* entertain_reversed_nor */;
 /* @*/
 
 /*@ "cancelAll.dpvm": cancel all orders */
 (const char publicKey[]) -> ()
-	cancelAll = corrects_pyromaniacs_orphanages;
-/* @*/                 
+	cancelAll = pt6YeaRjuNe_poLsDWTHpgP_dnzADKnekqo_kLFTcs9aZQc /* pacts_crucible_homeland */;
+/* @*/
