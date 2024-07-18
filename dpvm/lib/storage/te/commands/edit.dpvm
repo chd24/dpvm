@@ -1,6 +1,8 @@
-/* edit current entry command, T18.320-T18.336; $DVS:time$ */
+/* edit current entry command, T18.320-T20.328; $DVS:time$ */
 
 #include "../../../stdlib/stdlib.dpvmake"
+#include "../../../utils/utils.dpvmake"
+#include "../../../input/demo/demo.dpvmake"
 #include "../internal.dpvmh"
 
 type editData = {
@@ -88,7 +90,11 @@ type editData = {
 	return;
 }
 
-(volatile stateful editData d, const char text[], int status) -> () inputField {
+(volatile stateful any d0, const char text[], int status) -> () inputField {
+	editData arr[];
+	pushObject(d0, arr);
+	editData d = arr[0];
+
 	if (d.n >= 0) {
 		int size = text.csize;
 		if (size && text[size - 1] == '\n')
@@ -172,7 +178,7 @@ type editData = {
 	}
 
 	outputp("", "", res);
-	input(code, d, 0x100, -1);
+	inputExt(code, d, 0x100, -1);
 	return;
 }
 

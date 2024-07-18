@@ -1,8 +1,10 @@
 /* te version and history, header */
 
-char teVersion[] = "te 0.2.1, T18.319-T18.765"; /* $DVS:time$
+char teVersion[] = "te 0.2.2, T18.319-T20.328"; /* $DVS:time$
 
 history:
+
+T20.328 - ver. 0.2.2: use input library instead of input bytecode
 
 T18.765 - ver. 0.2.1: added external methods time2teTime and teTime2Time
 

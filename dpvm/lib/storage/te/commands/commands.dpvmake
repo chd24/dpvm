@@ -3,77 +3,77 @@
 #include "../internal.dpvmh"
 
 /*@ "0.dpvm": view field 0 command */
-teCommand cmd0 = rescuing_chambermaids_battleaxe;
+teCommand cmd0 = eTSse9Rg5oH_AQ67UFmESmx_Ey7aj8dRdYz_kN4LrfiKvC6 /* rescuing_chambermaids_battleaxe */;
 /* @*/
 
 /*@ "1.dpvm": view field 1 command */
-teCommand cmd1 = infers_inactivation_disregard;
+teCommand cmd1 = QB5EWZKciCN_Vd54M8GmbSA_Ec61XHMJpNB_XH3vDNeubYw /* infers_inactivation_disregard */;
 /* @*/
 
 /*@ "E.dpvm": view field E command */
-teCommand cmdE = anthropology_beguilement_fungoid;
+teCommand cmdE = bnZAGrta8qk_rG7nDip2gGU_TWQM5EtAF7m_AvHtm9KrKm2 /* anthropology_beguilement_fungoid */;
 /* @*/
 
 /*@ "L.dpvm": view field L command */
-teCommand cmdL = estimated_mouthorgan_chasers;
+teCommand cmdL = dL7iHd2Q2VZ_X8wN1xdWzsk_r7sUg56kKtg_S9rfNDaVy7C /* estimated_mouthorgan_chasers */;
 /* @*/
 
 /*@ "back.dpvm": view previously viwed entry */
-teCommand cmdBack = untidy_oaths_await;
+teCommand cmdBack = g7E9nHsEMxi_gEbywjxSByv_jES9yMCk7mW_p3bvr6qVs9p /* untidy_oaths_await */;
 /* @*/
 
 /*@ "dump.dpvm": print context dump command */
-teCommand cmdDump = fluoresce_minty_rabies;
+teCommand cmdDump = kQ6phvfSMcu_VDHz21LfngS_ZR2f1n5tYyc_SpiStwMCfMY /* fluoresce_minty_rabies */;
 /* @*/
 
 /*@ "edit.dpvm": edit current database entry command */
-teCommand cmdEdit = queue_plurals_baked;
+teCommand cmdEdit = r5ub8gwAKGi_G5nNTvY1WYF_MYU6HfrAZGw_hfhZprTjsXU /* catechism_chancery_scopes */;
 /* @*/
 
 /*@ "end.dpvm": view last entry of database command */
-teCommand cmdEnd = physician_ruggedly_exerciser;
+teCommand cmdEnd = JgT2QE25q7m_ekcioEEBkkg_Wzs3GXLZUYd_DYvcCYhaiHz /* physician_ruggedly_exerciser */;
 /* @*/
 
 /*@ "exit.dpvm": exit command */
-teCommand cmdExit = subsonic_captions_eritrea;
+teCommand cmdExit = kiHLiPj64tr_kngaKe2emGa_qG266MKu3FD_otqgmnshSsa /* subsonic_captions_eritrea */;
 /* @*/
 
 /*@ "help.dpvm": show help command */
-teCommand cmdHelp = shoed_invalids_foggy;
+teCommand cmdHelp = E8yKY8HSXGF_Vj6qt2aDScz_XgaFpfuRfy1_UBLVe3jx76c /* sparingly_mascots_scarring */;
 /* @*/
 
 /*@ "home.dpvm": view first entry of database command */
-teCommand cmdHome = chancellor_squad_haberdashery;
+teCommand cmdHome = Qz74GmSMb6i_hM1JQ59QnoP_EWe54dTLcc1_csHnGHdNsif /* chancellor_squad_haberdashery */;
 /* @*/
 
 /*@ "info.dpvm": show entry metainformation command */
-teCommand cmdInfo = brazenness_backhanded_devaluing;
+teCommand cmdInfo = LweCfccrZdf_eEUaZhcj5nY_mBECaCKDN64_rJSKDQjyb1u /* brazenness_backhanded_devaluing */;
 /* @*/
 
 /*@ "new.dpvm": create new entry command */
-teCommand cmdNew = shy_retitle_deceived;
+teCommand cmdNew = APhvtvqAB69_TvTg2VAxj2x_kVdvG6J96E2_HUTSJA7pSZw /* coarsely_surreys_enacted */;
 /* @*/
 
 /*@ "next.dpvm": view next database entry command */
-teCommand cmdNext = appellate_caring_cervix;
+teCommand cmdNext = UrB9bpHpiTs_T2jxSMYgdu8_i9UQguaw5VC_UegZdrVM6rL /* appellate_caring_cervix */;
 /* @*/
 
 /*@ "prev.dpvm": view previous database entry command */
-teCommand cmdPrev = pledged_annotated_invert;
+teCommand cmdPrev = RPKPHRyvhqs_dPVrSXLKFBi_f5Q79adgD5r_ZeVPSPZr55F /* pledged_annotated_invert */;
 /* @*/
 
 /*@ "save.dpvm": save database to original file command */
-teCommand cmdSave = globe_vacuums_relearning;
+teCommand cmdSave = XoEDpZNHhAd_Ne1uoqxmdkV_ga7LhzrPWbi_FuEaCnaZ5af /* feudal_proximity_prickling */;
 /* @*/
 
 /*@ "show.dpvm": unrestricted show current database entry command */
-teCommand cmdShow = airbus_basin_planetoids;
+teCommand cmdShow = LsCTVvUPaYf_mFi3xCTXUqL_YoqxF6XSfTA_CPZwcTDzGxa /* airbus_basin_planetoids */;
 /* @*/
 
 /*@ "view.dpvm": restricted view current database entry command */
-teCommand cmdView = misogynist_movingly_pillion;
+teCommand cmdView = N6mDL1ceSYt_WVv6GnGWzjf_QAuf3ABbDoN_CKk7LVQVDy4 /* resemble_figural_outlaw */;
 /* @*/
 
 /*@ "commands.dpvm": array of all commands */
-teCommand teCommands[] = dismay_turns_sanctuary;
-/* @*/                                                                        
+teCommand teCommands[] = QgTorq5fqAn_qZqwPW39RY7_LUBsYYk3Wr6_JRLicF1iCcZ /* unwelcome_iguanas_exiled */;
+/* @*/

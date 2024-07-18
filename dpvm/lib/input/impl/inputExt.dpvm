@@ -1,7 +1,10 @@
-/* input class, inputExt method implementation, T20.221-T20.322; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.328; $DVS:time$ */
 
-#include "../../../lib/stdlib/stdlib.dpvmake"
-#include "../../../lib/utils/utils.dpvmake"
+int _Z = 0;
+#include "../../../common/sysParams.dpvmh"
+#include "../../../common/taskFlags.dpvmh"
+#include "../../stdlib/stdlib.dpvmake"
+#include "../../utils/utils.dpvmake"
 #include "input.dpvmake"
 
 /* telnet command codes */
@@ -44,6 +47,7 @@ type inputExtData = {
 	int outOffset;
 	int historyQuery;
 	int lastLineSet;
+	int taskFlags;
 };
 
 (volatile stateful inputExtData data, const char text[], int status) -> () inputCallback = {
@@ -69,6 +73,8 @@ type inputExtData = {
 				data.state = S_ESC;
 
 			else if (c == '\r' || c == '\n') {
+				if (data.taskFlags & DPVM_TASK_FLAG_NO_INPUT_ECHO)
+					out.cpop(out.csize);
 				out.cpush('\r');
 				out.cpush('\n');
 				out.cpush(T_IAC), out.cpush(T_DO), out.cpush(T_LINEMODE);
@@ -81,7 +87,10 @@ type inputExtData = {
 				strcat(txt, data.line);
 				historyLine line = {txt, 0}, lines[] = {line};
 				strcat(data.line, "\r\n");
-				data.impl.methods.queryHistory(lines, data.impl, data.callback, data.data, HISTORY_QUERY_ADD);
+				if (data.taskFlags & DPVM_TASK_FLAG_NO_INPUT_HISTORY)
+					data.callback(data.data, "");
+				else
+					data.impl.methods.queryHistory(lines, data.impl, data.callback, data.data, HISTORY_QUERY_ADD);
 				return;
 
 			} else if (c == 0x7f) { /* backspace */
@@ -203,7 +212,7 @@ type inputExtData = {
 		}
 	}
 
-	if (out.csize)
+	if (out.csize && !(data.taskFlags & DPVM_TASK_FLAG_NO_INPUT_ECHO))
 		outputp("", "", out);
 	input(code, data, data.maxSize, data.timeout);
 	return;
@@ -260,6 +269,12 @@ type inputExtData = {
 	return inputCallback(data, "", 0);
 };
 
+(volatile stateful inputExtData data, const int values[]) -> () taskFlagsCallback = {
+	data.taskFlags = values[0];
+	input(inputCallback, data, data.maxSize, data.timeout);
+	return;
+};
+
 (volatile stateful char line[], volatile stateful any inputObj,
 		const (volatile stateful any data, const char error[]) -> () callback,
 		volatile stateful any data, int maxSize, int timeout) -> () inputExt = {
@@ -276,6 +291,6 @@ type inputExtData = {
 	cntl.cpush(T_IAC), cntl.cpush(T_WILL), cntl.cpush(T_ECHO);
 	outputp("", "", cntl);
 
-	input(inputCallback, d, maxSize, timeout);
-	return callback(data, "");
+	getsys(taskFlagsCallback, d, (const int[]){DPVM_SYS_PARAM_FLAGS});
+	return;
 };

@@ -3,15 +3,15 @@
 
 /*@ "dump.dpvm": creates input object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = fRHWesiRunw_Jsx2fQADdrg_bsNPZQYZUcs_ZVS1JsLxpxW /* homelessness_aborted_assents */;
+	dump = ZLG2RUuaHoB_BHWNLd3DjKr_iH4PQGGbiC1_aHQ7yWKatNU /* ethylene_soaks_intervening */;
 /* @*/
 
 /*@ "inputExt.dpvm": replacement of input bytecode to input text via line editor */
 (const any callback, volatile stateful any data, int maxSize, int timeout) -> ()
-	inputExt = PVzmr3N8nND_jNJHHeoQL9P_oxjW7rCX1nZ_D6LVz3dvSJ7 /* unalloyed_mayor_spanning */;
+	inputExt = X2caR9NeheP_mMc4CTeHn7J_UFnA5k2jRCw_mAFqPAbPiqP /* boerwar_thunderous_chairmanship */;
 /* @*/
 
 /*@ "queryHistory.dpvm": demo allows to enter commands which correspond to history queries */
 (const any registry, int flags) -> ()
-	queryHistory = DFA9JS8LQQX_nF2xq1i948h_DZaeZeTmLZh_UUZWNJZxABP /* sire_woodsmoke_ensconced */;
-/* @*/                     
+	queryHistory = Y67o4ec9WnJ_QYFP8FaeFM4_bqMqY5WTmjK_fGuNhc2ZRKQ /* delimits_philatelic_briefly */;
+/* @*/             

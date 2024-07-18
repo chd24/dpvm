@@ -1,9 +1,11 @@
-/* te viewer/editor, T18.319-T18.765; $DVS:time$ */
+/* te viewer/editor, T18.319-T20.328; $DVS:time$ */
 
 int _Z = 0;
-#include "../../common/taskFlags.dpvmh"
+#include "../../../common/sysParams.dpvmh"
+#include "../../../common/taskFlags.dpvmh"
 #include "../../stdlib/stdlib.dpvmake"
 #include "../../utils/utils.dpvmake"
+#include "../../input/demo/demo.dpvmake"
 #include "../../math/rand/rand.dpvmake"
 #include "../../math/crypto/crc32/crc32.dpvmake"
 #include "../../math/crypto/base64/base64.dpvmake"
@@ -457,16 +459,16 @@ int extT18_319Signature[]	= {0xc6de4f4c, 0x2ab2a7d7, 0x7c3dfd27, 0xff7d7dff};
 
 teUtilities teUtilitiesObj = {
 	teVersion,
-    teCommands,
-    teContextInit,
-    teContextDump,
-    dfsEncryptInts32,
-    dfsDecryptInts32,
-    teEntryTest,
-    teEntryInfo,
-    teEntryCorrect,
-    time2teTime,
-    teTime2Time
+	teCommands,
+	teContextInit,
+	teContextDump,
+	dfsEncryptInts32,
+	dfsDecryptInts32,
+	teEntryTest,
+	teEntryInfo,
+	teEntryCorrect,
+	time2teTime,
+	teTime2Time
 };
 
 (const teData data, const char mess[]) -> () fatalError {
@@ -515,9 +517,15 @@ teUtilities teUtilitiesObj = {
 	return;
 }
 
+(volatile stateful any d, const char text[], int status) -> () processCommandHelper = {
+	teData arr[];
+	pushObject(d, arr);
+	return processCommand(arr[0], text, status);
+};
+
 (volatile teData data, int status) -> () command {
 	outputp("", "", "te> ");
-	input(processCommand, data, 256, -1);
+	inputExt(processCommandHelper, data, 256, -1);
 	return;
 }
 
@@ -665,13 +673,19 @@ teUtilities teUtilitiesObj = {
 		}
 	}
 
-	const int vars[] = {0x200};
+	const int vars[] = {DPVM_SYS_PARAM_FLAGS};
 	const int values[] = {DPVM_TASK_FLAG_NO_INPUT_HISTORY};
 	setsysp("", "", vars, values);
 
 	output(command, data, "Type 'help' for commands list.\r\n");
 	return;
 }
+
+(volatile stateful any d, const char text[], int status) -> () processPasswordHelper = {
+	teData arr[];
+	pushObject(d, arr);
+	return processPassword(arr[0], text, status);
+};
 
 (volatile teData data, const char file[], int status) -> () readFile {
 	if (status < 0 || status % (66 * 12)) {
@@ -702,14 +716,13 @@ teUtilities teUtilitiesObj = {
 
 	data.file = chars2ints32(decoded, 0, decoded.csize);
 
-	const int vars[] = {0x200};
-	int values[];
-	values.ipush(DPVM_TASK_FLAG_NO_INPUT_HISTORY | DPVM_TASK_FLAG_NO_INPUT_ECHO);
+	const int vars[] = {DPVM_SYS_PARAM_FLAGS};
+	int values[] = {DPVM_TASK_FLAG_NO_INPUT_HISTORY | DPVM_TASK_FLAG_NO_INPUT_ECHO};
 	setsysp("", "", vars, values);
 
 	outputp("", "", "Password: ");
 
-	input(processPassword, data, 256, -1);
+	inputExt(processPasswordHelper, data, 256, -1);
 	return;
 }
 
