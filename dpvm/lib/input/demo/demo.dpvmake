@@ -3,20 +3,20 @@
 
 /*@ "dump.dpvm": creates input object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = PzW3GJGVwR4_LqmQQUjGuTe_QVwFFPh78K3_NmE21BPwZmK /* squeakier_scrolling_eelworm */;
+	dump = BejmyGEgUff_DHwiqLpjRg5_HHhYwy7B2ZQ_cfbxXJ3u1VP /* spectrometry_fag_paris */;
 /* @*/
 
 /*@ "editLine.dpvm": edit line with initial line value */
 (const any callback, volatile stateful any data, const char initialText[], int maxSize, int timeout) -> ()
-	editLine = nwkhS9R8fBG_EnwP9a5RVVG_VP38J2BfwoJ_aE3UVf2iBDp /* pyroxenes_commiserated_gladiolus */;
+	editLine = DAy2ajrFHKa_kV6z6pYKWyM_P5pn7cH7qr9_JA5yo8TbKXx /* esprit_dubiousness_boyhood */;
 /* @*/
 
 /*@ "inputExt.dpvm": replacement of input bytecode to input text via line editor */
 (const any callback, volatile stateful any data, int maxSize, int timeout) -> ()
-	inputExt = dpe1tRf4hwb_HKzPZhpbn19_AZv3qwPW8Zu_iBmqWJQESFY /* tick_changeless_homologues */;
+	inputExt = EXmK72jMF9H_fy4TdQ5kcPM_HC6BVKonNyT_atzGHUe46qL /* endorse_tranches_redeeming */;
 /* @*/
 
 /*@ "queryHistory.dpvm": demo allows to enter commands which correspond to history queries */
 (const any registry, int flags) -> ()
-	queryHistory = dSjN4RCTN6i_LH4S9i8dyDG_JTCeHpsTME2_ic5LV9XADon /* clad_area_demons */;
-/* @*/                             
+	queryHistory = YgWqRE4eyeJ_qAfC3EfXSEm_nJQWkMbrHdW_tKYp7oKSJy3 /* cease_lecture_hysteric */;
+/* @*/                                  

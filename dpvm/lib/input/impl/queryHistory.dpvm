@@ -1,4 +1,4 @@
-/* input class, runServer method implementation, T20.193-T20.331; $DVS:time$ */
+/* input class, runServer method implementation, T20.193-T20.333; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -10,7 +10,7 @@ int _Z = 0;
 char historyFile[]	= ".dpvm_history.txt";
 int HASH_SIZE		= 0x1000;
 int READ_SIZE		= 0x100000;
-int TIMEOUT		= 1000000000;
+int TIMEOUT		= 30000000000;
 
 type Address = {
 	int hash[4];

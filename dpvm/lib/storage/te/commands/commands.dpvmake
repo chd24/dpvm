@@ -27,7 +27,7 @@ teCommand cmdDump = kQ6phvfSMcu_VDHz21LfngS_ZR2f1n5tYyc_SpiStwMCfMY /* fluoresce
 /* @*/
 
 /*@ "edit.dpvm": edit current database entry command */
-teCommand cmdEdit = AAuHztdFXpm_Wo4BUuUjhPu_nybcAe9egkF_mxutGgYUMvw /* beep_menorah_less */;
+teCommand cmdEdit = Y8VRmWkYtgx_gwSdyL8Hctb_btXUjX54TjK_XeKvy68QbiR /* countless_wisest_exploiter */;
 /* @*/
 
 /*@ "end.dpvm": view last entry of database command */
@@ -75,5 +75,5 @@ teCommand cmdView = N6mDL1ceSYt_WVv6GnGWzjf_QAuf3ABbDoN_CKk7LVQVDy4 /* resemble_
 /* @*/
 
 /*@ "commands.dpvm": array of all commands */
-teCommand teCommands[] = MKfKwpvuqNM_Lpkn8PdVX9G_MjDqoxUcYCp_kxudbtfot4x /* underfoot_muck_first */;
-/* @*/                  
+teCommand teCommands[] = DnmXbLmWsV2_FDEXvV1VvRM_P1SDYphHGLD_RFe24wE3HzJ /* cuboid_smirking_maturational */;
+/* @*/ 

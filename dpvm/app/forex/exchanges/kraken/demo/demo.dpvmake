@@ -8,35 +8,35 @@
 
 /*@ "logData.dpvm": periodically writes currency pair rates to log file using given interval */
 (const any registry, const char logFile[], const char currencyPair[], int interval) -> ()
-	logData = mZPn83nv5qm_sbv2jPCn79A_ksyC8sadNc6_d6d58mqu4Gw /* unrequested_faecal_demists */;
+	logData = EVPGRRg5QjK_r61iMeJdao9_JLVYGfi2g5n_EK1grCNSKVU /* recuperates_sweepingly_confidential */;
 /* @*/
 
 /*@ "getBalances.dpvm": query balances from exchange and show them */
 (const char publicKey[], const char currencies[][]) -> ()
-	getBalances = UC8UsdiF94S_bnXc9b964Nf_n4xLH822t78_ircazH1wkdq /* fulsomely_ruination_copyable */;
+	getBalances = fzW1WGzYcSd_PExGgzbVFE8_EC6PJFBz26C_jjA3pvypCUz /* obscuration_counterpoint_aswan */;
 /* @*/
 
 /*@ "addOrder.dpvm": add order */
 (const char publicKey[], const char currencyPair[], int orderType, int direction, float volume, float price) -> ()
-	addOrder = bSUkezQLTmE_PFypRsrAaJA_Mg2wrvPbfbf_CUCnht7jCzR /* poinsettias_menace_sanddune */;
+	addOrder = Q9yFYztYJMF_pYknDUhbUhY_tgWbi4VKnJy_tidYJauv3x1 /* equalise_arent_backwardness */;
 /* @*/
 
 /*@ "listOrders.dpvm": list open orders for given currency pair */
 (const char publicKey[], const char currencyPair[]) -> ()
-	listOrders = n5hp32bqhvZ_aTCzXsvh1Nb_HTNrywyd36U_DHVhapksB84 /* disallows_duchesses_strategy */;
+	listOrders = D2yH8U5bU9h_sYUBQgYkkrz_GHQ6ekJ4mxF_UzMXubutaXS /* skates_flouncing_burbling */;
 /* @*/
 
 /*@ "getOrderStatus.dpvm": get status of order by its txid */
 (const char publicKey[], const char txid[]) -> ()
-	getOrderStatus = qvrw4JynieX_S2xU84eqwq4_qChz4emgfq1_A3Ao6tggkiA /* stumped_nourishment_helps */;
+	getOrderStatus = grwLKmh2f7e_SotTZnP2x17_HPC9rbY1ABV_kY98cLgmTGu /* sexual_colonel_soonest */;
 /* @*/
 
 /*@ "cancelOrder.dpvm": cancel order */
 (const char publicKey[], const char txid[]) -> ()
-	cancelOrder = VGggMtmU3Du_SXD1Rsf9TJ4_nQ75DQuR9Sz_fqB3cGzMrjQ /* entertain_reversed_nor */;
+	cancelOrder = LAQxU55JPiY_Xfd7DQKCzGe_NvTdY4PP16n_bgnZhUdmQFQ /* polluted_swimwear_despises */;
 /* @*/
 
 /*@ "cancelAll.dpvm": cancel all orders */
 (const char publicKey[]) -> ()
-	cancelAll = pt6YeaRjuNe_poLsDWTHpgP_dnzADKnekqo_kLFTcs9aZQc /* pacts_crucible_homeland */;
+	cancelAll = E1cPSd6Fitb_K9ft9vdWEcC_YzLPepzCztz_ZagWztV9g8X /* sprouting_stability_flounders */;
 /* @*/
