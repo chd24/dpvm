@@ -1,4 +1,4 @@
-/* input class, inputExt method implementation, T20.221-T20.329; $DVS:time$ */
+/* input class, inputExt method implementation, T20.221-T20.331; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -50,6 +50,24 @@ type inputExtData = {
 	int taskFlags;
 };
 
+(volatile stateful any d, const char error[]) -> () grepCallback = {
+	inputExtData arr[];
+	pushObject(d, arr);
+	inputExtData data = arr[0];
+
+	if (error.csize)
+		return data.callback(data.data, error);
+
+	int i;
+	for (i = 0; i < data.lines.lsize; i++) {
+		char out[];
+		printf(out, "%s\r\n", {data.lines[i].text});
+		outputp("", "", out);
+	}
+
+	return data.callback(data.data, "");
+};
+
 (volatile stateful inputExtData data, const char text[], int status) -> () inputCallback = {
 	char out[];
 
@@ -73,7 +91,17 @@ type inputExtData = {
 				data.state = S_ESC;
 
 			else if (c == '\r' || c == '\n') {
-				if (data.taskFlags & DPVM_TASK_FLAG_NO_INPUT_ECHO)
+				int grep;
+				historyLine lines[];
+				if (!(data.taskFlags & (DPVM_TASK_FLAG_NO_INPUT_ECHO | DPVM_TASK_FLAG_NO_INPUT_HISTORY))) {
+					char parts[][] = splitString(data.line, " \t\r\n");
+					if (parts.lsize == 2 && parts[0] == "history") {
+						grep = 1;
+						lines.lpush((historyLine){parts[1], 0});
+						data.lines = lines;
+					}
+				}
+				if (data.taskFlags & DPVM_TASK_FLAG_NO_INPUT_ECHO || grep)
 					out.cpop(out.csize);
 				out.cpush('\r');
 				out.cpush('\n');
@@ -83,12 +111,17 @@ type inputExtData = {
 				out.cpush(T_IAC), out.cpush(T_WONT), out.cpush(T_ECHO);
 				if (out.csize)
 					outputp("", "", out);
-				char txt[];
-				strcat(txt, data.line);
-				historyLine line = {txt, 0}, lines[] = {line};
+				if (!grep) {
+					char txt[];
+					strcat(txt, data.line);
+					lines.lpush((historyLine){txt, 0});
+				}
 				strcat(data.line, "\r\n");
+
 				if (data.taskFlags & DPVM_TASK_FLAG_NO_INPUT_HISTORY)
 					data.callback(data.data, "");
+				else if (grep)
+					data.impl.methods.queryHistory(lines, data.impl, grepCallback, data, HISTORY_QUERY_GREP);
 				else
 					data.impl.methods.queryHistory(lines, data.impl, data.callback, data.data, HISTORY_QUERY_ADD);
 				return;

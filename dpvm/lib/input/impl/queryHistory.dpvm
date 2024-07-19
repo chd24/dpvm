@@ -1,4 +1,4 @@
-/* input class, runServer method implementation, T20.193-T20.327; $DVS:time$ */
+/* input class, runServer method implementation, T20.193-T20.331; $DVS:time$ */
 
 int _Z = 0;
 #include "../../../common/sysParams.dpvmh"
@@ -164,22 +164,63 @@ type queryData = {
 					else
 						debug(addr, 120), lines.lpush(data.old[~n]);
 				}
+
+			} else if (m.query == HISTORY_QUERY_GREP) {
+				if (m.lines.lsize) {
+					debug(addr, 121);
+					char text[] = m.lines[0].text;
+					int begin = 0, end = data.history.csize;
+					while (begin < end) {
+						int pos = substrstr(data.history, text, begin, end);
+						if (pos >= 0) {
+							int left = substrrchr(data.history, begin, pos, '\n');
+							if (left >= 0 || !begin) {
+								left++;
+								int right = substrchr(data.history, pos + text.csize, end, '\n');
+								if (right < 0)
+									right = end, begin = end;
+								else
+									begin = right + 1;
+								if (right - 1 >= left && data.history[right - 1] == '\r')
+									right--;
+								char line[];
+								substrcat(line, data.history, left, right);
+								historyLine l = {line, left};
+								lines.lpush(l);
+							} else
+								begin = pos + text.csize;
+						} else
+							begin = end;
+					}
+
+					int j;
+					for (j = data.old.lsize - 1; j >= 0; j--)
+						if (strstr(data.old[j].text, text) >= 0)
+							lines.lpush(data.old[j]);
+
+					for (j = 0; j < data.new.lsize; j++)
+						if (strstr(data.new[j].text, text) >= 0)
+							lines.lpush(data.new[j]);
+
+				} else
+					debug(addr, 122), error = mkError("line is not given", "queryHistory:serverMain");
+
 			}
 
 			if (lines.lsize)
-				debug(addr, 121), r.lines = lines;
+				debug(addr, 123), r.lines = lines;
 			if (error.csize)
-				debug(addr, 122), r.error = error;
+				debug(addr, 124), r.error = error;
 			msendp("", "", m.returnAddr, r);
-			debug(addr, 123);
+			debug(addr, 125);
 		} else {
-			debug(addr, 124);
+			debug(addr, 126);
 			char mess[];
 			printf(mess, "type of received message %p equals %p, expected %p.\r\n", {objs.l[i], objs.l[i].type, Message});
 			outputp("", "", mkError(mess, "queryHistory:serverMain"));
 		}
 	}
-	debug(addr, 125);
+	debug(addr, 127);
 	mrecv(code, data, addr, -1);
 	return;
 };

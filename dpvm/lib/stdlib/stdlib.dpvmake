@@ -1,172 +1,177 @@
-/* std library, makefile; T16.624-T20.056; $DVS:time$ */
+/* std library, makefile; T16.624-T20.331; $DVS:time$ */
 
 /*@ "rand.dpvm": generate next pseudo-random seed by the given */
 (int seed) -> (int seed)
-	rand = handicap_terrazzo_hirer;
+	rand = UG8erYekspa_GYAzpKSsXRc_QdDsx4ZxVeM_juXAw8hCsTM /* handicap_terrazzo_hirer */;
 /* @*/
 
 /*@ "strchr.dpvm": searches first char occurence in string */
 (const stateful char str[], char c) -> (int index)
-	strchr = dishonesty_jeans_battalions;
+	strchr = GbjmAnxXEUY_eci5sVQHmMi_FybFcCWhKax_ZPCTXWM49tJ /* reuse_terriers_mapped */;
 /* @*/
 
 /*@ "substrchr.dpvm": searches first char occurence in substring */
 (const stateful char str[], int begin, int end, char c) -> (int index)
-	substrchr = legging_pegs_pianistic;
+	substrchr = dvebGd891K9_J93ZPbkbKfL_RgXJLdZ5dUD_fDQXj3DrXck /* mush_cassava_noddy */;
 /* @*/
 
 /*@ "strrchr.dpvm": searches last char occurence in string */
 (const stateful char str[], char c) -> (int index)
-	strrchr = started_maligning_casuistry;
+	strrchr = PYDn9hSvJec_sCy6gtsNYF6_gSXsuuoYmSY_Px56D9h4i8s /* jewellery_springboard_emperor */;
+/* @*/
+
+/*@ "substrrchr.dpvm": searches last char occurence in substring */
+(const stateful char str[], int begin, int end, char c) -> (int index)
+	substrrchr = NVgKdkfixkX_Zpoz4mNrN2g_V16a1Zt5h4J_RyszbXa6YCu /* macrophage_monochrome_blocking */;
 /* @*/
 
 /*@ "strcmp.dpvm": compares strings */
 (const stateful char a[], const stateful char b[]) -> (int res)
-	strcmp = nigeria_sportive_professions;
+	strcmp = f1FhmZi8EBv_kYTuDVmdL2z_YGXJZE88RK2_CB2Va9qZB2Z /* nigeria_sportive_professions */;
 /* @*/
 
 /*@ "strstr.dpvm": searches first src string occurence in string dst */
 (const stateful char dst[], const stateful char src[]) -> (int index)
-	strstr = loader_classless_softened;
+	strstr = Y8QZgsb3Urq_gqSw3xZWj5y_sNGPR589cmg_ow54HjDdWJs /* loader_classless_softened */;
 /* @*/
 
 /*@ "substrstr.dpvm": searches first src string occurence in substring dst[begin..end] */
 (const stateful char dst[], const stateful char src[], int begin, int end) 
-	-> (int index) substrstr = thuggish_unpunctual_spanked;
+	-> (int index) substrstr = MYTkBukD177_nP5eTPxPYVo_isWwCpqNLiF_KJCosYdgMwF /* thuggish_unpunctual_spanked */;
 /* @*/
 
 /*@ "strstrtable.dpvm": like strstr, but uses chars equality table */
 (const stateful char dst[], const stateful char src[],
 		const stateful char table[256]) -> (int index)
-	strstrtable = hertz_influenza_suppurating;
+	strstrtable = fbkRRYqhZMb_bTrBePQbzgN_oshqQHs53Q2_PwUwWLGL3Re /* quartered_redoubt_dude */;
 /* @*/
 
 /*@ "substrstr_table.dpvm": like substrstr, but uses chars equality table */
 (const stateful char dst[], const stateful char src[],
 		const stateful char table[256], int begin, int end) -> (int index)
-	substrstr_table = farces_honour_adenomas;
+	substrstr_table = cSfHGq5oKRN_s9LdeGWt4Wv_de6ebmGUmQK_BsDBwZNxwFG /* neoprene_knobs_illegible */;
 /* @*/
 
 /*@ "strcat.dpvm": pushes src string to dst */
 (volatile stateful char dst[], const stateful char src[]) -> ()
-	strcat = emphysema_stoker_stacks;
+	strcat = WazYjde1rWf_B7JzvK5NxjJ_ffmCwZhkcNi_eQon5fm8Wj1 /* emphysema_stoker_stacks */;
 /* @*/
 
 /*@ "substrcat.dpvm": pushes src substring to dst */
 (volatile stateful char dst[], const stateful char src[], int begin, int end) -> ()
-	substrcat = prediction_donors_superfluity;
+	substrcat = VTidXGKQjSC_rSvtALBbKgM_CPEUeoGE7sd_qKfCK3o1SJw /* prediction_donors_superfluity */;
 /* @*/
 
 /*@ "splitString.dpvm": split string into parts not contained delimiter characters */
 (const stateful char string[], const stateful char delimiters[]) -> (volatile char parts[][])
-        splitString = dryeyed_unworthy_docile;
+        splitString = hQZeArC5RkF_Zh7A7WcNsET_dJ2tzZ3q7MP_cGRVx5fkYeb /* autonomic_brassiere_artefacts */;
 /* @*/
 
 /*@ "printint.dpvm": pushes number as decimal integer to dst */
 (volatile stateful char dst[], int n, int digits) -> ()
-	printint = survival_bushier_estuaries;
+	printint = t4kxi6SccFW_GvHghrRPEwd_fqEKAPKLnTV_SRBBVcMdfNm /* survival_bushier_estuaries */;
 /* @*/
 
 /*@ "printhex.dpvm": pushes number as hexadecimal integer to dst */
 (volatile stateful char dst[], int n, int digits, int upper) -> ()
-	printhex = redefined_dingy_astounds;
+	printhex = TUyM7egBzXC_ksTFTZTakby_jYS2LcigRCs_mdqmiZpGvCB /* redefined_dingy_astounds */;
 /* @*/
 
 /*@ "printfloat.dpvm": pushes number as decimal float to dst */
 (volatile stateful char dst[], float x, int precision) -> ()
-	printfloat = interplay_casually_isolate;
+	printfloat = BFKGG1qypGW_PX6TpfFWyAC_iXcNVnySWM4_XCwhyo9JqnL /* interplay_casually_isolate */;
 /* @*/
 
 /*@ "strtostr.dpvm": scans substring from string */
 (const stateful char str[], int begin, int end) -> (int begin, int end)
-	strtostr = basilisks_duality_clucked;
+	strtostr = f7Ucc6T9s8q_NPjSTvPgwUt_DhS5MXdscNd_pdk1gWXJDiZ /* basilisks_duality_clucked */;
 /* @*/
 
 /*@ "strtoi.dpvm": scans integer from string */
 (const stateful char str[], int begin, int end, int base) 
 	-> (int number, int error, int nextbegin) 
-	strtoi = telexes_popper_bulldoze;
+	strtoi = dgnoV4ovmEp_c2HMA2LkZap_ANMXxWqF33g_kssiGkCGEBd /* murmured_necessarily_dependants */;
 /* @*/
 
 /*@ "strtoip.dpvm": scans ip address from string */
 (const stateful char str[], int begin, int end) 
 	-> (int ipaddr0, int ipaddr1, int error, int nextbegin)
-	strtoip = immeasurably_hoar_expended;
+	strtoip = ivTWFcU7rso_Sd8SM5f2c13_eriAVKvv7a3_EViwhrGKXhF /* consensual_interpreting_reflexions */;
 /* @*/
 
 /*@ "strtof.dpvm": scans float from string */
 (const stateful char str[], int begin, int end) 
 		-> (int error, int nextbegin, float number)
-	strtof = simplified_thankful_coherent;
+	strtof = KANidpqCju4_JHegGMmV5qF_ZMpVNoYqX1q_om1wJpDLEyJ /* simplified_thankful_coherent */;
 /* @*/
 
 /*@ "copyints.dpvm": copy ints from src subarray to dst array */
 (volatile stateful int res[], const stateful int src[], int begin, int end) -> ()
-        copyints = tyrannicide_rearmament_midwife;
+        copyints = f369HHiSeE3_fTf6bi6uXuv_Rr1injMLpYg_nSKBKEVqruy /* tyrannicide_rearmament_midwife */;
 /* @*/
 
 /*@ "objcopyto.dpvm": copy one object to given another */
 (volatile stateful any obj, const stateful any cobj) -> ()
-	objcopyto = corporeally_pinpoints_conceal;
+	objcopyto = QBYbzCbiabg_eYrP13ffvsx_dRNREN3ccCr_pmghwDNsDgF /* corporeally_pinpoints_conceal */;
 /* @*/
 
 /*@ "make_time.dpvm": make time from components */
 (int year, int month, int day, int hour, int min, int sec, int nanosec) -> (int time)
-	make_time = make_eyeteeth_mendel;
+	make_time = orwiJrNAei7_gqDMjHLbGqv_UHTtRpvESwq_fezraJA7fH2 /* make_eyeteeth_mendel */;
 /* @*/
 
 /*@ "parse_time.dpvm": parse time into components */
 (int time, int offset) -> (int year, int month, int day, int weekday,
 			   int hour, int min, int sec, int nanosec)
-	parse_time = dozy_notoriety_lankiest;
+	parse_time = kPbzmSQQZcC_RE6t24AqDPN_Miun94TDxiQ_EorYqj7YSTC /* dozy_notoriety_lankiest */;
 /* @*/
 
 /*@ "scanutf8.dpvm": read unicode char from utf8 string */
 (const stateful char src[], int begin, int end) -> (int unicode, int next)
-        scanutf8 = diabetes_beautifully_stilling;
+        scanutf8 = geT9CVcByyU_ETAFadzhaJM_pV2dhtjRqL2_mkqyUQg7Dpk /* diabetes_beautifully_stilling */;
 /* @*/
 
 /*@ "printutf8.dpvm": prints unicode char as utf8 */
 (volatile stateful char dst[], int unicode) -> ()
-	printutf8 = perishable_centrifuging_sophists;
+	printutf8 = gS7gcB2gNEg_ehftsJJg9bH_BMDnYoSL5mV_tjYuMeGGz6T /* perishable_centrifuging_sophists */;
 /* @*/
 
 /*@ "printip.dpvm": prints ip address to dst */
 (volatile stateful char dst[], int ipaddr0, int ipaddr1) -> ()
-	printip = bloody_prettiness_recomputes;
+	printip = T4f6ZX5yNUx_E1EwtyEUUUH_BcTBQH5BWLh_t4SJnHPnE3U /* bloody_prettiness_recomputes */;
 /* @*/
 
 /*@ "printobjname.dpvm": pushes name of object woth given short hash to dst */
 (volatile stateful char dst[], int hash) -> ()
-	printobjname = testers_regaining_defecating;
+	printobjname = HJzw3aak5ye_Sx9CKU4ow5h_daTYVUqoudb_JCv2SsU5KoW /* testers_regaining_defecating */;
 /* @*/
 
 /*@ "print_error.dpvm": pushes error name to dst */
 (volatile stateful char mess[], int cod) -> ()
-	print_error = sexist_softspoken_artfulness;
+	print_error = VYpKua3NX4v_sJuWnhYhDyy_KAriwiHdpZK_BuRqqhTvf31 /* sexist_softspoken_artfulness */;
 /* @*/
 
 /*@ "print_bytecode.dpvm": pushes bytecode name to dst */
 (volatile stateful char text[], int cod) -> ()
-	print_bytecode = babysit_monomania_savours;
+	print_bytecode = VpQMJw7ifVc_gyS4ievRfLn_GBDeauEefcw_HfDoVJFe61u /* pathogen_chewy_niceties */;
 /* @*/
 
 /*@ "printf.dpvm": print formatted string */
 (volatile stateful char dst[], const stateful char format[], const stateful any args) -> (int status)
-        printf = tricks_astringent_pinking;
+        printf = KeCcUuTtHQi_XyyfesWmFPK_HtCjJbWnXXV_LVhiAvUhXTq /* tricks_astringent_pinking */;
 /* @*/
 
 /*@ "strftime.dpvm": print time to dst according to format */
 (volatile stateful char dst[], const stateful char format[], int time, int offset)
-        -> () strftime = escapee_discipline_subcontinent;
+        -> () strftime = rC5xgCn4ZjQ_CJWFhugjvYR_Q7G1MJF5ZKK_jTRXJjrFPNc /* escapee_discipline_subcontinent */;
 /* @*/
 
 /*@ "scanf.dpvm": scan formatted string */
 (volatile stateful any dst, const stateful char format[], const stateful char src[], int begin, int end) -> (int matched)
-	scanf = clumps_stagehands_modulating;
+	scanf = XENt7cpA5Tg_nAcZWChHXRU_RnKFW4jbHD6_oadN9CYsbRy /* repair_ribcage_adoring */;
 /* @*/
 
 /*@ "pathcat.dpvm": add relative filesystem path src to base path dst */
 (volatile stateful char dst[], const stateful char src[]) -> ()
-	pathcat = undertakers_aga_stares;
-/* @*/                                              
+	pathcat = GeRq4FvhRQe_YGBTRSkDYrk_Cad5m19rJdA_WYpEqwct71x /* eligibly_discounted_memoirs */;
+/* @*/
