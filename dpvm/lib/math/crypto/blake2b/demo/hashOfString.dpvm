@@ -1,0 +1,10 @@
+/* blake2b class, hashOfString demo, T20.341-T20.341; $DVS:time$ */
+
+#include "../blake2b.dpvmake"
+
+(volatile stateful char output[], const char input[]) -> () hashOfString = {
+	blake2bClass blake2bObj = blake2bCreate();
+	blake2bObj.methods.addString(blake2bObj, input);
+	blake2bObj.methods.finish(output, blake2bObj);
+	return;
+};

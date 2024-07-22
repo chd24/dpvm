@@ -1,0 +1,28 @@
+/* blake2b class, copy method implementation, T20.341-T20.341; $DVS:time$ */
+
+#include "../../../../stdlib/stdlib.dpvmake"
+#include "blake2b.dpvmake"
+
+(const any blake2bObj) -> (volatile any blake2bObj) copy = {
+	blake2bImpl oldImpl;
+	char err[] = convertObjToImpl(oldImpl, blake2bObj, "copy");
+	if (err.csize) {
+		char e[];
+		strcat(e, err);
+		return e;
+	}
+
+	blake2bImpl impl;
+	impl.methods = oldImpl.methods;
+	impl.data.registry = oldImpl.data.registry;
+	objcopyto(impl.data.input, oldImpl.data.input);
+	objcopyto(impl.data.state, oldImpl.data.state);
+	impl.data.flags = oldImpl.data.flags;
+	impl.data.outputLength = oldImpl.data.outputLength;
+	impl.data.registrySet = oldImpl.data.registrySet;
+	impl.data.compressedBytes = oldImpl.data.compressedBytes;
+
+	blake2bClass obj;
+	objcopyto(obj, impl);
+	return obj;
+};
