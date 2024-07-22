@@ -3,5 +3,5 @@
 
 /*@ "dump.dpvm": creates blake2b object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = n1RVCtw1rdr_ZxSG4jriFQA_KxRzQySSrnw_ZbovGy9wuPa /* moor_qualifying_acidic */;
-/* @*/
+	dump = aR1A9BRoVUv_akmtprWwV3M_MoNeUMBnAb6_CmMZ2DgFxx4 /* disruptive_buddhist_solidify */;
+/* @*/       
