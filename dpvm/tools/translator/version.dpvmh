@@ -1,8 +1,10 @@
 /* translator, version */
 
-char version[] = "translator 0.6.3, T16.070-T20.135"; /* $DVS:time$
+char version[] = "translator 0.6.4, T16.070-T20.344"; /* $DVS:time$
 
 History:
+
+T20.344 ver 0.6.4 - fixed bug in graphs translation method
 
 T20.135 ver 0.6.3 - support translation to final ret where is no branching over
 

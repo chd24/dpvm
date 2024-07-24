@@ -1,6 +1,6 @@
-/* assemble schema; T16.576-T17.992; $DVS:time$ */
+/* assemble schema; T16.576-T20.344; $DVS:time$ */
 
-#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../../lib/stdlib/stdlib.dpvmake"
 #include "graphs.dpvmake"
 
 int startreg		= 0x4000000000000000;
@@ -34,7 +34,7 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
 		else
 			a.push('+'), a.push('d'), modrm = 0x86, disp = 4;
 		a.push(']');
-		if (is32 != -1) {
+		if (is32 > 0) {
                         if (mnem == "mov" || mnem == "mul" || mnem == "setcc" || mnem == "xchg") is32 = 0;
 			else code(list, "mov", 0xC7, -1, 0, -1, d + 4, 0, 0);
 		}
@@ -220,18 +220,16 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
 					mmreg = premm(list, s, offset, mmreg),
 					r = mmreg;
 				if (r >= 8)
-					asm_add(list, "mov r,q", "49 101 128",
-						0xB8 | r & 7, 0, v, 0, 0);
+					asm_add(list, "mov r,q", "49 101 128", 0xB8 | r & 7, 0, v, 0, 0);
 				else
-					asm_add(list, "mov r,q", "48 101 128",
-						0xB8 | r, 0, v, 0, 0);
+					asm_add(list, "mov r,q", "48 101 128", 0xB8 | r, 0, v, 0, 0);
 
-				if (!rd0 | (rd0 > 0 & d0 != r))
+				if (!rd0 || (rd0 > 0 && d0 != r))
 					binop(list, "mov", 0x89, is32, rd0, 1, d0, r, 0);
-				if (!rd1 | (rd1 > 0 & d1 != r))
+				if (!rd1 || (rd1 > 0 && d1 != r))
 					binop(list, "mov", 0x89, is32, rd1, 1, d1, r, 0);
 			} else {
-				v = v | 0x100000000;
+				v |= 0x100000000;
 				if (rd0 >= 0)
 					binop(list, "mov", 0xC7, is32, rd0, -1, d0, 0, v);
 				if (rd1 >= 0)
@@ -248,7 +246,7 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
 			if (g.op == op_not) ext = 2;
 			else if (g.op == op_neg) ext = 3;
 
-			if (!rs0 & (rd0 | d0 != s0)) {
+			if (!rs0 && (rd0 || d0 != s0)) {
 				rd = 1;
 				if (rd0) d = d0;
 				else mmreg = premm(list, s, offset, mmreg), d = mmreg;
@@ -257,8 +255,15 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
 	
 			binop(list, "uop", 0xF7, is32, rd, 2, d, ext, 0);
 			
-			if (rd != rd0 | d != d0)
-				binop(list, "mov", 0x89, is32, rd0, rd, d0, d, 0);
+			if (rd != rd0 || d != d0) {
+				if (rd || rd0)
+					binop(list, "mov", 0x89, is32, rd0, rd, d0, d, 0);
+				else {
+					mmreg = premm(list, s, offset, mmreg);
+					binop(list, "mov", 0x89, is32, 1, rd, mmreg, d, 0);
+					binop(list, "mov", 0x89, is32, rd0, 1, d0, mmreg, 0);
+				}
+			}
 
 
 		/* binary */
@@ -279,18 +284,16 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
 			else if (g.op == op_rol) cop = 0xBF, ext = 0, v = v & 0x7f, vlarge = 0;
 			else if (g.op == op_ror) cop = 0xBF, ext = 1, v = v & 0x7f, vlarge = 0;
 
-			if ((rs0 < 0 | rs1 < 0) & vlarge) {
+			if ((rs0 < 0 || rs1 < 0) && vlarge) {
 				int r;
-				if (rd0 & rs0 <= 0 & rs1 <= 0) r = d0;
+				if (rd0 && rs0 <= 0 && rs1 <= 0) r = d0;
 				else 
 					mmreg = premm(list, s, offset, mmreg),
 					r = mmreg;
 				if (r >= 8)
-					asm_add(list, "mov r,q", "49 101 128",
-						0xB8 | r & 7, 0, v, 0, 0);
+					asm_add(list, "mov r,q", "49 101 128", 0xB8 | r & 7, 0, v, 0, 0);
 				else
-					asm_add(list, "mov r,q", "48 101 128",
-						0xB8 | r, 0, v, 0, 0);
+					asm_add(list, "mov r,q", "48 101 128", 0xB8 | r, 0, v, 0, 0);
 				if (rs0 < 0) rs0 = 1, s0 = r;
 				else rs1 = 1, s1 = r;
 				v = 0;
@@ -298,14 +301,14 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
 
 			int d;
 			int rd;
-                        if (rs0 >= 0 & rs1 >= 0) {
+                        if (rs0 >= 0 && rs1 >= 0) {
 				if (!rs0 & !rs1) {
 					int r;
 					if (rd0) r = d0;
 					else
 						mmreg = premm(list, s, offset, mmreg),
 						r = mmreg;
-					if (!rd0 & d0 == s0)
+					if (!rd0 && d0 == s0)
 						binop(list, "mov", 0x89, is32, 1, rs1, r, s1, 0),
 						rs1 = 1, s1 = r;
 					else
@@ -329,8 +332,8 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
                                 }
 			} else if (rs0 >= 0) {
 				if (g.op == op_mul) rs1 = -4 | rs0, ext = s0;
-				if (rs0 | (rs0 == rd0 & s0 == d0)) {
-					if (!rs0 & g.op == op_mul)
+				if (rs0 || (rs0 == rd0 && s0 == d0)) {
+					if (!rs0 && g.op == op_mul)
 						mmreg = premm(list, s, offset, mmreg),
 						rs0 = 1, s0 = mmreg;
 					binop(list, "bop", cop, is32, rs0, rs1, s0, ext, v);
@@ -344,7 +347,7 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
 					binop(list, "bop", cop, is32, rd, rs1, d, ext, v);
 				} 
 			} else {
-				if (!rs1 & (rd0 | d0 != s1)) {
+				if (!rs1 && (rd0 || d0 != s1)) {
 					rd = 1;
 					if (rd0) d = d0;
 					else mmreg = premm(list, s, offset, mmreg), d = mmreg;
@@ -363,8 +366,15 @@ int regs[]		= {0, 1, 2, 9, 3, 5, 7, 8, 10, 11, 12, 13, 14, 15, 4};
                                 else if (g.op == op_leq) op = 0x9e0f;
                                 else if (g.op == op_geq) op = 0x9d0f;
                                 binop(list, "setcc", op, 0, rd0, 2, d0, 0, 0);
-                        } else if (d != d0 | rd != rd0)
-				binop(list, "mov", 0x89, is32, rd0, rd, d0, d, 0);
+                        } else if (d != d0 || rd != rd0) {
+				if (rd || rd0)
+					binop(list, "mov", 0x89, is32, rd0, rd, d0, d, 0);
+				else {
+					mmreg = premm(list, s, offset, mmreg);
+					binop(list, "mov", 0x89, is32, 1, rd, mmreg, d, 0);
+					binop(list, "mov", 0x89, is32, rd0, 1, d0, mmreg, 0);
+				}
+                        }
 
 
                 /* full multiplication */

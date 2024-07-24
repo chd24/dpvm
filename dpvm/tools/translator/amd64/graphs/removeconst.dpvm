@@ -1,6 +1,6 @@
-/* removes constants from schema; T16.576-T17.980; $DVS:time$ */
+/* removes constants from schema; T16.576-T20.344; $DVS:time$ */
 
-#include "../../../math/math.dpvmake"
+#include "../../../../lib/math/math.dpvmake"
 #include "graphs.dpvmake"
 
 (volatile stateful schema s) -> () {

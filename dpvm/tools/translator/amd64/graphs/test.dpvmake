@@ -1,13 +1,13 @@
-/* test for via-graphs translator for amd64, makefile; T16.615-T18.018; $DVS:time$ */
+/* test for via-graphs translator for amd64, makefile; T16.615-T20.344; $DVS:time$ */
 
 #include "graphs.dpvmake"
 
 /*@ "printschema.dpvm": print contents of schema into char string */
 (volatile stateful schema s) -> (const char text[])
-	printschema = spared_journal_domineering;
+	printschema = DEAxMMqwC8b_Fkm4fgiQHPZ_R6ai47H7q5a_SRaFnYvRhvn /* spared_journal_domineering */;
 /* @*/
 
 /*@ "test.dpvm": print results of different stages of schema transformation */
-(const stateful any func, int stage) -> (const char text[])
-	graphs_test = notes_exmembers_discern;
-/* @*/          
+(const stateful any func, int stage) -> (const char text[], int res)
+	graphs_test = FxDZ1AXAtVW_QtnxHWx59WA_m9LPv2kAZj3_J4qPPLSzkqB /* panama_dreaded_figleaf */;
+/* @*/     

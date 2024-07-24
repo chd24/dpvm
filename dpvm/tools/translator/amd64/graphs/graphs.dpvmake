@@ -71,49 +71,49 @@ int flag_in1right	= 0x40; /* 1 if input 1 of gate connected to output 1 of that 
 /*@ "findend.dpvm": finds end of potentially compiled using this method segment 
 	of bytecodes starting from given beginning pos in function */
 (const stateful any func, int begin) -> (int end)
-	findend = demo_attenuation_soar;
+	findend = YJkbmwr2z9W_cF6Ro3yJf9w_c22GdgSmfgB_diUK5onS1xE /* demo_attenuation_soar */;
 /* @*/
 
 /*@ "destroyschema.dpvm": destroys gate set, auto garbage cleaning not worked because 
 	of cyclic links */
-(volatile stateful schema res) -> () destroyschema = strider_fortune_ambivalently;
+(volatile stateful schema res) -> () destroyschema = Bzf9auLTUgd_Ph7oqLTvv2n_LeuoLeXhRyC_jxvd1wigTgF /* strider_fortune_ambivalently */;
 /* @*/
 
 /*@ "makeschema.dpvm": creates schema for given segment of the function,
 	beginstack is size of integral stack at the beginning of segment */
 (const stateful any func, int begin, int end, int beginstack) 
         -> (volatile stateful schema res, int status)
-	makeschema = upholders_scissored_sewage;
+	makeschema = dABEdGwDPvU_p8wndGUKS9q_pBAdudcSoPe_t5ejGYBWMTp /* wild_primates_maids */;
 /* @*/
 
 /*@ "removeconst.dpvm": removes const gates from scheme expect of const outputs */
-(volatile stateful schema s) -> () removeconst = saigon_controversy_radio;
+(volatile stateful schema s) -> () removeconst = LLpsR7Rofcb_jCrTQna3mUG_BoeLMRo28ph_Lg6hVWgsZsp /* saigon_controversy_radio */;
 /* @*/
 
 /*@ "removeleaf.dpvm": removes leaf (not used) gates and 1-1 transit gates */
-(volatile stateful schema s) -> () removeleaf = belch_unsuppressed_restraint;
+(volatile stateful schema s) -> () removeleaf = m26vE1LCcs5_BDkEa1rAkVu_mNJaSvvrk1j_PYWR4U7kEZ1 /* belch_unsuppressed_restraint */;
 /* @*/
 
 /*@ "shifts2rotates.dpvm": converts shifts back and forward to cyclic shift */
-(volatile stateful schema s) -> () shifts2rotates = arab_railwaymen_shortcut;
+(volatile stateful schema s) -> () shifts2rotates = KPqnABU8kTf_CpPXDBeZPNt_iYVgm5J1phN_p7b1sSaHUyq /* arab_railwaymen_shortcut */;
 /* @*/
 
 /*@ "addoutputleaf.dpvm": add leaf gaget for output if output is written to memory
 	before this memory cell is still used by input value */
-(volatile stateful schema s) -> () addoutputleaf = ratified_communing_announced;
+(volatile stateful schema s) -> () addoutputleaf = rDrEVTcR97K_G6CrmA5nrVM_TSr5pm7WfeC_c2Fvgv1Lw6e /* ratified_communing_announced */;
 /* @*/
 
 /*@ "split2chains.dpvm": split all edges between gates into chains, each chain
 	corresponds rehister of memory cell */
-(volatile stateful schema s) -> () split2chains = roaster_ugliness_pagers;
+(volatile stateful schema s) -> () split2chains = U67YVjQpzyX_DjZ5Zudt3YZ_kyQsd814xDu_QtWuHZ3tVi2 /* roaster_ugliness_pagers */;
 /* @*/
 
 /*@ "assembly.dpvm": output schema as seuence of assembly instructions */
 (volatile stateful asm_instr list[], const stateful any func, volatile stateful schema s) 
-	-> () assembly = clothespeg_infiltrate_auspice;
+	-> () assembly = sDJ5h1Gn4vp_m8Li2TZZnkE_G363GdPXqvh_h3yjqJTfaCp /* clinician_component_repainted */;
 /* @*/
 
 /*@ "main.dpvm": full translation cycle from function to machina code */
 (volatile stateful audience_trigs_modelling machcode, const stateful any func) 
-	-> (int res) amd64_graphs = mbabane_debilitate_centuries;
-/* @*/                                     
+	-> (int res) amd64_graphs = ef3uq4NSqWr_J9D3Tw3iw62_WPCQfR6XnbJ_Fo14UfGhXvX /* speculator_racier_imprudent */;
+/* @*/

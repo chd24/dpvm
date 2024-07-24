@@ -1,4 +1,4 @@
-/* new method for x86-64; T17.668-T17.668; $DVS:time$ */
+/* new method for x86-64; T17.668-T20.344; $DVS:time$ */
 
 #include "amd64/graphs/test.dpvmake"
 
@@ -6,7 +6,13 @@
 	int level = getaddr(data.addrs, "debug");
 	if (level < 0)
 		return amd64_graphs(data.machcode, data.func);
- 	return graphs_test(data.func, level);
+	char text[];
+	int res, i;
+ 	(text, res) = graphs_test(data.func, level);
+ 	if (!data.machcode.csize)
+		for (i = 0; i < text.csize; i++)
+			data.machcode.cpush(text[i]);
+ 	return res;
 }
 
 translator_method amd64_graphs_ = {

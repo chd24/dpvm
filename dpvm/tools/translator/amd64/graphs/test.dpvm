@@ -1,20 +1,20 @@
-/* test schema of code segment; T16.570-T17.667; $DVS:time$ */
+/* test schema of code segment; T16.570-T20.344; $DVS:time$ */
 
-#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../../lib/stdlib/stdlib.dpvmake"
 #include "test.dpvmake"
 
-(const stateful any func, int stage) -> (const char text[]) {
+(const stateful any func, int stage) -> (const char text[], int res) {
 	char text[];
 
 	if (stage < 0) {
 		audience_trigs_modelling machcode;
-		amd64_graphs(machcode, func);
+		int res = amd64_graphs(machcode, func);
 
 		int i;
 		int size = machcode.csize;
-		for (i = 0; i < size; i = i + 1)
+		for (i = 0; i < size; i++)
 			text.cpush(machcode.c[i]);
-		return text;
+		return (text, res);
 	}
 
 	schema s;
@@ -30,7 +30,7 @@
 	if (status) {
 		strcat(text, "Error in makeschema: ");
 		printhex(text, status, 1, 0);
-		return text;
+		return (text, status);
 	}
 
 	if (stage >= 1) removeconst(s);
@@ -58,5 +58,5 @@
 
 	destroyschema(s);
 
-	return text;
+	return (text, 0);
 }

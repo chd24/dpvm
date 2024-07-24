@@ -3,24 +3,24 @@
 #include "translator_utils.dpvmake"
 
 /*@ "amd64_old.dpvm": old method for x86-64 */
-translator_method amd64_old = interpreted_craft_cherries;
+translator_method amd64_old = daY2ozQtJC3_CpZ1ZbTa1dE_AH4Rqj4GhdB_hgFAjnbfSKN /* interpreted_craft_cherries */;
 /* @*/
 
 /*@ "amd64_graphs.dpvm": new graphs-based method for x86-64 */
-translator_method amd64_graphs = defilement_piecemeal_meddles;
+translator_method amd64_graphs = T5HTErpiSTn_Lri6sUMWjNu_caVjKQ4eyN6_LcwPExpiPX1 /* apparatchik_mutinous_sequentially */;
 /* @*/
 
 /*@ "amd64_floats.dpvm": method for float computations on x86-64 */
-translator_method amd64_floats = babblers_temporal_replete;
+translator_method amd64_floats = ZEAVBtoA4hn_jvLjvoqusch_GqgmmVJTsiG_sE5ReMrArQX /* babblers_temporal_replete */;
 /* @*/
 
 /*@ "methods.dpvm": array of all translator methods */
-translator_method translator_methods[] = dictates_accelerates_beanstalk;
+translator_method translator_methods[] = davEifmUi9z_LPuNwgTYAJu_ouMji35M7Cc_HtEtHK3kWB2 /* overwrought_reduces_fanning */;
 /* @*/
 
 /*@ "main.dpvm": main function of translator */
 (const stateful any func, const stateful addrs_list addrs, 
 		const stateful checker_data cdata, const stateful char arch[]) -> 
 		(volatile mach_code machcode, int res)
-	translator = paperthin_tedious_dinosaurs;
-/* @*/           
+	translator = qWytchN1fXg_FXSUsZL2iNU_m16RGf6VNYZ_gCmLed9ESJr /* preferred_hayfield_cheerless */;
+/* @*/

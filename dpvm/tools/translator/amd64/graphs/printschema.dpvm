@@ -1,6 +1,6 @@
-/* creates schema of code segment; T16.570-T17.981; $DVS:time$ */
+/* creates schema of code segment; T16.570-T20.344; $DVS:time$ */
 
-#include "../../../stdlib/stdlib.dpvmake"
+#include "../../../../lib/stdlib/stdlib.dpvmake"
 #include "graphs.dpvmake"
 
 int startreg		= 0x4000000000000000;
