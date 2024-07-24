@@ -72,13 +72,16 @@ Yahoo           https://www.yahoo.com/news/rss
 Znak            https://www.znak.com/rss
 Агентство       https://t.me/s/agentstvonews
 Алексашенко     https://t.me/s/NewsAboutCrisis
+Антивоенный-Комитет  https://t.me/s/RussianAntiWarCommittee
 Апостроф        https://apostrophe.ua/site/newsfeed
 Бумага          https://paperpaper.ru/feed/
+Важные-Истории  https://istories.media/rss/all.xml
 Венедиктов      https://t.me/s/aavst2022
 Вёрстка         https://t.me/s/svobodnieslova
 Голос           https://www.golos-ameriki.ru/z/1953
 Грани           https://graniru.org/export/articles-rss2.xml
 Дождь           https://tvrain.ru/export/rss/all.xml
+Досье           https://t.me/s/dossiercenter
 ЕЖ              http://www.ej.ru/xml/
 Живой-Гвоздь    https://t.me/s/livegvozd
 Каспаров        http://www.kasparov.ru/rss/
