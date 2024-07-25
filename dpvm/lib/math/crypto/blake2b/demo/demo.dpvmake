@@ -3,10 +3,10 @@
 
 /*@ "dump.dpvm": creates blake2b object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dumpDemo = C7nDPxBSP9X_NL4PZ49YWNo_aFUwSmMyQk7_oVou1pkCaCq /* adrift_earphone_shaky */;
+	dumpDemo = fddePjYydLo_mWzRPK2412t_pHjQuj6TvfN_cvM4JHJFKyq /* warbling_slander_overstressed */;
 /* @*/
 
 /*@ "hashOfString.dpvm": computes hash of input[] and writes it to output[] */
 (volatile stateful char output[], const char input[]) -> ()
-	hashOfString = SFYepPKj9VF_Hg6G19NRPWw_NSo2hnQ16it_mkyySUH4kWC /* queen_fume_gravely */;
-/* @*/                   
+	hashOfString = DhQ4XxTWqxU_CXNBR8yc7op_WGbE9bmKeMx_EfAxJHjtng2 /* unregarded_network_computes */;
+/* @*/  

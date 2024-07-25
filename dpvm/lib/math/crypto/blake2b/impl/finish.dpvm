@@ -1,4 +1,4 @@
-/* blake2b class, finish method implementation, T20.341-T20.341; $DVS:time$ */
+/* blake2b class, finish method implementation, T20.341-T20.347; $DVS:time$ */
 
 #include "../../../../stdlib/stdlib.dpvmake"
 #include "../../../../utils/utils.dpvmake"
@@ -14,11 +14,13 @@
 		int i, size = BLAKE2B_BLOCK_SIZE - impl.data.input.csize;
 		for (i = 0; i < size; i++)
 			array.cpush(0);
-		impl.data.compressedBytes -= size;
+		impl.data.compressedBytes += impl.data.input.csize;
+		impl.data.lastBlock = 1;
 		addString(impl, array);
 	}
 
 	impl.data.compressedBytes = 0;
+	impl.data.lastBlock = 0;
 	int h[8] = impl.data.state;
 	strcat(output, ints2chars((int[]){h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]}, 0, impl.data.outputLength >> 3));
 	return;

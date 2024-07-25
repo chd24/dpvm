@@ -1,4 +1,4 @@
-/* blake2b class, addString method implementation, T20.336-T20.341; $DVS:time$ */
+/* blake2b class, addString method implementation, T20.336-T20.347; $DVS:time$ */
 
 #include "../../../../stdlib/stdlib.dpvmake"
 #include "../../../../utils/utils.dpvmake"
@@ -12,19 +12,21 @@
 	int ptr, todo;
 	char input[] = impl.data.input;
 	for (ptr = 0; ptr < string.csize; ptr += todo) {
+		int last = impl.data.lastBlock ^ 1;
 		todo = string.csize - ptr;
 		if (todo + input.csize > BLAKE2B_BLOCK_SIZE)
-			todo = BLAKE2B_BLOCK_SIZE - input.csize;
+			todo = BLAKE2B_BLOCK_SIZE - input.csize, last = 0;
 		int full = todo == BLAKE2B_BLOCK_SIZE;
-		if (!full)
+		if (!full || last)
 			substrcat(input, string, ptr, ptr + todo);
-		if (todo + input.csize == BLAKE2B_BLOCK_SIZE) {
+		if (todo + input.csize == BLAKE2B_BLOCK_SIZE && !last) {
 			int pos = full ? ptr : 0, h[8] = impl.data.state,
 				m[] = chars2ints(full ? string : input, pos, pos + BLAKE2B_BLOCK_SIZE);
-			impl.data.compressedBytes += BLAKE2B_BLOCK_SIZE;
+			if (!impl.data.lastBlock)
+				impl.data.compressedBytes += BLAKE2B_BLOCK_SIZE;
 			(h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7]) = compress(h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],
 				m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10],m[11],m[12],m[13],m[14],m[15],
-				impl.data.compressedBytes, 0, impl.data.outputLength);
+				impl.data.compressedBytes, impl.data.lastBlock, impl.data.outputLength);
 			if (!full)
 				input.cpop(input.csize);
 		}
