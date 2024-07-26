@@ -1,4 +1,4 @@
-# newslog: list of feeds; T15.592-T20.051; $DVS:time$
+# newslog: list of feeds; T15.592-T20.349; $DVS:time$
 
 ABC             http://feeds.abcnews.com/abcnews/topstories
 ASTRA           https://t.me/s/astrapress
@@ -31,6 +31,7 @@ Fox             http://feeds.foxnews.com/foxnews/latest
 Gothamist       https://gothamist.com/feed
 Hi-News         https://hi-news.ru/feed
 Huffington      https://www.huffpost.com/section/front-page/feed?x=1
+Insider         https://t.me/s/theinsider
 Intercept       https://theintercept.com/feed/?lang=en
 Kerch           https://www.kerch.com.ru/RSS/LastNews.aspx?id=1
 Korrespondent   http://k.img.com.ua/rss/ru/all_news2.0.xml
