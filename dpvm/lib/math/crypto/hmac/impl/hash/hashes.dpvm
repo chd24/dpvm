@@ -1,8 +1,9 @@
-/* hmac class, array of all hashes, T19.993-T19.993; $DVS:time$ */
+/* hmac class, array of all hashes, T19.993-T20.349; $DVS:time$ */
 
 #include "hash.dpvmake"
 
 hmacHash hmacHashes[] = {
 	sha256_hash,
-	sha512_hash
+	sha512_hash,
+	blake2b_hash
 };

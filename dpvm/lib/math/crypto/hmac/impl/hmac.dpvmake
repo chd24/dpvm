@@ -5,19 +5,19 @@
 
 /*@ "mkError.dpvm": compose error message */
 (const char mess[], const char func[]) -> (const char err[])
-	mkError = cones_aztecs_hugged;
+	mkError = G3U5KUcoN11_UP8HcVbVnUx_KWniiMXoDVm_gVzBMNYG9oH /* buoyed_bedding_hippodrome */;
 /* @*/
 
 /*@ "convertObjToImpl.dpvm": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
 (volatile stateful hmacImpl impl, const stateful any hmacObj, const char func[]) -> (const char error[])
-	convertObjToImpl = maulers_shopkeepers_alpine;
+	convertObjToImpl = JfSCF6scmAv_A6FmogEGNWa_RJNFXYxBSRZ_WgNAZG86rEr /* insincere_louvred_reinstating */;
 /* @*/
 
 /*@ "dump.dpvm": dump internal content of hmacObj object */
 (volatile stateful char out[], volatile stateful any hmacObj) -> (const char error[])
-	dump = sesame_storekeepers_restricting;
+	dump = niGoHoaJm5T_UB2UKt2bKNz_WAYsG9S6bSL_oc2XddwbxND /* figurer_timidly_spitfire */;
 /* @*/
 
 /*@ "methods.dpvm": public methods implementation */
-hmacMethods hmacMethodsImpl = psoriasis_direst_confinements;
-/* @*/     
+hmacMethods hmacMethodsImpl = JEgpPFZPpKT_TTRoWnJBS1t_GkDEiGXSHjQ_ZvSuyV1C85s /* unenviable_czech_pastor */;
+/* @*/

@@ -1,0 +1,16 @@
+/* blake2b class, debug demo, T20.350-T20.350; $DVS:time$ */
+
+#include "../../../../stdlib/stdlib.dpvmake"
+#include "../blake2b.dpvmake"
+
+(volatile stateful char output[], const char input[]) -> () debug = {
+	blake2bClass blake2bObj = blake2bCreate();
+	char error[] = blake2bObj.methods.setFlags(blake2bObj, BLAKE2B_FLAG_DEBUG);
+	if (error.csize) {
+		strcat(output, error);
+		return;
+	}
+	blake2bObj.methods.addString(blake2bObj, input);
+	blake2bObj.methods.finish(output, blake2bObj);
+	return;
+};

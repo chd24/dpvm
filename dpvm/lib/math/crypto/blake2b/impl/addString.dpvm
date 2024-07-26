@@ -4,26 +4,61 @@
 #include "../../../../utils/utils.dpvmake"
 #include "blake2b.dpvmake"
 
+(volatile stateful blake2bImpl impl, int n) -> () debug = {
+	if (impl.data.flags & BLAKE2B_FLAG_DEBUG) {
+		char mess[];
+		printf(mess, "[%x]", {n});
+		outputp({}, {}, mess);
+	}
+	return;
+};
+
 (volatile stateful any blake2bObj, const char string[]) -> () addString = {
 	blake2bImpl impl;
 	char err[] = convertObjToImpl(impl, blake2bObj, "addString");
-	if (err.csize) return;
+	if (err.csize) {
+		debug(impl, 0x201);
+		return;
+	}
 
 	int ptr, todo;
 	char input[] = impl.data.input;
+
+	if (impl.data.flags & BLAKE2B_FLAG_DEBUG) {
+		debug(impl, 0x101);
+		debug(impl, impl.data.input.csize);
+		debug(impl, string.csize);
+	}
+
 	for (ptr = 0; ptr < string.csize; ptr += todo) {
-		int last = impl.data.lastBlock ^ 1;
+		int last = impl.data.lastBlock ^ 1, size = input.csize;
 		todo = string.csize - ptr;
-		if (todo + input.csize > BLAKE2B_BLOCK_SIZE)
-			todo = BLAKE2B_BLOCK_SIZE - input.csize, last = 0;
+		if (impl.data.flags & BLAKE2B_FLAG_DEBUG) {
+			debug(impl, 0x102);
+			debug(impl, ptr);
+			debug(impl, last);
+			debug(impl, todo);
+		}
+		if (todo + size > BLAKE2B_BLOCK_SIZE)
+			todo = BLAKE2B_BLOCK_SIZE - size, last = 0;
 		int full = todo == BLAKE2B_BLOCK_SIZE;
+		if (impl.data.flags & BLAKE2B_FLAG_DEBUG) {
+			debug(impl, todo);
+			debug(impl, full);
+		}
 		if (!full || last)
 			substrcat(input, string, ptr, ptr + todo);
-		if (todo + input.csize == BLAKE2B_BLOCK_SIZE && !last) {
+		if (todo + size == BLAKE2B_BLOCK_SIZE && !last) {
 			int pos = full ? ptr : 0, h[8] = impl.data.state,
 				m[] = chars2ints(full ? string : input, pos, pos + BLAKE2B_BLOCK_SIZE);
 			if (!impl.data.lastBlock)
 				impl.data.compressedBytes += BLAKE2B_BLOCK_SIZE;
+			if (impl.data.flags & BLAKE2B_FLAG_DEBUG) {
+				debug(impl, 0x103);
+				debug(impl, pos);
+				debug(impl, impl.data.lastBlock);
+				debug(impl, impl.data.compressedBytes);
+			}
 			(h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7]) = compress(h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],
 				m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10],m[11],m[12],m[13],m[14],m[15],
 				impl.data.compressedBytes, impl.data.lastBlock, impl.data.outputLength);
