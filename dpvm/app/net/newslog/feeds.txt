@@ -85,6 +85,7 @@ Znak            https://www.znak.com/rss
 Досье           https://t.me/s/dossiercenter
 ЕЖ              http://www.ej.ru/xml/
 Живой-Гвоздь    https://t.me/s/livegvozd
+Идите-Лесом     https://t.me/s/iditelesom_help
 Каспаров        http://www.kasparov.ru/rss/
 Колезев         https://t.me/s/kolezev
 Лазерсон	https://t.me/s/znachit_net
