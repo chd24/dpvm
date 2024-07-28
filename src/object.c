@@ -1,4 +1,4 @@
-/* dpvm: object; T15.395-T20.051; $DVS:time$ */
+/* dpvm: object; T15.395-T20.357; $DVS:time$ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -152,7 +152,7 @@ struct dpvm_object *dpvm_create_object(struct dpvm_object *thread, struct dpvm_o
 
 	if (type->type != &dpvm_type_type)
 		return 0;
-	if (!dpvm_object_hash(type, -4ull))
+	if (!dpvm_object_hash(thread, type, -4ull))
 		return 0;
 
 	for (i = DPVM_TYPE_SIZEOF_LINK_MIN; i <= DPVM_TYPE_SIZEOF_CODE_MIN; ++i) 
@@ -331,7 +331,7 @@ struct dpvm_object *dpvm_unlink_object(struct dpvm_object *thread, struct dpvm_o
 	return thread;
 }
 
-int dpvm_match_type(struct dpvm_object *tested_type, struct dpvm_object *pattern_type) {
+int dpvm_match_type(struct dpvm_object *thread, struct dpvm_object *tested_type, struct dpvm_object *pattern_type) {
 	struct dpvm_hash *ht, *hp;
 
 	if (tested_type == pattern_type)
@@ -339,8 +339,8 @@ int dpvm_match_type(struct dpvm_object *tested_type, struct dpvm_object *pattern
 	if (pattern_type == &dpvm_type_any)
 		return 1;
 
-	ht = dpvm_object_hash(tested_type, -3ull);
-	hp = dpvm_object_hash(pattern_type, -3ull);
+	ht = dpvm_object_hash(thread, tested_type, -3ull);
+	hp = dpvm_object_hash(thread, pattern_type, -3ull);
 
 	if (ht && hp && !memcmp(ht, hp, sizeof(struct dpvm_hash)))
 		return 1;
@@ -353,7 +353,7 @@ int dpvm_set_link(struct dpvm_object *thread, struct dpvm_object *obj, int64_t n
 	if (nlink < 0 || nlink >= obj->nlinks)
 		return DPVM_ERROR_LINKS_INDEX;
 	type = dpvm_type_of_link(obj->type, nlink);
-	if (!dpvm_match_type(link->type, type))
+	if (!dpvm_match_type(thread, link->type, type))
 		return DPVM_ERROR_TYPE_MISMATCH;
 	if (link != obj) 
                 dpvm_link_object(link);
@@ -394,7 +394,7 @@ int dpvm_push_link(struct dpvm_object *thread, struct dpvm_object *obj, struct d
 	int res = dpvm_reserve_links(thread, obj, 1);
 	if (res) return res;
 	type = dpvm_type_of_link(obj->type, obj->nlinks);
-	if (!dpvm_match_type(link->type, type))
+	if (!dpvm_match_type(thread, link->type, type))
 		return DPVM_ERROR_TYPE_MISMATCH;
 	obj->links[obj->nlinks++] = link;
 	if (link != obj)
@@ -542,7 +542,7 @@ struct dpvm_object *dpvm_create_type(struct dpvm_object *thread,
 	return type;
 }
 
-static struct dpvm_hash *object_hash(struct dpvm_object *obj, uint64_t temp_mark, uint64_t final_mark) {
+static struct dpvm_hash *object_hash(struct dpvm_object *thread, struct dpvm_object *obj, uint64_t temp_mark, uint64_t final_mark) {
 	static const struct dpvm_hash zero = { 0 };
 	struct dpvm_hash_state state;
 	const struct dpvm_hash *hash;
@@ -566,45 +566,45 @@ static struct dpvm_hash *object_hash(struct dpvm_object *obj, uint64_t temp_mark
 
 	if (calculate) {
 		dpvm_hash_init(&state);
-		dpvm_hash_add(&state, dpvm_type_type_ints, 4 * sizeof(int64_t));
-		dpvm_hash_add(&state, &obj->nlinks, 4 * sizeof(int64_t));
+		dpvm_hash_add(obj->dpvm, thread, &state, dpvm_type_type_ints, 4 * sizeof(int64_t));
+		dpvm_hash_add(obj->dpvm, thread, &state, &obj->nlinks, 4 * sizeof(int64_t));
 	}
 
-	hash = (obj->type != obj ? object_hash(obj->type, temp_mark, final_mark) : &zero);
+	hash = (obj->type != obj ? object_hash(thread, obj->type, temp_mark, final_mark) : &zero);
 	if (!hash) return 0;
 
 	if (calculate)
-		dpvm_hash_add(&state, hash, DPVM_HASH_SIZE);
+		dpvm_hash_add(obj->dpvm, thread, &state, hash, DPVM_HASH_SIZE);
 
 	for (i = 0; i < obj->nlinks; ++i) {
-		hash = (obj->links[i] != obj ? object_hash(obj->links[i], temp_mark, final_mark) : &zero);
+		hash = (obj->links[i] != obj ? object_hash(thread, obj->links[i], temp_mark, final_mark) : &zero);
 		if (!hash) return 0;
 		if (calculate)
-			dpvm_hash_add(&state, hash, DPVM_HASH_SIZE);
+			dpvm_hash_add(obj->dpvm, thread, &state, hash, DPVM_HASH_SIZE);
 	}
 
 	if (calculate) {
-		dpvm_hash_add(&state, obj->ints, obj->nints * sizeof(int64_t));
-		dpvm_hash_add(&state, obj->floats, obj->nfloats * sizeof(double));
-		dpvm_hash_add(&state, obj->codes, obj->ncodes);
-		dpvm_hash_final(&state, &obj->hash);
+		dpvm_hash_add(obj->dpvm, thread, &state, obj->ints, obj->nints * sizeof(int64_t));
+		dpvm_hash_add(obj->dpvm, thread, &state, obj->floats, obj->nfloats * sizeof(double));
+		dpvm_hash_add(obj->dpvm, thread, &state, obj->codes, obj->ncodes);
+		dpvm_hash_final(obj->dpvm, thread, &state, &obj->hash);
 	}
 
 	obj->hash_mark = final_mark;
 	return &obj->hash;
 }
 
-struct dpvm_hash *dpvm_object_hash(struct dpvm_object *obj, uint64_t hash_mark) {
+struct dpvm_hash *dpvm_object_hash(struct dpvm_object *thread, struct dpvm_object *obj, uint64_t hash_mark) {
 	uint64_t temp_mark;
 	if (obj->hash_mark >= hash_mark)
 		return &obj->hash;
 	temp_mark = ((int64_t)obj->hash_mark < 0 ? 0 : __sync_add_and_fetch(&obj->dpvm->hash_mark, 1));
 	if (hash_mark == -3ull)
 		hash_mark = (obj->hash_mark == -4ull ? -2ull : __sync_add_and_fetch(&obj->dpvm->hash_mark, 1));
-	return object_hash(obj, temp_mark, hash_mark);
+	return object_hash(thread, obj, temp_mark, hash_mark);
 }
 
-int dpvm_serialize_object(struct dpvm_object *obj, uint64_t hash_mark, void **pmem, size_t *psize) {
+int dpvm_serialize_object(struct dpvm_object *thread, struct dpvm_object *obj, uint64_t hash_mark, void **pmem, size_t *psize) {
 	size_t size;
 	void *mem;
 	uint8_t *ptr;
@@ -629,7 +629,7 @@ int dpvm_serialize_object(struct dpvm_object *obj, uint64_t hash_mark, void **pm
 	memcpy(ptr, &obj->nlinks, 4 * sizeof(int64_t));
 	ptr += 4 * sizeof(int64_t);
 	if (obj->type != obj) {
-		dpvm_object_hash(obj->type, hash_mark);
+		dpvm_object_hash(thread, obj->type, hash_mark);
 		memcpy(ptr, &obj->type->hash, DPVM_HASH_SIZE);
 	} else {
 		memset(ptr, 0, DPVM_HASH_SIZE);
@@ -638,7 +638,7 @@ int dpvm_serialize_object(struct dpvm_object *obj, uint64_t hash_mark, void **pm
 	
 	for (i = 0; i < obj->nlinks; ++i) {
 		if (obj->links[i] != obj) {
-			dpvm_object_hash(obj->links[i], hash_mark);
+			dpvm_object_hash(thread, obj->links[i], hash_mark);
 			memcpy(ptr, &obj->links[i]->hash, DPVM_HASH_SIZE);
 		} else {
 			memset(ptr, 0, DPVM_HASH_SIZE);

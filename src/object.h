@@ -1,4 +1,4 @@
-/* dpvm: object; T15.395-T19.631; $DVS:time$ */
+/* dpvm: object; T15.395-T20.357; $DVS:time$ */
 
 #ifndef DPVM_OBJECT
 #define DPVM_OBJECT
@@ -87,15 +87,15 @@ extern int dpvm_reserve_ints(struct dpvm_object *thread, struct dpvm_object *obj
 extern int dpvm_reserve_floats(struct dpvm_object *thread, struct dpvm_object *obj, int64_t n);
 extern int dpvm_reserve_codes(struct dpvm_object *thread, struct dpvm_object *obj, int64_t n);
 
-extern int dpvm_match_type(struct dpvm_object *tested_type, struct dpvm_object *pattern_type);
+extern int dpvm_match_type(struct dpvm_object *thread, struct dpvm_object *tested_type, struct dpvm_object *pattern_type);
 extern int dpvm_set_link(struct dpvm_object *thread, struct dpvm_object *obj, int64_t nlink, struct dpvm_object *link);
 extern int dpvm_push_link(struct dpvm_object *thread, struct dpvm_object *obj, struct dpvm_object *link);
 extern int dpvm_push_int(struct dpvm_object *thread, struct dpvm_object *obj, int64_t i);
 extern int dpvm_push_float(struct dpvm_object *thread, struct dpvm_object *obj, double f);
 extern int dpvm_push_code(struct dpvm_object *thread, struct dpvm_object *obj, uint8_t c);
 
-extern struct dpvm_hash *dpvm_object_hash(struct dpvm_object *obj, uint64_t hash_mark);
-extern int dpvm_serialize_object(struct dpvm_object *obj, uint64_t hash_mark, void **pmem, size_t *psize);
+extern struct dpvm_hash *dpvm_object_hash(struct dpvm_object *thread, struct dpvm_object *obj, uint64_t hash_mark);
+extern int dpvm_serialize_object(struct dpvm_object *thread, struct dpvm_object *obj, uint64_t hash_mark, void **pmem, size_t *psize);
 extern struct dpvm_object *dpvm_deserialize_object(struct dpvm *dpvm, struct dpvm_object *thread, const void *mem,
 		size_t size);
 

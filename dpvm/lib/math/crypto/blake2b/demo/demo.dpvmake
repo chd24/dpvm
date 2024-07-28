@@ -3,20 +3,20 @@
 
 /*@ "dump.dpvm": creates blake2b object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dumpDemo = suYv84RzuRD_o6RwbPVS5fZ_onU3bFUWVkG_YqMuqeaFftw /* trisecting_sonorous_footmen */;
+	dumpDemo = Hc3ttZoM8H9_UBbyyzX8n47_TyLYHfTkV1M_WSTFo3Crtz7 /* umpteen_sketchier_cenotaph */;
 /* @*/
 
 /*@ "debug.dpvm": computes hash of input[] and writes it to output[] with debugging */
 (volatile stateful char output[], const char input[]) -> ()
-	debug = RezffPkD9yM_UCVBG4tC91C_nqHq8NDpoKy_jWnkkLwFjpD /* complicated_plausibly_snooker */;
+	debug = hDcRtBAeBhL_eTSANwHhPXa_GJ46zJBNvvQ_JnFPjrxxk9b /* laziest_prawns_appraisers */;
 /* @*/
 
 /*@ "hashOfString.dpvm": computes hash of input[] and writes it to output[] */
 (volatile stateful char output[], const char input[]) -> ()
-	hashOfString = NqR8dt93FYw_FgBWbwr4yuF_Qp9mdaEDvNc_iPkzTjXa4PY /* shouted_tolerating_redrafted */;
+	hashOfString = nikQ68Nxn1M_AtKAyDKH7to_ZruJv1xYLvb_U7upVoqQPjQ /* dank_weekenders_attest */;
 /* @*/
 
 /*@ "hashOfObject.dpvm": computes hash of object as dpvm computes it */
 (const any obj) -> (int a, int b, int c, int d)
-	hashOfObject = KuJJqLb9uhZ_Z7bt6JdEpnK_hafgsNBzX7y_Hx8egxV6CeG /* ruminating_constitute_league */;
-/* @*/  
+	hashOfObject = MmGWqdtB99Y_NGtxF9QyLZe_qHivUpai6sb_HMbe2e6on2v /* emblem_decade_refurbished */;
+/* @*/                

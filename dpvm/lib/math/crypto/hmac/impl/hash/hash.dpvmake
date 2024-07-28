@@ -11,9 +11,9 @@ hmacHash sha512_hash = Wk4YEHC4rRE_QMLLnF4xfB2_G8xa5dGrDZd_MsqfZqHvCoV /* biases
 /* @*/
 
 /*@ "blake2b.dpvm": BLAKE2B */
-hmacHash blake2b_hash = WFSczG6Lroi_KHvnxbRbGZu_dndj9pAX7iN_kLN6GQdpC1n /* cretin_manholes_carriageway */;
+hmacHash blake2b_hash = tNDY9u7bZeN_e5Z16LUrC8w_bAqXTPLdqzs_BZQeYVKnouR /* caulking_couched_pillowed */;
 /* @*/
 
 /*@ "hashes.dpvm": array of all hashes */
-hmacHash hmacHashes[] = TZqHV6tvNJJ_DMdbVi85jZN_K7sxHVrvWi7_DzajcqeFZhk /* disposition_bookbinding_maple */;
-/* @*/ 
+hmacHash hmacHashes[] = qqfhb2Vk1kk_rc4s2JSNNKg_b7vg47GKKjM_c7qfqXNhi4A /* gropers_schwa_false */;
+/* @*/             

@@ -1,4 +1,4 @@
-/* dpvm byte code translator, amd64 type match check; T16.164-T18.397; $DVS:time$ */
+/* dpvm byte code translator, amd64 type match check; T16.164-T20.357; $DVS:time$ */
 
 /* 
 	rax = object
@@ -106,8 +106,9 @@ output:
 		as(list, "push rdx", "52", 0, 0, 0, 0, 0);
 		as(list, "push r9", "41 51", 0, 0, 0, 0, 0);
 		amd64_precall(list);
-		as(list, "mov rdi,[rdx+b]", "48 8B 7A 111", 0, 0x60, 0, 0, 0);
-		as(list, "mov rsi,r9", "4C 89 CE", 0, 0, 0, 0, 0);
+		as(list, "mov rdi,r8", "4C 89 C7", 0, 0, 0, 0, 0);
+		as(list, "mov rsi,[rdx+b]", "48 8B 72 111", 0, 0x60, 0, 0, 0);
+		as(list, "mov rdx,r9", "4C 89 CA", 0, 0, 0, 0, 0);
 		amd64_call(list, addr);
 		as(list, "test rax,rax", "48 85 C0", 0, 0, 0, 0, 0);
 		as(list, "pop r9", "41 59", 0, 0, 0, 0, 0);

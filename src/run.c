@@ -1,4 +1,4 @@
-/* dpvm: bytecode; T16.049-T20.150; $DVS:time$ */
+/* dpvm: bytecode; T16.049-T20.357; $DVS:time$ */
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -153,7 +153,7 @@ int64_t dpvm_check_function(struct dpvm_object *parent, struct dpvm_object *func
 	}
 
 	func->flags |= DPVM_OBJECT_FLAG_IN_CHECK;
-	if (!dpvm_object_hash(func, -4ull)) {
+	if (!dpvm_object_hash(parent, func, -4ull)) {
 		err = DPVM_ERROR_NOT_FINISHED; goto end;
 	}
 
@@ -302,7 +302,7 @@ int64_t dpvm_check_function(struct dpvm_object *parent, struct dpvm_object *func
 		mc->flags |= DPVM_OBJECT_FLAG_CODE_MAPPED;
 		if (stack_limits[4])
 			mc->flags |= DPVM_OBJECT_FLAG_LARGE_STACK;
-		if (!dpvm_object_hash(mc, -4ull)) {
+		if (!dpvm_object_hash(parent, mc, -4ull)) {
 			err = DPVM_ERROR_NOT_FINISHED; goto end;
 		}
 		func->machcode = mc;
@@ -405,7 +405,7 @@ int64_t dpvm_run_thread(struct dpvm_object *thread, int64_t nsteps) {
 
 	regs = thread->ints + thread->nints - DPVM_THREAD_INT_EXT_END;
 	func = thread->links[regs[DPVM_THREAD_INT_EXT_NLINKS]];
-	if (!dpvm_object_hash(func, -4ull))
+	if (!dpvm_object_hash(thread, func, -4ull))
 		return DPVM_ERROR_NOT_FINISHED;
 	pc = regs[DPVM_THREAD_INT_EXT_PC];
 
@@ -414,7 +414,7 @@ int64_t dpvm_run_thread(struct dpvm_object *thread, int64_t nsteps) {
 			err = dpvm_check_function(thread, func, DPVM_THREAD_FLAG_NO_PARENT);
                         if (err) {
 				struct dpvm_hash *hash;
-				if (!(err >> 5) && (hash = dpvm_object_hash(func, -3ull)))
+				if (!(err >> 5) && (hash = dpvm_object_hash(thread, func, -3ull)))
 					err |= hash->hash[0] << 17 | (0xf00 | DPVM_CODE_ILL) << 5;
 				goto end;
                         }

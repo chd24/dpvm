@@ -3,10 +3,10 @@
 
 /*@ "dump.dpvm": creates hmac object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = ZYSxZXvRiSE_QGjABs3UrA5_QhhN9P6izyW_khTM5hA3DRt /* cyprians_sprains_ratios */;
+	dump = W5XSUxizCBM_VxZYU1cjDVe_ngvckXrWddx_sDLqBz1nLNf /* stockcar_styli_pretext */;
 /* @*/
 
 /*@ "test.dpvm": run all tests */
 () -> (const char error[])
-	test = EePcqrA7EsR_foyMts763c1_Ee8C3xjfPj6_PeT8Eu8E5Sa /* henry_draconian_incompetents */;
-/* @*/        
+	test = fPN6q5PHoG4_EZV8aLKEHdJ_c6Hkyv23nWc_CZHcmdT1xNq /* rare_blueblooded_ohmic */;
+/* @*/               

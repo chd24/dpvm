@@ -1,4 +1,4 @@
-/* dpvm: transaction; T17.903-T19.643; $DVS:time$ */
+/* dpvm: transaction; T17.903-T20.357; $DVS:time$ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -213,7 +213,7 @@ int dpvm_transaction_build(struct dpvm_transaction *t, struct dpvm_object *threa
 				dpvm_unlink_object(thread, temporaryType);
 			temporary = -1;
 
-			if (!err && modifiers->links[i + 4]->ints[2] != 'v' && !dpvm_object_hash(links[i], -4ull))
+			if (!err && modifiers->links[i + 4]->ints[2] != 'v' && !dpvm_object_hash(thread, links[i], -4ull))
 				err = DPVM_ERROR_NOT_FINISHED;
 		} else
 			err = dpvm_set_link(thread, arg, i, links[i]);
@@ -222,7 +222,7 @@ int dpvm_transaction_build(struct dpvm_transaction *t, struct dpvm_object *threa
 			return err;
 	}
 
-        if (!dpvm_object_hash(transaction, -4ull))
+        if (!dpvm_object_hash(thread, transaction, -4ull))
                 return DPVM_ERROR_NOT_FINISHED;
 
         return temporary;
@@ -230,7 +230,7 @@ int dpvm_transaction_build(struct dpvm_transaction *t, struct dpvm_object *threa
 
 int dpvm_transaction_add(struct dpvm_transaction *t, struct dpvm_object *thread, struct dpvm_object *transaction,
 		int temporary) {
-        struct dpvm_hash *hash = dpvm_object_hash(transaction, -2ull);
+        struct dpvm_hash *hash = dpvm_object_hash(thread, transaction, -2ull);
         struct dpvm_object *bucket;
         int64_t i, i0;
         time_t tim;
@@ -294,7 +294,7 @@ end:
 
 int dpvm_transaction_set_result(struct dpvm_transaction *t, struct dpvm_object *thread, struct dpvm_object *transaction,
 		struct dpvm_object *result, int64_t error) {
-        struct dpvm_hash *hash = dpvm_object_hash(transaction, -2ull);
+        struct dpvm_hash *hash = dpvm_object_hash(thread, transaction, -2ull);
         struct dpvm_object *bucket;
         int64_t i, n, err;
         int h;
@@ -315,9 +315,9 @@ int dpvm_transaction_set_result(struct dpvm_transaction *t, struct dpvm_object *
                     hash->hash[2] == bucket->ints[i + BUCKET_HASH2] && hash->hash[3] == bucket->ints[i + BUCKET_HASH3]) {
                         if (bucket->ints[i + BUCKET_FLAGS] & BUCKET_FLAG_READY) {
 				if (!error) {
-					struct dpvm_hash *lhash = dpvm_object_hash(bucket->links[n],
+					struct dpvm_hash *lhash = dpvm_object_hash(thread, bucket->links[n],
 						 bucket->ints[i + BUCKET_FLAGS] & BUCKET_FLAG_TEMPORARY ? -3ull : -2ull),
-						 *rhash = dpvm_object_hash(result,
+						 *rhash = dpvm_object_hash(thread, result,
 						 bucket->ints[i + BUCKET_FLAGS] & BUCKET_FLAG_TEMPORARY ? -3ull : -2ull);
 					if (!lhash || !rhash) { err = DPVM_ERROR_NOT_FINISHED; goto end; }
 					if (memcmp(rhash, lhash, sizeof(struct dpvm_hash)))
@@ -329,7 +329,7 @@ int dpvm_transaction_set_result(struct dpvm_transaction *t, struct dpvm_object *
 					err = DPVM_ERROR_TYPE_MISMATCH;
                         } else if (!error) {
 				if (!(bucket->ints[i + BUCKET_FLAGS] & BUCKET_FLAG_TEMPORARY)
-						&& !dpvm_object_hash(result, -4ull)) {
+						&& !dpvm_object_hash(thread, result, -4ull)) {
 					err = DPVM_ERROR_NOT_FINISHED;
 					goto end;
 				}
@@ -364,7 +364,7 @@ end:
 
 int64_t dpvm_transaction_get_result(struct dpvm_transaction *t, struct dpvm_object *thread,
 		struct dpvm_object *transaction, struct dpvm_object **presult) {
-        struct dpvm_hash *hash = dpvm_object_hash(transaction, -2ull);
+        struct dpvm_hash *hash = dpvm_object_hash(thread, transaction, -2ull);
 	struct dpvm_object *bucket;
         int64_t i, n = -1ll, err = 0;
         int h;

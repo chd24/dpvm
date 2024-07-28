@@ -3,7 +3,7 @@
 #include "translator_utils.dpvmake"
 
 /*@ "amd64_old.dpvm": old method for x86-64 */
-translator_method amd64_old = daY2ozQtJC3_CpZ1ZbTa1dE_AH4Rqj4GhdB_hgFAjnbfSKN /* interpreted_craft_cherries */;
+translator_method amd64_old = jaSZQbKjW9C_kCKinYS7DAJ_pC22FLQtkMh_tBDaKxx3Rd4 /* agio_communing_helplines */;
 /* @*/
 
 /*@ "amd64_graphs.dpvm": new graphs-based method for x86-64 */
@@ -15,12 +15,12 @@ translator_method amd64_floats = ZEAVBtoA4hn_jvLjvoqusch_GqgmmVJTsiG_sE5ReMrArQX
 /* @*/
 
 /*@ "methods.dpvm": array of all translator methods */
-translator_method translator_methods[] = davEifmUi9z_LPuNwgTYAJu_ouMji35M7Cc_HtEtHK3kWB2 /* overwrought_reduces_fanning */;
+translator_method translator_methods[] = cm3h6t6ZMgE_iwcveoLmK5Z_N74Em3Kppu3_tdxrvkVoNRq /* atoll_heterologous_sap */;
 /* @*/
 
 /*@ "main.dpvm": main function of translator */
 (const stateful any func, const stateful addrs_list addrs, 
 		const stateful checker_data cdata, const stateful char arch[]) -> 
 		(volatile mach_code machcode, int res)
-	translator = qWytchN1fXg_FXSUsZL2iNU_m16RGf6VNYZ_gCmLed9ESJr /* preferred_hayfield_cheerless */;
-/* @*/
+	translator = HffyS39HhpT_oAouuwheuP2_g38GZnVZa4o_jZz4TWJjt1B /* tartly_bonneted_dwindling */;
+/* @*/          

@@ -1,4 +1,4 @@
-/* dpvm: init; T15.406-T18.508; $DVS:time$ */
+/* dpvm: init; T15.406-T20.354; $DVS:time$ */
 
 #include <string.h>
 #include <signal.h>
@@ -29,35 +29,38 @@ int64_t dpvm_init(struct dpvm *dpvm, int flags) {
 
 	dpvm->flags = flags;
 
-	if ((err = dpvm_hash_global_init()))
+	if ((err = dpvm_object_init(dpvm)))
                 return (-err << 4 | 1) << 8;
 
-	if ((err = dpvm_object_init(dpvm)))
+	if ((err = dpvm_bytecode_init(dpvm)))
                 return (-err << 4 | 2) << 8;
 
-	if ((err = dpvm_bytecode_init(dpvm)))
-                return (-err << 4 | 3) << 8;
-
 	if ((err = dpvm_thread_init(dpvm)))
-                return (-err << 4 | 4) << 8;
+                return (-err << 4 | 3) << 8;
 \
 	if ((err = dpvm_task_init(dpvm)))
-                return (-err << 4 | 5) << 8;
+                return (-err << 4 | 4) << 8;
 
 	if ((err = dpvm_io_init(dpvm)))
-                return (-err << 4 | 6) << 8;
+                return (-err << 4 | 5) << 8;
 
 	if ((err = dpvm_cache_init(dpvm)))
-		return (err << 4 | 7) << 8;
+		return (err << 4 | 6) << 8;
+
+	if ((err = dpvm_hash_global_init(dpvm)))
+                return (err << 4 | 7) << 8;
+
+	if ((err = dpvm_cache_post_init(dpvm)))
+		return (err << 4 | 8) << 8;
 
 	if ((err = dpvm_thread_post_init(dpvm)))
-                return (-err << 4 | 8) << 8;
-
-	if ((err = dpvm_name_init(dpvm)))
                 return (-err << 4 | 9) << 8;
 
-	if ((err = dpvm_config_init(dpvm)))
+	if ((err = dpvm_name_init(dpvm)))
                 return (-err << 4 | 10) << 8;
+
+	if ((err = dpvm_config_init(dpvm)))
+                return (-err << 4 | 11) << 8;
 
         dpvm->inited = -1;
 

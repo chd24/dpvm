@@ -1,4 +1,4 @@
-/* dpvm: mailbox; T16.625-T19.630; $DVS:time$ */
+/* dpvm: mailbox; T16.625-T20.357; $DVS:time$ */
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -40,7 +40,7 @@ int dpvm_mailbox_init(struct dpvm *dpvm) {
 		return -3;
 
 	m->empty = m->mbox->links[0];
-	if (!dpvm_object_hash(m->empty, -4ull))
+	if (!dpvm_object_hash(0, m->empty, -4ull))
 		return -4;
 
 	for (i = 0; i < 1 << COND_EXP; ++i) {
@@ -51,8 +51,8 @@ int dpvm_mailbox_init(struct dpvm *dpvm) {
 	return 0;
 }
 
-static int find_box(struct dpvm_mailbox *m, struct dpvm_object *address, int64_t taskid, int lock) {
-	struct dpvm_hash *hash = dpvm_object_hash(address, -3ull);
+static int find_box(struct dpvm_mailbox *m, struct dpvm_object *thread, struct dpvm_object *address, int64_t taskid, int lock) {
+	struct dpvm_hash *hash = dpvm_object_hash(thread, address, -3ull);
 	int64_t *bucket, *taskids;
 	int nbucket, i, j, k = -DPVM_ERROR_NO_MEMORY;
 
@@ -99,7 +99,7 @@ static int find_box(struct dpvm_mailbox *m, struct dpvm_object *address, int64_t
 
 int dpvm_mailbox_send(struct dpvm_object *thread, struct dpvm_object *address, struct dpvm_object *message) {
 	struct dpvm_mailbox *m = address->dpvm->mailbox;
-	int err = 0, box = find_box(m, address, -1l, 1), n = box >> BUCKET_EXP;
+	int err = 0, box = find_box(m, thread, address, -1l, 1), n = box >> BUCKET_EXP;
 	if (box < 0) return -box;
 
 	if (m->mbox->links[box] == m->empty) {
@@ -124,7 +124,7 @@ struct dpvm_object *dpvm_mailbox_receive(struct dpvm_object *thread,
 	int lock;
 	*status = 0;
 	for(lock = 1;;lock = 0) {
-		int box = find_box(m, address, 
+		int box = find_box(m, thread, address,
 			thread->links[DPVM_THREAD_LINK_TASK]->ints[DPVM_TASK_INT_ID],
 			lock), n = box >> BUCKET_EXP;
 		if (box < 0) {

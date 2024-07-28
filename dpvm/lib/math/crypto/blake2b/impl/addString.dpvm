@@ -1,4 +1,4 @@
-/* blake2b class, addString method implementation, T20.336-T20.347; $DVS:time$ */
+/* blake2b class, addString method implementation, T20.336-T20.355; $DVS:time$ */
 
 #include "../../../../stdlib/stdlib.dpvmake"
 #include "../../../../utils/utils.dpvmake"
@@ -30,7 +30,7 @@
 		debug(impl, string.csize);
 	}
 
-	for (ptr = 0; ptr < string.csize; ptr += todo) {
+	do {
 		int last = impl.data.lastBlock ^ 1, size = input.csize;
 		todo = string.csize - ptr;
 		if (impl.data.flags & BLAKE2B_FLAG_DEBUG) {
@@ -65,7 +65,8 @@
 			if (!full)
 				input.cpop(input.csize);
 		}
-	}
+		ptr += todo;
+	} while (ptr < string.csize);
 
 	return;
 };

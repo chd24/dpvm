@@ -2,9 +2,11 @@
 #ifndef DPVM_HISTORY
 #define DPVM_HISTORY
 
-#define DPVM_VERSION	"dpvm T15.395-T20.329" /* $DVS:time$
+#define DPVM_VERSION	"dpvm T15.395-T20.357" /* $DVS:time$
 
 *** history ***
+
+T20.357 - removed blake2 library, replaced by internal implementation of compress function
 
 T20.329 - removed linenoise library and special input handling for stdin
 

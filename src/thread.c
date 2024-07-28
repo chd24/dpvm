@@ -1,4 +1,4 @@
-/* dpvm: thread; T15.530-T20.152; $DVS:time$ */
+/* dpvm: thread; T15.530-T20.357; $DVS:time$ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -412,13 +412,13 @@ static void do_io(struct dpvm_object *thread, int handle_err) {
 	tmp = (*dpvm_io_run_funcs[i].run)(thread);
 	if (!tmp) err = DPVM_ERROR_IO;
 	if (!err) err = dpvm_set_link(thread, tmp, 0, thread->links[DPVM_THREAD_LINK_ARG]);
-	if (!err && code >= 0xF0 && !dpvm_object_hash(tmp, -4ull))
+	if (!err && code >= 0xF0 && !dpvm_object_hash(thread, tmp, -4ull))
 		err = DPVM_ERROR_NOT_FINISHED;
 	if (!err) err = dpvm_set_link(thread, thread, DPVM_THREAD_LINK_ARG, tmp);
 	if (tmp) dpvm_unlink_object(thread, tmp);
 	if (!err) err = dpvm_thread_run(thread, NULL);
 	if (err) {
-		struct dpvm_hash *hash = dpvm_object_hash(thread->links[DPVM_THREAD_LINK_FUNC], -3ull);
+		struct dpvm_hash *hash = dpvm_object_hash(thread, thread->links[DPVM_THREAD_LINK_FUNC], -3ull);
 		err &= 0x1f;
 		err |= (code | 0xf00) << 5; 
 		if (hash)
@@ -448,18 +448,18 @@ int dpvm_thread_io(struct dpvm_object *thread, int code) {
 
 	if (!res) {
 		if ((obj = thread->links[DPVM_THREAD_LINK_FUNC])
-			&& !dpvm_object_hash(obj, -4ull)) goto err;
+			&& !dpvm_object_hash(thread, obj, -4ull)) goto err;
 		if ((obj = thread->links[DPVM_THREAD_LINK_ARG])
-			&& !dpvm_object_hash(obj, -4ull)) goto err;
+			&& !dpvm_object_hash(thread, obj, -4ull)) goto err;
 		if ((obj = thread->links[DPVM_THREAD_LINK_NAME])
-			&& !dpvm_object_hash(obj, -4ull)) goto err;
+			&& !dpvm_object_hash(thread, obj, -4ull)) goto err;
 		if ((obj = thread->links[DPVM_THREAD_LINK_DATA])
-			&& !dpvm_object_hash(obj, -4ull)) goto err;
+			&& !dpvm_object_hash(thread, obj, -4ull)) goto err;
 	} else if (code == DPVM_CODE_BIND || (code == DPVM_CODE_MPOPEN
             && thread->ints[DPVM_THREAD_INT_EXT] != DPVM_MPOPEN_READ
             && thread->ints[DPVM_THREAD_INT_EXT] != DPVM_MPOPEN_RW_MERGED)) {
 		if ((obj = thread->links[DPVM_THREAD_LINK_ARG])
-			&& !dpvm_object_hash(obj, -4ull)) goto err;
+			&& !dpvm_object_hash(thread, obj, -4ull)) goto err;
 	}
 
 	if (!(thread->ints[DPVM_THREAD_INT_FLAGS] & DPVM_THREAD_FLAG_IO))
@@ -482,7 +482,7 @@ int dpvm_thread_io(struct dpvm_object *thread, int code) {
 		for (i = 0; i < data->nints; ++i) {
 			if (data->ints[i] >= DPVM_SYS_PARAM_ERROR && data->ints[i] < DPVM_SYS_PARAM_ERROR_END) {
 				struct dpvm_object *task = thread->links[DPVM_THREAD_LINK_TASK];
-				if ((obj = thread->links[DPVM_THREAD_LINK_ARG]) && !dpvm_object_hash(obj, -4ull)) goto err;
+				if ((obj = thread->links[DPVM_THREAD_LINK_ARG]) && !dpvm_object_hash(thread, obj, -4ull)) goto err;
 				if (task->ints[DPVM_TASK_INT_FLAGS] & DPVM_TASK_FLAG_NO_HANDLER) goto err;
 				dpvm_set_link(thread, task, DPVM_TASK_LINK_HANDLER, thread);
 				dpvm_set_link(thread, thread, DPVM_THREAD_LINK_TASK, thread);

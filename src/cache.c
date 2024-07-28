@@ -1,4 +1,4 @@
-/* dpvm: cache; T15.401-T20.174; $DVS:time$ */
+/* dpvm: cache; T15.401-T20.357; $DVS:time$ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -50,7 +50,7 @@ int dpvm_cache_add(struct dpvm *dpvm, struct dpvm_object *thread, struct dpvm_ob
 	}
 
 	err = 0;
-	hash = dpvm_object_hash(obj, -1ull);
+	hash = dpvm_object_hash(thread, obj, -1ull);
 	if (!hash)
 		return DPVM_ERROR_NOT_FINISHED;
 	short_hash = hash->hash[0] & DPVM_SHORT_HASH_MASK;
@@ -75,18 +75,18 @@ int dpvm_cache_add(struct dpvm *dpvm, struct dpvm_object *thread, struct dpvm_ob
 			if (!dpvm_store_load(dpvm, thread, hash, DPVM_HASH_SIZE, &mem, &size)) {
 				struct dpvm_hash hash1;
 				char name[DPVM_NAME_SIZE_MAX + 1];
-				dpvm_hash_of_array(mem, size, &hash1);
+				dpvm_hash_of_array(dpvm, thread, mem, size, &hash1);
 				free(mem);
 				if (!memcmp(hash, &hash1, DPVM_HASH_SIZE))
 					{ err = 0; goto end; }
 				fprintf(stderr, "\n!!! Error: object %s corrupted or mismatched in the store.\n",
-						dpvm_object2name(dpvm, obj, name));
+						dpvm_object2name(dpvm, thread, obj, name));
 				fflush(stderr);
 				/* continue to store correct version */
 				mem = 0;
 				size = 0;
 			}
-			if (dpvm_serialize_object(obj, -1ull, &mem, &size))
+			if (dpvm_serialize_object(thread, obj, -1ull, &mem, &size))
 				{ free(mem); err = -1; goto end; }
 			if ((err = dpvm_store_save(dpvm, thread, hash, DPVM_HASH_SIZE, mem, size)))
 				{ free(mem); goto end; }
@@ -134,7 +134,11 @@ int64_t dpvm_cache_init(struct dpvm *dpvm) {
 	for (i = 0; i < N_BUCKETS; ++i)
 		dpvm->cache->cache->ints[i] = 0xfedcba9876543210llu;
 
-	dpvm_cache_add(dpvm, 0, &type);
+	return 0;
+}
+
+int64_t dpvm_cache_post_init(struct dpvm *dpvm) {
+	dpvm_cache_add(dpvm, 0, &dpvm->cache->cache->type);
 
 	return 0;
 }
@@ -143,8 +147,8 @@ void dpvm_cache_finish(struct dpvm *dpvm) {
 	dpvm_store_finish(dpvm);	
 }
 
-char *dpvm_object2name(struct dpvm *dpvm, struct dpvm_object *obj, char name[DPVM_NAME_SIZE_MAX + 1]) {
-	struct dpvm_hash *hash = dpvm_object_hash(obj, -3ull);
+char *dpvm_object2name(struct dpvm *dpvm, struct dpvm_object *thread, struct dpvm_object *obj, char name[DPVM_NAME_SIZE_MAX + 1]) {
+	struct dpvm_hash *hash = dpvm_object_hash(thread, obj, -3ull);
 	if (!hash)
 		return 0;
 	if (dpvm_short_hash2name(dpvm, hash->hash[0] & DPVM_SHORT_HASH_MASK, name) < 0)
@@ -194,7 +198,7 @@ struct dpvm_object *dpvm_short_hash2object(struct dpvm *dpvm, struct dpvm_object
 
 	if ((obj->hash.hash[0] & DPVM_SHORT_HASH_MASK) != short_hash) {
 		char name[DPVM_NAME_SIZE_MAX + 1];
-		fprintf(stderr, "\n!!! Error: hash mismatch for object %s.\n", dpvm_object2name(dpvm, obj, name));
+		fprintf(stderr, "\n!!! Error: hash mismatch for object %s.\n", dpvm_object2name(dpvm, thread, obj, name));
 		fflush(stderr);
 		dpvm_free_object(thread, obj);
 		return 0;
@@ -244,7 +248,7 @@ struct dpvm_object *dpvm_hash2object(struct dpvm *dpvm, struct dpvm_object *thre
 
 	if (memcmp(&obj->hash, hash, DPVM_HASH_SIZE)) {
 		char name[DPVM_NAME_SIZE_MAX + 1];
-		fprintf(stderr, "\n!!! Error: hash mismatch for object %s.\n", dpvm_object2name(dpvm, obj, name));
+		fprintf(stderr, "\n!!! Error: hash mismatch for object %s.\n", dpvm_object2name(dpvm, thread, obj, name));
 		fflush(stderr);
 		dpvm_free_object(thread, obj);
 		return 0;

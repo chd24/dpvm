@@ -1,4 +1,4 @@
-/* dpvm: bytecode; T15.409-T19.630; $DVS:time$ */
+/* dpvm: bytecode; T15.409-T20.357; $DVS:time$ */
 
 #define _GNU_SOURCE
 #include <string.h>
@@ -55,9 +55,9 @@ static int64_t error_code(struct dpvm_object *func, int64_t err, int64_t pos, in
                                 return ERR(DPVM_ERROR_N_FLOAT_ARGS);
 #define min_ncodes(n)  if (stack->ncodes  - regs[INT_STACK_NCODES]  < (n)) \
                                 return ERR(DPVM_ERROR_N_CODE_ARGS);
-#define match_type(obj,nlnks,n) 						\
-	if (!dpvm_match_type(stack->links[stack->nlinks - (nlnks) + (n)]->type, \
-			dpvm_type_of_link(obj, n)))				\
+#define match_type(thread,obj,nlnks,n) 						\
+	if (!dpvm_match_type(thread, stack->links[stack->nlinks - (nlnks) + (n)]->type, \
+			dpvm_type_of_link(obj, n)))					\
                 return ERR(DPVM_ERROR_TYPE_MISMATCH);
 
 int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
@@ -135,7 +135,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
 		min_nlinks(1);
 		obj = stack->links[stack->nlinks - 1];
 		{
-			struct dpvm_hash *hash = dpvm_object_hash(obj, -3ull);
+			struct dpvm_hash *hash = dpvm_object_hash(thread, obj, -3ull);
 			if (!hash)
                                 return ERR(DPVM_ERROR_NOT_FINISHED);
 			for (i = 0; i < INTS_IN_HASH; ++i)
@@ -148,7 +148,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
 	case DPVM_CODE_FIX:
 		min_nlinks(1);
 		obj = stack->links[stack->nlinks - 1];
-		if (!dpvm_object_hash(obj, -4ull))
+		if (!dpvm_object_hash(thread, obj, -4ull))
                         return ERR(DPVM_ERROR_NOT_FINISHED);
 		dpvm_unlink_object(thread, obj);
 		stack->nlinks--;
@@ -168,7 +168,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
 		min_ncodes(ncodes);
 
 		for (i = 0; i < nlinks; ++i)
-			match_type(obj, nlinks, i);
+			match_type(thread, obj, nlinks, i);
 
 		n = stack->nlinks - regs[INT_STACK_NLINKS];
 		diff = n - nlinks;
@@ -227,7 +227,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
         case DPVM_CODE_WAIT:
                 min_nlinks(1);
                 obj = stack->links[stack->nlinks - 1];
-                if (!dpvm_match_type(obj->type, dpvm_thread_type_transaction(dpvm)))				\
+                if (!dpvm_match_type(thread, obj->type, dpvm_thread_type_transaction(dpvm)))				\
                         return ERR(DPVM_ERROR_TYPE_MISMATCH);
 
                 newfunc = obj->links[0];
@@ -256,7 +256,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
         case DPVM_CODE_CALL:
 		min_nlinks(1);
 		newfunc = stack->links[stack->nlinks - 1];
-		if (!dpvm_object_hash(newfunc, -4ull))
+		if (!dpvm_object_hash(thread, newfunc, -4ull))
                         return ERR(DPVM_ERROR_NOT_FINISHED);
 		if (!(newfunc->flags & DPVM_OBJECT_FLAG_CHECKED)) {
 			int64_t res = dpvm_check_function(thread, newfunc, DPVM_THREAD_FLAG_NO_PARENT);
@@ -276,7 +276,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
 		min_ncodes(ncodes);
 
 		for (i = 0; i < nlinks; ++i)
-			match_type(obj, nlinks + 1, i);
+			match_type(thread, obj, nlinks + 1, i);
 
 		stack->nlinks--;
 		err |= dpvm_push_int(thread, thread, stack->nlinks - nlinks);
@@ -300,7 +300,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
         case DPVM_CODE_RUN:
                 min_nlinks(1);
                 newfunc = stack->links[stack->nlinks - 1];
-                if (!dpvm_object_hash(newfunc, -4ull))
+                if (!dpvm_object_hash(thread, newfunc, -4ull))
                         return ERR(DPVM_ERROR_NOT_FINISHED);
                 if (!(newfunc->flags & DPVM_OBJECT_FLAG_CHECKED)) {
                         int64_t res = dpvm_check_function(thread, newfunc, DPVM_THREAD_FLAG_NO_PARENT);
@@ -320,7 +320,7 @@ int64_t dpvm_bytecode_run(struct dpvm_object *thread, int64_t nsteps) {
                 min_ncodes(ncodes);
 
                 for (i = 0; i < nlinks; ++i)
-                        match_type(obj, nlinks + 1, i);
+                        match_type(thread, obj, nlinks + 1, i);
 
                 err |= dpvm_thread_do_run(stack->links + stack->nlinks, stack->ints + stack->nints,
                               stack->floats + stack->nfloats, stack->codes + stack->ncodes, thread);

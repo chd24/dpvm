@@ -1,4 +1,4 @@
-/* dpvm byte code translator, amd64 info operations; T16.130-T19.631; $DVS:time$ */
+/* dpvm byte code translator, amd64 info operations; T16.130-T20.357; $DVS:time$ */
 
 /* 
  	rsi = ints stack end
@@ -147,12 +147,13 @@ int _Z = 0;
 		as(list, "jcc label", "0F 101 134", 0x8D - 0xB * (c == DPVM_CODE_HASH), 0, 0, j, 0);
 		as(endlist, "label", "", 0, 0, 0, j, 0);
 		as(endlist, "push rax", "50", 0, 0, 0, 0, 0);
-		as(endlist, "push rax", "50", 0, 0, 0, 0, 0);
+		as(endlist, "push rdx", "52", 0, 0, 0, 0, 0);
 		amd64_precall(endlist);
-		as(endlist, "cp rdi,rax", "48 89 C7", 0, 0, 0, 0, 0);
-		as(endlist, "mov rsi,d", "48 C7 C6 124", 0, 0, -4 + (c == DPVM_CODE_HASH), 0, 0);
+		as(endlist, "mov rdi,r8", "4C 89 C7", 0, 0, 0, 0, 0);
+		as(endlist, "mov rsi,rax", "48 89 C6", 0, 0, 0, 0, 0);
+		as(endlist, "mov rdx,d", "48 C7 C2 124", 0, 0, -4 + (c == DPVM_CODE_HASH), 0, 0);
 		amd64_call(endlist, addr);
-		as(endlist, "pop rax", "58", 0, 0, 0, 0, 0);
+		as(endlist, "pop rdx", "5A", 0, 0, 0, 0, 0);
 		as(endlist, "pop rax", "58", 0, 0, 0, 0, 0);
 		as(endlist, "jmp label", "E9 134", 0, 0, 0, j + 1, 0);
 		as(list, "label", "", 0, 0, 0, j + 1, 0);

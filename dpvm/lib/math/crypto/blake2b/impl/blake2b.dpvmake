@@ -5,27 +5,27 @@
 
 /*@ "mkError.dpvm": compose error message */
 (const char mess[], const char func[]) -> (const char err[])
-	mkError = XqhMaUrSuoH_orAyTAYhVJN_QkVL5LmxAFp_skJKmcWRiJB /* mendacious_bimonthly_acquaints */;
+	mkError = PosDzbCxViz_THyFMof5KQG_toXjcwybUCG_swJBkXzHPEH /* collage_vibrations_arrives */;
 /* @*/
 
 /*@ "convertObjToImpl.dpvm": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
 (volatile stateful blake2bImpl impl, const stateful any blake2bObj, const char func[]) -> (const char error[])
-	convertObjToImpl = e5GnEJd15MU_r1M3N4r2Rtk_Y2Bt3WaXgTs_pwDxLwBuPFb /* discrete_writings_recitative */;
+	convertObjToImpl = s1NMvHgmfui_SyfXZz5xNgu_fgf1KSqT9V7_LNpuT8iNcda /* organism_sometimes_foxier */;
 /* @*/
 
 /*@ "copy.dpvm": make a copy of class object */
 (const any blake2bObj) -> (volatile any blake2bObj)
-	copy = snpqVSuhkQG_keZSk9L1Pjg_nkBLqLhGJF2_b11BMYWP8gy /* marsala_mutually_grizzly */;
+	copy = sFqbpTp6h3V_SZHycH4vhkV_gLYzv6MXxFy_HNra7wVkYqz /* tinkled_sculptors_autographing */;
 /* @*/
 
 /*@ "dump.dpvm": dump internal content of blake2bObj object */
 (volatile stateful char out[], volatile stateful any blake2bObj) -> (const char error[])
-	dump = HjjpMCrjWpP_PwxYB3cwjcc_RaQ5ubExdLe_JhREpbvuYEb /* disruptor_speakable_skilfully */;
+	dump = FpYc95xCgVL_j4dK9Z2V5C5_WA18cPZAAfp_DfHpFRStdfb /* muggy_fossilise_impingement */;
 /* @*/
 
 /*@ "generateCompress.dpvm": generate code of compress() method */
 (int debug) -> (const char compress[])
-	generateCompress = VHQutNYUkBW_AVRRLPhWNye_QzM1nsnhCgv_e7L93jaDfRF /* flinch_stingier_birthright */;
+	generateCompress = hEyT6oVsDC4_CdgBQ6RhgUK_CJDCueJac2r_kyv2jp74if9 /* geological_quotes_spreadsheet */;
 /* @*/
 
 /*@ "compress.dpvm": generated compress() method */
@@ -39,14 +39,14 @@
 
 /*@ "addString.dpvm": add string to compression */
 (volatile stateful any blake2bObj, const char string[]) -> ()
-	addString = o1zXesk6rYo_AGbuCRWoHCV_CfBFMQQuoRT_SQ461Vk323q /* furthering_decking_broadsword */;
+	addString = mJYdbiAvYQZ_b9Wvkc3ftk8_SS6Cyyk6pep_YTKfJN43mkh /* holiest_surge_node */;
 /* @*/
 
 /*@ "finish.dpvm": finish compression and return hash */
 (volatile stateful char output[], volatile stateful any blake2bObj) -> ()
-	finish = XUBsRZgx1w5_SJvErQDQYZZ_YCQ2GPTVfQR_Gcpz4vYtTp7 /* fascinating_misbehave_salts */;
+	finish = bxzs9BEEkg1_BqcJ2reMPxK_ee3cPXHzzHB_rq13xrKChjk /* gettable_clears_legalised */;
 /* @*/
 
 /*@ "methods.dpvm": public methods implementation */
-blake2bMethods blake2bMethodsImpl = hhTdoU2tKcu_BzzPSTiC2Pr_fLFwJWyDpVB_GFeSyEvQRmd /* postmarked_pair_questions */;
-/* @*/       
+blake2bMethods blake2bMethodsImpl = BRdByoNjG6m_SSiPWzqB1yF_H8TaB63jSi8_hkbtnHrjnbK /* touchier_greener_menders */;
+/* @*/                     

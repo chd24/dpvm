@@ -1,4 +1,4 @@
-# dpvm: general cmake; T15.398-T20.329; $DVS:time$
+# dpvm: general cmake; T15.398-T20.357; $DVS:time$
 #
 # CMakeLists files in this project can
 # refer to the root source directory of the project as ${HELLO_SOURCE_DIR} and
@@ -18,4 +18,3 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # cause another cmake executable to run. The same process will walk through
 # the project's entire directory structure.
 add_subdirectory (src)
-add_subdirectory (blake2)

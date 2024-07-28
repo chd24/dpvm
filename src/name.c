@@ -1,4 +1,4 @@
-/* dpvm: words; T15.404-T20.174; $DVS:time$ */
+/* dpvm: words; T15.404-T20.356; $DVS:time$ */
 
 #include <stdio.h>
 #include <string.h>
@@ -92,7 +92,7 @@ int dpvm_name_init(struct dpvm *dpvm) {
 	if (err)
 		return err;
 	
-	hash = dpvm_object_hash(dpvm->words, -1ull);
+	hash = dpvm_object_hash(0, dpvm->words, -1ull);
 	if (!hash)
 		return -7;
 	if (memcmp(&words_hash, hash, DPVM_HASH_SIZE)) {

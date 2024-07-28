@@ -5,5 +5,5 @@
 
 /*@ "impl/create.dpvm": create blake2b object */
 () -> (volatile blake2bClass obj)
-	blake2bCreate = WYrqLC12Nct_hTi3UXmXGH9_AmtLRwyVRmF_tX4NieXdBSt /* poacher_vamp_firefly */;
-/* @*/             
+	blake2bCreate = X7NGf11UGwt_Bo15GevuNvA_By5URt3aRyq_Wes81zg7EDK /* ignominious_duplicating_agriculture */;
+/* @*/

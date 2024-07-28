@@ -1,4 +1,4 @@
-/* dpvm: init; T15.401-T19.697; $DVS:time$ */
+/* dpvm: init; T15.401-T20.355; $DVS:time$ */
 
 #ifndef DPVM_INIT
 #define DPVM_INIT
@@ -9,11 +9,13 @@
 
 struct dpvm_store;
 struct dpvm_cache;
+struct dpvm_hash_global;
 struct dpvm_io;
 struct dpvm_mailbox;
 struct dpvm_object;
-struct dpvm_thread;
+struct dpvm_store;
 struct dpvm_task;
+struct dpvm_thread;
 
 struct dpvm {
 	struct dpvm_object *any;
@@ -23,6 +25,7 @@ struct dpvm {
 	struct dpvm_object *words;
 	struct dpvm_cache *cache;
 	struct dpvm_io *io;
+	struct dpvm_hash_global *hash;
 	struct dpvm_mailbox *mailbox;
 	struct dpvm_store *store;
 	struct dpvm_task *tasks;
