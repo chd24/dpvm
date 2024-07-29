@@ -1,4 +1,4 @@
-/* dpvm: object; T15.395-T20.357; $DVS:time$ */
+/* dpvm: object; T15.395-T20.358; $DVS:time$ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -550,7 +550,7 @@ static struct dpvm_hash *object_hash(struct dpvm_object *thread, struct dpvm_obj
 	int calculate;
 
 	if (obj->hash_mark >= final_mark) {
-		if (obj->hash_mark == -4ull)
+		if (obj->hash_mark == -4ull && final_mark != -4ull)
 			final_mark = -2ull;
 		else
 			return &obj->hash;

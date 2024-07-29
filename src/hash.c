@@ -1,4 +1,4 @@
-/* dpvm: hash; T15.395-T20.357; $DVS:time$ */
+/* dpvm: hash; T15.395-T20.360; $DVS:time$ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,6 +25,7 @@ int64_t dpvm_hash_global_init(struct dpvm *dpvm) {
 	struct dpvm_object *intype, *outtype, *functype, *compress;
 	void *mem = 0;
 	size_t size = 0;
+	int64_t err;
 
 	if (sizeof(struct dpvm_hash_state) != DPVM_HASH_STATE_SIZE) {
 		printf("Error: sizeof(struct dpvm_hash_state) == %ld != %d\n", sizeof(struct dpvm_hash_state), DPVM_HASH_STATE_SIZE);
@@ -65,6 +66,10 @@ int64_t dpvm_hash_global_init(struct dpvm *dpvm) {
 	dpvm->hash->compress = compress;
 
 	free(mem);
+
+	err = dpvm_cache_add(dpvm, 0, &dpvm->any);
+	if (err)
+		return err;
 
 	dpvm->hash->compress = dpvm_hash2object(dpvm, 0, &compress_hash);
 	dpvm_unlink_object(0, compress);
@@ -117,21 +122,26 @@ end:
 }
 
 int64_t dpvm_hash_add(struct dpvm *dpvm, struct dpvm_object *parent, struct dpvm_hash_state *state, const void *array, size_t size) {
-	size_t ptr = 0;
+	size_t ptr = 0, isize = state->inputSize & (BLAKE2B_BLOCK_SIZE - 1);
+	if (state->inputSize && !isize)
+		isize = BLAKE2B_BLOCK_SIZE;
 
 	do {
-		size_t todo = size - ptr, isize = state->inputSize & (BLAKE2B_BLOCK_SIZE - 1);
+		size_t todo = size - ptr;
 		if (todo + isize > BLAKE2B_BLOCK_SIZE)
 			todo = BLAKE2B_BLOCK_SIZE - isize;
 
-		memcpy(state->input + isize, array + ptr, todo),
-		state->inputSize += todo,
-		isize += todo;
-		ptr += todo;
+		if (todo) {
+			memcpy(state->input + isize, (char *)array + ptr, todo),
+			state->inputSize += todo,
+			isize += todo;
+			ptr += todo;
+		}
 
 		if (isize == BLAKE2B_BLOCK_SIZE && ptr != size) {
 			int64_t err = compress(dpvm, parent, state);
 			if (err) return err;
+			isize = 0;
 		}
 
 	} while (ptr < size);
@@ -143,8 +153,11 @@ int64_t dpvm_hash_add(struct dpvm *dpvm, struct dpvm_object *parent, struct dpvm
 int64_t dpvm_hash_final(struct dpvm *dpvm, struct dpvm_object *parent, struct dpvm_hash_state *state, struct dpvm_hash *hash) {
 	size_t isize = state->inputSize & (BLAKE2B_BLOCK_SIZE - 1), todo = BLAKE2B_BLOCK_SIZE - isize;
 	int64_t err;
+	if (state->inputSize && !isize)
+		isize = BLAKE2B_BLOCK_SIZE, todo = 0;
 
-	memset(state->input + isize, 0, todo);
+	if (todo)
+		memset(state->input + isize, 0, todo);
 	state->last = 1;
 	err = compress(dpvm, parent, state);
 	if (err) return err;
