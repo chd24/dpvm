@@ -1,0 +1,15 @@
+/* linker class, makefile for formats list, T20.361-T20.361; $DVS:time$ */
+
+#include "format.dpvmh"
+
+/*@ "elflinux.dpvm": elflinux format */
+Format elflinuxFormat = qCUwc4Er4B1_rnT8DdtMdKW_p1HNBTgodwQ_DxbJLnfeFHt /* hiking_terriers_restarts */;
+/* @*/
+
+/*@ "bootfloppy.dpvm": bootfloppy format */
+Format bootfloppyFormat = ej6oCUSYs6H_Ybvb5u54j2B_L6QnrhsUgyr_E59ewpmfTEb /* meltdown_cobbling_cutbacks */;
+/* @*/
+
+/*@ "formats.dpvm": all formats */
+Format allFormats[] = t1Le8RvvFko_CD7GeYxYgbC_UL2FcsdQWxz_Yxmz1wyNofU /* launch_unavoidable_sector */;
+/* @*/

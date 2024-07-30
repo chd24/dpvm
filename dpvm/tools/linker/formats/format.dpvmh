@@ -1,0 +1,30 @@
+/* format class interface, public header, T20.360-T20.360; $DVS:time$ */
+
+/* flags for addSection() method */
+int FORMAT_FLAG_READ	= 1;
+int FORMAT_FLAG_WRITE	= 2;
+int FORMAT_FLAG_EXEC	= 4;
+
+type formatMethods = {
+	const char version[];
+	const (volatile stateful any formatObj) -> (const char error[], int flags) getFlags;
+	const (volatile stateful any formatObj, int flags) -> (const char error[]) setFlags;
+	const (volatile stateful any formatObj, int entryPoint) -> (const char error[]) setEntryPoint;
+	const (volatile stateful any formatObj, const char arch[]) -> (const char error[]) setArch;
+	const (volatile stateful any formatObj, const char outputFile[]) -> (const char error[]) setOutputFile;
+	const (volatile stateful any formatObj, const stateful any registry) -> (const char error[]) setRegistry;
+	const (volatile stateful char out[], volatile stateful any formatObj) -> (const char error[]) dump;
+	const (volatile stateful any formatObj, const char data[], int flags) -> (const char error[]) addSection;
+	const (volatile stateful any formatObj) -> (const char error[]) finish;
+};
+
+type formatClass = {
+	volatile any data;
+	const formatMethods methods;
+};
+
+type Format = {
+	const char name[];
+	const () -> (volatile formatClass obj) create;
+	int startAddress;				/* address of first section */
+};

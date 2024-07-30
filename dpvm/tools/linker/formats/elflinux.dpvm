@@ -1,0 +1,10 @@
+/* linker class, register elflinux format, T20.360-T20.360; $DVS:time$ */
+
+#include "elflinux/elflinux.dpvmake"
+#include "format.dpvmh"
+
+Format elflinuxFormat = {
+	"elflinux",
+	elflinuxCreate,
+	0x400100
+};

@@ -1,0 +1,8 @@
+/* linker class, formats list, T20.360-T20.361; $DVS:time$ */
+
+#include "formats.dpvmake"
+
+Format allFormats[] = {
+	elflinuxFormat,
+	bootfloppyFormat
+};

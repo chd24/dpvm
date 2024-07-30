@@ -1,0 +1,10 @@
+/* linker class, register bootfloppy format, T20.360-T20.360; $DVS:time$ */
+
+#include "bootfloppy/bootfloppy.dpvmake"
+#include "format.dpvmh"
+
+Format bootfloppyFormat = {
+	"bootfloppy",
+	bootfloppyCreate,
+	0xa000
+};
