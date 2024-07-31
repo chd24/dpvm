@@ -5,5 +5,5 @@
 
 /*@ "impl/create.dpvm": create linker object */
 () -> (volatile linkerClass obj)
-	linkerCreate = Ra81vQzKCtr_gxwMUsimraW_gzpKHYyxQEK_Jo3HaVP2Zfe /* byebye_insulated_pin */;
-/* @*/         
+	linkerCreate = Fu6DoW7s5Za_MWqCHsbb1tf_RQ6TDj2afrQ_HQEd8DcGyoT /* signalled_belligerent_fiefdoms */;
+/* @*/

@@ -3,5 +3,5 @@
 
 /*@ "dump.dpvm": creates bootfloppy object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = CAHSQuYc2gA_TMZLhquzJTQ_WzNE3DdSw5Q_EZGPMjNKrmc /* unravel_chaplain_apologia */;
-/* @*/
+	dump = tmbFqxqRvDQ_q2MSUAkvKCp_py31Qg5d3jB_NwaidLn5bLn /* demote_hidden_extend */;
+/* @*/          
