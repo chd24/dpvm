@@ -2,55 +2,55 @@
 
 /*@ "factorial.dpvm": n! recursive implementation */
 (int n) -> (int res)
-	factorial = drumbeat_embroider_softer;
+	factorial = qFVnHRNJF9j_iFyntbKoxkU_n9vVaSVUwtx_Ljbexy3E4by /* drumbeat_embroider_softer */;
 /* @*/
 
 /*@ "factorial2.dpvm": n! cycle-based implementation */
 (int n) -> (int res)
-	factorial2 = conceal_typology_insiders;
+	factorial2 = GpuTV5Fu6FE_nmxDJ2iazCt_YbMNnrRB65z_tSkTYqajXha /* conceal_typology_insiders */;
 /* @*/
 
 /*@ "binom1.dpvm": C_n^m via factorials */
 (int n, int m) -> (int res)
-	binom1 = garage_iconoclast_encircling;
+	binom1 = YT5V9eHzbTy_J2s6wCRMq5G_cSY7ciWKNXn_X7MWpsHvjh8 /* garage_iconoclast_encircling */;
 /* @*/
 
 /*@ "binom1a.dpvm": C_n^m via factorial2 */
 (int n, int m) -> (int res)
-	binom1a = mastitis_scraped_grumblings;
+	binom1a = XFjPLMGzQSx_E65bTfbvEZ9_dt4aQwbaFyj_QNcXi8zXxGz /* mastitis_scraped_grumblings */;
 /* @*/
 
 /*@ "binom2.dpvm": C_n^m via sums */
 (int n, int m) -> (int res)
-	binom2 = piffle_traversals_bypaths;
+	binom2 = K5WEEQa4wTQ_PPJEcvhCS9J_pu5irNXF3J4_KhNTNsV1k9W /* piffle_traversals_bypaths */;
 /* @*/
 
 /*@ "binom3.dpvm": C_n^m via multiplying/divisions */
 (int n, int m) -> (int res)
-	binom3 = cockney_scoot_megalomaniac;
+	binom3 = NKKkSnXXQCR_X2Di5tFeEhx_fAnBjCfhFzq_iqyq55FbJ2B /* cockney_scoot_megalomaniac */;
 /* @*/
 
 /*@ "binom4.dpvm": C_n^m non-recursive */
 (int n, int m) -> (int res)
-	binom4 = supreme_sentential_insulating;
+	binom4 = XGsQicgdgH7_LFbvwNC6m8K_BmWgEdNjr4h_Aef6rym5hrF /* supreme_sentential_insulating */;
 /* @*/
 
 /*@ "fibonacci.dpvm": output n-th fibonacci number */
 (int n) -> (int fib)
-	fibonacci = drovers_carcasses_lineally;
+	fibonacci = ih6UFE9sqR7_W9abVt4JHHQ_PaSA168LRZa_rDWuSAh6voq /* drovers_carcasses_lineally */;
 /* @*/
 
 /*@ "square_equ.dpvm": solve square equation */
 (float a, float b, float c) -> (float x1, float x2)
-	square_equ = constant_summertime_farthing;
+	square_equ = TqA6K5rNhtC_jNvdDdojU7i_eJKGqiumW1G_aut2oJxxVnk /* constant_summertime_farthing */;
 /* @*/
 
 /*@ "average.dpvm": compute average sums by given array of values and period */
 (const stateful int arr[], int period) -> (volatile int res[])
-	average = seeps_frames_martyred;
+	average = QcLWa1xmGBz_fZqf6k6oXXN_P5p4oZ2vW8A_YYvUnQTJjKx /* seeps_frames_martyred */;
 /* @*/
 
 /*@ "complex.dpvm": example of the function using complex numbers */
 () -> (float res)
-	complex_example = boated_catacombs_manipulative;
+	complex_example = DBkd5ED7BET_BWMhA6RdSrJ_Kin9arT35yj_PAGomG3KdAr /* boated_catacombs_manipulative */;
 /* @*/

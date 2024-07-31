@@ -1,0 +1,51 @@
+/* linker class, dump method implementation, T20.363-T20.363; $DVS:time$ */
+
+#include "../../../lib/stdlib/stdlib.dpvmake"
+#include "linker.dpvmake"
+
+type linkData = {
+	const linkerImpl impl;
+	volatile stateful formatClass formatObj;
+};
+
+(volatile stateful linkData data, const any obj) -> (const char error[]) linkObject = {
+	char res[] = data.impl.data.registry.translator.translatorTest(data.impl.data.registry, obj, data.impl.data.arch, -1);
+	char err[] = data.formatObj.methods.addSection(data.formatObj, res, FORMAT_FLAG_READ | FORMAT_FLAG_EXEC);
+	return err;
+};
+
+(const stateful any linkerObj, const (int) -> (int) main, const char outputFile[]) -> (const char error[]) link = {
+	linkerImpl impl;
+	char err[] = convertObjToImpl(impl, linkerObj, "link");
+	if (err.csize) return err;
+
+	if (!impl.data.registrySet)
+		return mkError("registry not set", "link");
+
+	if (!impl.data.formatSet)
+		return mkError("format not set", "link");
+
+	if (!impl.data.archSet)
+		return mkError("arch not set", "link");
+
+	formatClass formatObj = impl.data.format.create();
+
+	err = formatObj.methods.setArch(formatObj, impl.data.arch);
+	if (err.csize) return err;
+
+	err = formatObj.methods.setOutputFile(formatObj, outputFile);
+	if (err.csize) return err;
+
+	err = formatObj.methods.setEntryPoint(formatObj, impl.data.format.startAddress);
+	if (err.csize) return err;
+
+	linkData data = {impl, formatObj};
+
+	err = linkObject(data, main);
+	if (err.csize) return err;
+
+	err = formatObj.methods.finish(formatObj);
+	if (err.csize) return err;
+
+	return "";
+};

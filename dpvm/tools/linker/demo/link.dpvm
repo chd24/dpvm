@@ -1,0 +1,25 @@
+/* linker class, link demo, T20.363-T20.363; $DVS:time$ */
+
+#include "../linker.dpvmake"
+
+(const stateful any registry, const char format[], const char arch[], const (int) -> (int) main, const char outputFile[])
+		-> (const char error[]) link = {
+	linkerClass linkerObj = linkerCreate();
+
+	char error[] = linkerObj.methods.setFlags(linkerObj, 0);
+	if (error.csize) return error;
+
+	error = linkerObj.methods.setRegistry(linkerObj, registry);
+	if (error.csize) return error;
+
+	error = linkerObj.methods.setFormat(linkerObj, format);
+	if (error.csize) return error;
+
+	error = linkerObj.methods.setArch(linkerObj, arch);
+	if (error.csize) return error;
+
+	error = linkerObj.methods.link(linkerObj, main, outputFile);
+	if (error.csize) return error;
+
+	return "";
+};

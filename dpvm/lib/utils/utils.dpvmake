@@ -1,131 +1,136 @@
-/* set of utilities, makefile; T16.606-T19.574; $DVS:time$ */
+/* set of utilities, makefile; T16.606-T20.363; $DVS:time$ */
 
 /*@ "hash.dpvm": returns full hash of object */
 (const stateful any object) -> (int hash0, int hash1, int hash2, int hash3)
-	getfullhash = mongoose_piracy_legging;
+	getfullhash = gDgMdg9z4BM_mhkc3ZG8C9z_cusHW1VH6Ys_eCVPWnQCFjm /* mongoose_piracy_legging */;
 /* @*/
 
 /*@ "info.dpvm": returns object info */
 (const stateful any obj) -> (const type t, int a, int b, int c, int d, int e, int f, int g, int h)
-	object_info = peroration_mussel_annuls;
+	object_info = nv8rZY7Mi7D_j8hJ5BG2weM_JPj35vb8hoC_Ru9NPcF1K67 /* peroration_mussel_annuls */;
 /* @*/
 
 /*@ "new.dpvm": constructs new object from type and lenghts */
 (const any typ, int a, int b, int c, int d, int e, int f, int g, int h) -> (volatile any obj)
-	new_object = cremates_hyphenation_surpassed;
+	new_object = fUyjkZjgxjR_MdLroYpyNYt_sAGibPXJfzJ_YYCnHkPE3CP /* cremates_hyphenation_surpassed */;
 /* @*/
 
 /*@ "lpush.dpvm": push object to another object */
 (const stateful any child, volatile stateful any parent) -> ()
-	pushObject = expound_footbath_availed;
+	pushObject = ceYxaz1tmHa_iAhJuvdUjXv_QibLJHiYA7p_n731XBwr2Ls /* expound_footbath_availed */;
 /* @*/
 
 /*@ "charsArray.dpvm": constructs new chars array of given size */
 (int size) -> (volatile char array[])
-	charsArray = wood_duckling_scallops;
+	charsArray = PaMTs2nKRWV_kYKpj4aAZJK_DqYDSwzzYwQ_M41V7Lqn7vN /* wood_duckling_scallops */;
 /* @*/
 
 /*@ "intsArray.dpvm": constructs new ints array of given size */
 (int size) -> (volatile int array[])
-	intsArray = unalike_headache_misfortune;
+	intsArray = p5Drr17Tjrc_YuE1yPepFYD_tEtdAT9pjzC_FUaZGpUa7zz /* unalike_headache_misfortune */;
 /* @*/
 
 /*@ "floatsArray.dpvm": constructs new floats array of given size */
 (int size) -> (volatile float array[])
-	floatsArray = chance_carabinieri_leak;
+	floatsArray = Dqm7mGs2vTv_T2myLPDMiRt_Lf2RYjbpNvz_QhxVTg4kSkz /* chance_carabinieri_leak */;
 /* @*/
 
 /*@ "floatsFixedArray.dpvm": constructs new floats array of fixed given size */
 (int size) -> (volatile any array)
-	floatsFixedArray = included_etiquette_scantier;
+	floatsFixedArray = PHhUDMQYmiz_kDHpYFaDQd1_aJJHQwa35Ax_MeqwR7meYb1 /* included_etiquette_scantier */;
 /* @*/
 
 /*@ "chars2ints.dpvm": convert array of chars to array of integers */
 (const stateful char str[], int begin, int end) -> (volatile int arr[])
-	chars2ints = enthroned_princesses_anodes;
+	chars2ints = LgrkSu5PkjW_pJQFgZxq984_hmL8yAHmcye_fYLnGGM8dka /* enthroned_princesses_anodes */;
 /* @*/
 
 /*@ "chars2ints32.dpvm": convert array of chars to array of 32-bit integers */
 (const stateful char str[], int begin, int end) -> (volatile int arr[])
-	chars2ints32 = dignitaries_factious_batty;
+	chars2ints32 = FUp7b198FKx_k2NgyamjPYc_okr2setBQNT_My6JHURA8mM /* dignitaries_factious_batty */;
 /* @*/
 
 /*@ "ints2ints32.dpvm": convert array of integers to array of 32-bit integers */
 (const stateful int src[], int begin, int end) -> (volatile int arr[])
-	ints2ints32 = schedule_expedite_mantras;
+	ints2ints32 = XG7Y5QTmSyz_GdkPA3kH963_Z4jjPtZYmCM_QGbpsdxiPih /* schedule_expedite_mantras */;
 /* @*/
 
 /*@ "ints2chars.dpvm": convert array of integers to array of chars */
 (const stateful int src[], int begin, int end) -> (volatile char arr[])
-	ints2chars = murderously_fissures_clowned;
+	ints2chars = QJ7vmDYFVX7_LHzmRW62Xns_YBMvNxZSHGL_owPCkLGwHmL /* murderously_fissures_clowned */;
 /* @*/
 
 /*@ "ints32_2chars.dpvm": convert array of 32-bit integers to array of chars */
 (const stateful int src[], int begin, int end) -> (volatile char arr[])
-	ints32_2chars = saki_drag_regarded;
+	ints32_2chars = onGVJs195nm_buW2ds9GF8N_nmxZo5xAhNY_HMkmXQZVCjq /* saki_drag_regarded */;
 /* @*/
 
 /*@ "ints32_2ints.dpvm": convert array of 32-bit integers to array of ints */
 (const stateful int src[], int begin, int end) -> (volatile int arr[])
-        ints32_2ints = dodo_billed_lawlessness;
+        ints32_2ints = VKAXvk3NKvd_kvYqNgmPLte_tmXscJwmapw_SBmBjRVf78C /* dodo_billed_lawlessness */;
 /* @*/
 
 /*@ "str2ints.dpvm": convert string with integers to array of integers */
 (const stateful char str[]) -> (volatile int arr[]) 
-	str2ints = luminance_possibility_because;
+	str2ints = k8U4cWKNTkr_iRjdEBfQcCF_DZFeZxwTHSw_abPJuCU1iXN /* tabernacle_impetuously_overdue */;
 /* @*/
 
 /*@ "str2floats.dpvm": convert string with floats to array of floats */
 (const stateful char str[]) -> (volatile float arr[])
-	str2floats = floozy_compasses_ophthalmic;
+	str2floats = hJMsWJGjjhU_XiK7gS1yx4E_QCVi2Gnvt8p_qwHhvoBJnPG /* floozy_compasses_ophthalmic */;
 /* @*/
 
 /*@ "words2ints_old.dpvm": convert text file with lexems to ints array for assembler */
 (const stateful char words[]) -> (volatile int ints[])
-	words2ints_old = shrouding_amidships_proximally;
+	words2ints_old = LbWZ74NwWf2_XiNuZwAVir1_F4P3ouiG5A7_YpQadADtUGH /* shrouding_amidships_proximally */;
 /* @*/
 
 /*@ "words2ints.dpvm": convert text file with lexems to ints array for compiler */
 (const stateful char words[]) -> (volatile int ints[]) 
-	words2ints = eulogising_wimp_seek;
+	words2ints = SdiwKh7nSmS_qxAq7qQzzaJ_D4vUrWomTrt_Ak9pQ8WDh9b /* eulogising_wimp_seek */;
 /* @*/
 
 /*@ "word2code.dpvm": converts standard vocabulaty word to its number */
 (const stateful char src[], int pos, int end) -> (int res)
-	word2code = haiku_flintlocks_franc;
+	word2code = nppStwrXscU_H3eaztRNgjE_LY1HduBysS7_fVY7fQv8A4D /* haiku_flintlocks_franc */;
 /* @*/
 
 /*@ "name2hash.dpvm": converts short name of object to short hash */
 (const stateful char src[], int pos, int end) -> (int res)
-	name2hash = unbeaten_myopia_quay;
+	name2hash = BXYFtmkK4Wy_ggCUXZtkTP9_ZFpzBAtwif3_CRW7yq4xLfp /* unbeaten_myopia_quay */;
 /* @*/
 
 /*@ "text2hashes.dpvm": searches object names in text and return theis hashes */
 (const stateful char text[]) -> (volatile int hashes[])
-	text2hashes = stirfried_recap_boundary;
+	text2hashes = ncXzdVjjngr_UhRtQcifNpp_XLQckMA4YvA_NX4fNYhZDFF /* stirfried_recap_boundary */;
 /* @*/
 
 /*@ "errorInfo.dpvm": print error code in human readable format */
 (int errorCode) -> (volatile char text[])
-        errorInfo = taxidermists_budgets_lumpen;
+        errorInfo = CQ5bBYC7gHm_cduzVwbBY4A_KDHypnWeKhb_qqtbUdXZ6iK /* abode_mealie_cadence */;
+/* @*/
+
+/*@ "hexdump.dpvm": print file as ints array */
+(const char filename[]) -> ()
+	hexdump = AQDxLmJCG16_ip5585prfc9_pi7St9W7pr1_iHFViJ8tZ1X /* minicomputer_overspent_museum */;
 /* @*/
 
 /*@ "generateClass.dpvm": generate initial class source code in given folder */
 (const char path[]) -> ()
-	generateClass = ungracious_ghosts_hullo;
+	generateClass = RpibxCvcT6W_JravHuJ4L4v_sFXHCTvXpK1_QXcRjzq8UGm /* node_strayed_bathwater */;
 /* @*/
 
 /*@ "disassemble.dpvm": disassemble function */
 (const stateful any func) -> (volatile char src[])
-	disassemble = unguarded_evolving_gosh;
+	disassemble = DZcBY4H8Zou_TdjorfRthe5_h69AHeepiRG_Stv39Xu41Kc /* luxor_lavatory_actuation */;
 /* @*/
 
 /*@ "system.dpvm": execute command in native shell */
 (const char command[]) -> (int error)
-	system = dated_realising_singed;
+	system = MWo1JLLR3Vk_f2yNVB7DZaV_CJFP52q37AU_F4XSgWcaM5k /* dated_realising_singed */;
 /* @*/
 
 /*@ "killer.dpvm": kills programs with given name whose run too long */
 (const char progname[], int interval) -> () 
-	killer = falsifying_haulages_liny;
-/* @*/                                                                 
+	killer = bUYAayJ82ci_TnYfEmMnh4U_grkxe3WpTey_Mce5XVJnnLR /* parakeet_sacrificed_intents */;
+/* @*/

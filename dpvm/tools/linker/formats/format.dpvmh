@@ -1,9 +1,9 @@
-/* format class interface, public header, T20.360-T20.360; $DVS:time$ */
+/* format class interface, public header, T20.360-T20.362; $DVS:time$ */
 
 /* flags for addSection() method */
-int FORMAT_FLAG_READ	= 1;
+int FORMAT_FLAG_EXEC	= 1;
 int FORMAT_FLAG_WRITE	= 2;
-int FORMAT_FLAG_EXEC	= 4;
+int FORMAT_FLAG_READ	= 4;
 
 type formatMethods = {
 	const char version[];

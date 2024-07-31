@@ -1,8 +1,10 @@
 /* version of compiler */
 	
-char version[] = "DPVM compiler 1.0.3 T15.418-T20.171"; /* $DVS:time$
+char version[] = "DPVM compiler 1.0.4 T15.418-T20.363"; /* $DVS:time$
 
 history:
+
+T20.363 ver 1.0.4: - fixed bug with reading comments before scalar constant
 
 T20.171 ver 1.0.3: - added support for long object names
 

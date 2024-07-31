@@ -1,0 +1,28 @@
+/* hexdump: output file as ints array source; T20.363-T20.363; $DVS:time$ */
+
+#include "../stdlib/stdlib.dpvmake"
+#include "utils.dpvmake"
+
+(const any data, const char file[], int status) -> () readCallback = {
+	int arr[] = chars2ints(file, 0, status), i;
+	char out[];
+	for (i = 0; i < arr.isize; i++) {
+		if (!(i & 3))
+			out.cpush('\t');
+		printf(out, "0x%016x", {arr[i]});
+		if (i != arr.isize - 1)
+			out.cpush(',');
+		if ((i & 3) == 3 || i == arr.isize - 1)
+			out.cpush('\r'), out.cpush('\n');
+		else
+			out.cpush(' ');
+	}
+
+	outputp({}, {}, out);
+	return;
+};
+
+(const char filename[]) -> () hexdump = {
+	read(readCallback, {}, filename, 0, 0x100000);
+	return;
+};

@@ -3,7 +3,7 @@
 #include "format.dpvmh"
 
 /*@ "elflinux.dpvm": elflinux format */
-Format elflinuxFormat = qCUwc4Er4B1_rnT8DdtMdKW_p1HNBTgodwQ_DxbJLnfeFHt /* hiking_terriers_restarts */;
+Format elflinuxFormat = qzKthqsxgXv_D8fWzbYQJ4x_PYiYYdUzSVs_NCUkuQWTqHy /* chugging_misfiled_endothermic */;
 /* @*/
 
 /*@ "bootfloppy.dpvm": bootfloppy format */
@@ -11,5 +11,5 @@ Format bootfloppyFormat = ej6oCUSYs6H_Ybvb5u54j2B_L6QnrhsUgyr_E59ewpmfTEb /* mel
 /* @*/
 
 /*@ "formats.dpvm": all formats */
-Format allFormats[] = t1Le8RvvFko_CD7GeYxYgbC_UL2FcsdQWxz_Yxmz1wyNofU /* launch_unavoidable_sector */;
-/* @*/
+Format allFormats[] = D5CbnF6hqhS_Tnf4y7TPi6Z_paGgGXkyy1g_NZtgSh5HGMm /* dug_safari_rearview */;
+/* @*/          

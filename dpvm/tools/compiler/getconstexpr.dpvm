@@ -1,4 +1,4 @@
-/* dpvm: get constant expression; T15.535-T20.056; $DVS:time$ */
+/* dpvm: get constant expression; T15.535-T20.363; $DVS:time$ */
 
 /* read constant expression and return value:
  * exprtype:
@@ -120,15 +120,15 @@
 
 		(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
 
-        if (status == LEX_FIGURE_L) {
-            any a;
+		if (status == LEX_FIGURE_L) {
+			any a;
 			type t;
 			int i;
 			int j;
 
 			data.pos = pos;
 			dst = objtype;
-            if (dst == a.type) dst = dst.type;
+			if (dst == a.type) dst = dst.type;
 			dst = new_object(objtype,
 				dst.i[0], dst.i[1], dst.i[2], dst.i[3],
 				objtype.i[8], objtype.i[9], objtype.i[10], objtype.i[11]);
@@ -136,7 +136,7 @@
 			(pos, end, status) = getlexem(data.src, lexems, data.pos, data.end);
 
 			i = 0; j = 0;
-            while (status != LEX_FIGURE_R) {
+			while (status != LEX_FIGURE_R) {
 				while (j >= objtype.i[12 + i]) {
 					i = i + 1;
 					if (i >= 4) {
@@ -188,36 +188,48 @@
 				data.pos = pos;
 			}
 
-            data.pos = pos;
+			data.pos = pos;
 			lvalue = dst;
 			status = 0;
 		} else
 			status = -1;
 
 
-	/* integer */
-
-	} else if ((exprtype & 3) == 1) {
-		(ivalue, status, pos) = strtoi(data.src, data.pos, data.end, 0);
-
-		if (!status) data.pos = pos;
-
-
-	/* float */
-
-	} else if ((exprtype & 3) == 2) {
-		(status, pos, fvalue) = strtof(data.src, data.pos, data.end);
-
-		if (!status) data.pos = pos;
-
-
-	/* 'c' */
+	/* scalar types */
 
 	} else {
-		(lvalue, pos, status, cvalue) = 
-				getconststring(data.src, data.pos, data.end);
 
-		if (status == 3) { data.pos = pos; status = 0; }
+		pos = skipSpaces(data.src, data.pos, data.end);
+		if (pos < 0) {
+			data.mess = "error reading next lexem";
+			return (lvalue, ivalue, -2, fvalue, cvalue);
+		}
+
+
+		/* integer */
+
+		if ((exprtype & 3) == 1) {
+			(ivalue, status, pos) = strtoi(data.src, pos, data.end, 0);
+
+			if (!status) data.pos = pos;
+
+
+		/* float */
+
+		} else if ((exprtype & 3) == 2) {
+			(status, pos, fvalue) = strtof(data.src, pos, data.end);
+
+			if (!status) data.pos = pos;
+
+
+		/* 'c' */
+
+		} else {
+			(lvalue, pos, status, cvalue) =
+					getconststring(data.src, pos, data.end);
+
+			if (status == 3) { data.pos = pos; status = 0; }
+		}
 	}
 
 

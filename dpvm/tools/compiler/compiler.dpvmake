@@ -62,168 +62,173 @@ int bytecodes[] = colonels_misname_dogy; /* bytecodes */
 
 /*@ "mktype.dpvm": fill standard fields of the type */
 (const stateful type t, int isfunc) -> (volatile type res)
-	mktype = ingested_soles_lampooning;
+	mktype = AjWcE1UuVVy_oAbnZRoh3DQ_fxZRNABnwk7_pzs7h8dGaTF /* ingested_soles_lampooning */;
 /* @*/
 
 /*@ "getnobj.dpvm": get index of object from dst which name is ended be end position in src[] */
 (const stateful char src[], const stateful any dst, int end) -> (int number, int begin)
-	getnobj = shipwrights_mercies_pettiness;
+	getnobj = GBtHzGVmvJC_WnxJHkoUXDF_jHWfvMpELFJ_fZmVjhFxurN /* shipwrights_mercies_pettiness */;
+/* @*/
+
+/*@ "skipSpaces.dpvm": skip spaces and comments; return new position or -1 if not valid */
+(const stateful char src[], int pos, int end) -> (int new_pos)
+	skipSpaces = RcTxf4Dfngt_F3hubja1n1X_hyhsiMf6Pac_sMnvmACcfpU /* cogitations_parried_gobbledygook */;
 /* @*/
 
 /*@ "getlexem.dpvm": reads next lexem from src[pos..end), returns new pos, end
 	and lexem's index in lexems[] or hash of new lexem or -1 if not valid */
 (const stateful char src[], const stateful int lexems_[], int pos, int end) -> (int new_pos, int end, int lexem)
-	getlexem = directive_toothbrushes_gravitation;
+	getlexem = eDrEmV2zVQE_a3GRhNhaMWc_kZCUKcAbx8S_MASEiz4BZ2h /* charmingly_barmen_healing */;
 /* @*/
 
 /*@ "findlexem.dpvm": finds lexem by its hash in int[][] array */
 (const stateful int lexems_[][], int lexem) -> (int narr, int npos)
-	findlexem = wildcats_edgings_humanely;
+	findlexem = TPASGGSdpVC_gkvYZfBpsC9_FCALpKSJwNN_T2emzLKnk8b /* wildcats_edgings_humanely */;
 /* @*/
 
 /*@ "getconststring.dpvm": reads const character or string from source */
 (const stateful char src[], int pos, int end) -> (volatile char str[], int new_pos, int status, char c)
-	getconststring = honestly_helmsman_degraded;
+	getconststring = WeWkAKMBVdY_SsJfjXhevgP_Vw1jPb2KVT7_AvhbaFsDexs /* zoom_reprogrammed_prescribed */;
 /* @*/
 
 /*@ "registry.dpvm": check registry and cast it to native type */
 (const stateful any regSrc) -> (volatile registryData reg, const char error[])
-        registryPrepare = ventricular_goodly_babbled;
+        registryPrepare = B5S8Z1bGNam_GNxQuKad5Vo_LvCdP4GdY7G_UVY7nXcjVme /* latvian_petite_agitators */;
 /* @*/
 
 /*@ "typecast.dpvm": cast one type to another and put bytecodes to dst */
 (volatile stateful compdata data, int to, int from) -> (int status)
-	typecast = necking_severely_aslant;
+	typecast = bHMFdWNiTuT_aSD4d18JFzz_PV92FMa9TWh_Gco92hKLLUY /* necking_severely_aslant */;
 /* @*/
 
 /*@ "putint.dpvm": put integer to the stack, write bytecodes to dst */
 (volatile stateful compdata data, int n) -> ()
-	putint = irradiation_watches_retailer;
+	putint = aCGYiiWjC1R_iM4wjnKPAbu_EaqBFB9JLsc_o1ihd9EJtWm /* irradiation_watches_retailer */;
 /* @*/
 
 /*@ "getconstexpr.dpvm": reads const expression from source */
 (volatile stateful compdata data, const type objtype, int exprtype)
 		-> (const any lvalue, int ivalue, int status, float fvalue, char cvalue)
-	getconstexpr = smacked_whom_olympus;
+	getconstexpr = PAv92nM7LcK_Pny1QWyxEzr_hiKSoEdP6oY_Z1Ptu44Nvoi /* aeroplane_aquaria_stone */;
 /* @*/
 
 /*@ "getdecllist.dpvm": reads declaration list from source */
 (volatile stateful compdata data, const Getdecl getdecl, int addvars) -> (const type res, int status)
-	getdecllist = honesty_canvassed_crete;
+	getdecllist = diCMNmYhu3h_oYSMo9tTGCN_bkpMY8DY3Go_T7qDwJ37tmY /* superseding_starves_heavier */;
 /* @*/
 
 /*@ "getdecltype.dpvm": reads declaration type from source */
 (volatile stateful compdata data, const Getdecl getdecl, int context) -> (const type res, int rstatus)
-        getdecltype = microdot_encapsulate_corn;
+        getdecltype = HFApDzymWb2_BpkjREf4Nkh_bHoFJ4oDUe9_gM3dTFTiRxq /* humpback_bookmarks_cancels */;
 /* @*/
 
 /*@ "getdeclname.dpvm": reads declaration name andpostfix type from source */
 (volatile stateful compdata data, const Getdecl getdecl, const type res, int context, int rstatus)
 		-> (const type res, int rstatus)
-        getdeclname = procreating_evaluates_generalised;
+        getdeclname = hhBdqk2T4JZ_EP3BYTsKRwe_hLYhhY61C9R_nDNGoBvdMzs /* sprites_determining_crumbly */;
 /* @*/
 
 /*@ "getdecl.dpvm": reads declaration from source */
 (volatile stateful compdata data, int context) -> (const type res, int rstatus)
-	getdecl = thunder_lusts_dun;
+	getdecl = FnfbP1RFhQU_G3ivPAduKoc_K11dbbjz9J8_FcW3JGNUhav /* synopsis_swelled_drowns */;
 /* @*/
 
 /*@ "getObject.dpvm": reads composed object from the source */
 (volatile stateful compdata data, const Instr instr, const Getexpr getexpr, const type tip)
 		-> (const type res, int status)
-	getObject = virago_humiliating_bunkers;
+	getObject = LYGUZa6d5d9_am3a1R8uqhF_Mk2rFtTaMpD_sgkhQ8kDYpr /* harassed_lunacy_momentum */;
 /* @*/
 
 /*@ "getDeclInitializer.dpvm": reads declaration initializer */
 (volatile stateful compdata data, volatile stateful compdata olddata, const Instr instr, const Getexpr getexpr,
                 const Getexterm getexterm, const type tres, int structsLsize, int namePos, int status, int context)
                 -> (int status)
-	getDeclInitializer = farces_homoeopathic_deputised;
+	getDeclInitializer = nY3Hf9JxiEH_J4RSEFXKE4u_NSRHBd2n6D3_nTLCriEVb2P /* monogram_filthier_secondclass */;
 /* @*/
 
 /*@ "getTypeCastExpr.dpvm": reads '(type) initizlizer' expression */
 (volatile stateful compdata data, const Instr instr, const Getexpr getexpr, const Getexterm getexterm)
 		-> (const type res, int status)
-	getTypeCastExpr = glens_quarterback_symbolically;
+	getTypeCastExpr = Xm4x9J3X8sv_CKD67bHsLrE_mr7Nv9gFhsS_SZ6FEjcb6HZ /* faxes_emancipating_protectively */;
 /* @*/
 
 /*@ "getterm.dpvm": reads term from source */
 (volatile stateful compdata data, const Instr instr, const Getexpr getexpr) -> (const type res, int status)
-	getterm = represented_sorrowed_referees;
+	getterm = prz8RhfBhDb_rdYADbvfQkP_EmCFcovvhAe_sKcritrxXF8 /* wellbred_disburse_rustproof */;
 /* @*/
 
 /*@ "getmultiexpr.dpvm": reads multi-expression from source */
 (volatile stateful compdata data, const Instr instr, const Getexpr getexpr, volatile stateful type castto, int inbraces)
 		-> (const type res, int segments[], int status)
-	getmultiexpr = randomly_dodecahedron_hinder;
+	getmultiexpr = ZN3dMhcnFcM_LzFcDREKatG_de4awYUaYuX_Hb1tte8rr5Q /* sportive_president_reallife */;
 /* @*/
 
 /*@ "getexterm.dpvm": reads extended term from source */
 (volatile stateful compdata data, const Instr instr, const Getexpr getexpr) -> (const type res, int status)
-	getexterm = tampered_manifestly_garrulous;
+	getexterm = FE8i6EUo2xv_a9YPiBjeFt7_MDjyRDVCv7T_Ng6kA3NnC7a /* inscribed_buyout_evidenced */;
 /* @*/
 
 /*@ "getexpr.dpvm": reads expression from source */
 (volatile stateful compdata data, const Instr instr) -> (const type res, int status)
-	getexpr = lymphomas_novices_glows;
+	getexpr = GNj3SdnCJRy_W2z4rD8JseA_hyzcYR21vUR_CKWqVdkwLvj /* epithelial_chemic_ritualistic */;
 /* @*/
 
 /*@ "getvoidexpr.dpvm": reads void-valued expression from source */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	getvoidexpr = hairdressers_imperially_sleepwalks;
+	getvoidexpr = tCAJNRXsd1F_Bghb4S4a4Wv_cJwANcBy5Mk_EfWeQhFPq5S /* mishandling_intersect_aggrievedly */;
 /* @*/
 
 /*@ "instr_asm.dpvm": 'asm' instruction */
 (const stateful char src[], volatile stateful any dst, int pos, int end) -> (int new_pos, int end, int status)
-	instr_asm = decent_enrichments_dipsticks;
+	instr_asm = Y6VwzXKk7xB_XdNHZbjquP4_YyN3tA3TGQo_GEevibQJn9z /* decent_enrichments_dipsticks */;
 /* @*/
 
 /*@ "instr_block.dpvm": block { } instruction */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	instr_block = tyrannic_perfection_premium;
+	instr_block = fG1b4oBtNCK_Uui6eKhDYSJ_ELUcHmiYKpj_owQtX4GzUhs /* warehousing_intending_lice */;
 /* @*/
 
 /*@ "instr_decl.dpvm": instruction-declaration */
 (volatile stateful compdata data, const Instr instr, int context) -> (int status)
-	instr_decl = flimsy_servers_before;
+	instr_decl = Ku8owMXis1B_RsPLx4VRCob_U6827LoqnVh_mEZW6Y1Dg57 /* twofaced_telegraph_slushiest */;
 /* @*/
 
 /*@ "instr_do.dpvm": do-while instruction */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	instr_do = master_deformable_payrolls;
+	instr_do = fiAnnsn3v57_NRWpHecHaQ1_epumXCFfSbG_jEX7g1nsKvd /* shuttered_aborting_caramelised */;
 /* @*/
 
 /*@ "instr_expr.dpvm": instruction-expression */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	instr_expr = jealously_intervenes_adjacent;
+	instr_expr = o96mJFAs9gb_JznMxMFa3VD_HBQZuUVwQF3_DEWy78UfxPu /* unzips_toss_cryptography */;
 /* @*/
 
 /*@ "instr_for.dpvm": 'for' instruction */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	instr_for = ohio_reactors_jadedly;
+	instr_for = pfKT1u4Y31G_ZV3PqTfTnZY_PCVHR4jeWRL_aXpwJNhVsfL /* lobs_pyramids_browsers */;
 /* @*/
 
 /*@ "instr_if.dpvm": if-else instruction */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	instr_if = plumbing_garden_marshgas;
+	instr_if = dZGx9QnBGqZ_joBynbATmcM_mztPEGaVTTd_ahxHhEGq2dL /* hobbles_outlook_nightclub */;
 /* @*/
 
 /*@ "instr_return.dpvm": 'return' instruction */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	instr_return = avoids_winemakers_fastest;
+	instr_return = rm8mHN5V1t5_jScfptyJL6R_rtBavW47bgs_dRPARRF99wn /* loser_invoking_chanted */;
 /* @*/
 
 /*@ "instr_use.dpvm": 'use' instruction */
 (volatile stateful compdata data) -> (int status)
-	instr_use = histogram_sjambok_sparseness;
+	instr_use = psRa4rU8Btg_A1Ev8srJHUb_VMLjRrDJu4Q_SPX3eogX6Zt /* propagator_depths_adrenal */;
 /* @*/
 
 /*@ "instr_while.dpvm": 'while' instruction */
 (volatile stateful compdata data, const Instr instr) -> (int status)
-	instr_while = crunchiest_monarchic_judicature;
+	instr_while = PG52xCybA2u_QY7RWkr8a8f_MgwrchYLzut_FfCFgrigq9i /* persuasive_outrageously_speechless */;
 /* @*/
 
 /*@ "instr.dpvm": any instruction */
 (volatile stateful compdata data) -> (int status) 
-	instr = tints_swing_malingering;
-/* @*/                                 
+	instr = K8s4499Moja_NrYmmTyQPpm_rNsJYu3jr1x_WVdg3K6thwy /* excerpt_religion_fumes */;
+/* @*/
