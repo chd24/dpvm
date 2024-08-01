@@ -1,0 +1,14 @@
+rem creating floppy boot image dpvm.img, part 1, T11.221-T20.366; $DVS:time$
+
+copy   s:/dus/boot/loader.bin				r:/loader.bin
+copy   boot.com						r:/boot.com
+copy   h:/home/programs/ldus/source/scripts/linux.bin	r:/linux.bin
+copy   s:/dus/boot/multboot.com				r:/multboot.com
+copy   s:/dus/boot/reboot.com				r:/reboot.com
+copy   bootlive.bat					r:/bootlive.bat
+copy   h:/home/programs/ldus/source/scripts/prompt.txt	r:/prompt.txt
+create 							r:/dpvm
+
+flush  r:
+
+sys/load 256 s:/programs/dar/bin/fileAsDisk <>$(img) a: disk/setBootInfo a: a: s:/dus/boot/sector0.bin loader.bin bootlive.bat

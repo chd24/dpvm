@@ -1,0 +1,7 @@
+rem creating floppy boot image dpvm.img, part 0, T11.122-T20.366; $DVS:time$
+
+set img=dpvm.img
+create $(img)
+sys/load 2000 drivers/dusfs r:=$(img) sys/load 64 drivers/multfile - dush mkbootimg1.dsh
+s:/programs/release/bin/setFileSize $(img) 1474560
+bat/echo Archive dpvm.img created.
