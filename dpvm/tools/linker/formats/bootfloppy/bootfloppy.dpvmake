@@ -5,5 +5,5 @@
 
 /*@ "impl/create.dpvm": create bootfloppy object */
 () -> (volatile bootfloppyClass obj)
-	bootfloppyCreate = ryNzHerikBF_bNijyNHH87t_S5c61y4Y2Nq_JNw5rPK4rip /* baboons_alpaca_gastropod */;
-/* @*/
+	bootfloppyCreate = KrzyGtGBdDJ_Eq8ymUi978R_pa3937KWDXL_aZsWVkK3fDP /* soaping_millet_cutback */;
+/* @*/      

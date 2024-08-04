@@ -3,11 +3,11 @@
 
 /*@ "dump.dpvm": creates linker object, sets flags to it and dumps it */
 (const stateful any registry, int flags) -> (const char error[])
-	dump = aeKiQPnrPE9_JRYwYRtmeSL_c7hA8CHLZ2V_L15rKVoi8e9 /* ambushing_sexism_skins */;
+	dump = RNnADUAo4aG_JB1xrxfXd9s_aYH51U64h9L_KK6h6z5Ebzi /* blazers_frostbitten_bringer */;
 /* @*/
 
 /*@ "link.dpvm": link program main and store result to output file */
 (const stateful any registry, const char format[], const char arch[], const (int) -> (int) main, const char outputFile[])
 		-> (const char error[])
-	link = mvhQxoDgEmH_ekZidvHckju_K44ZGVTWR3k_Tnk6t9JLMUp /* sights_disordered_memorable */;
-/* @*/       
+	link = L6dksLJuZrs_ecC52FKKHSW_e2nkr8Z3tpu_giHQqnaLUyW /* albatross_feverish_reckon */;
+/* @*/    

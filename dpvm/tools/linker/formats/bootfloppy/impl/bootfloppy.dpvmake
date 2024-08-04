@@ -5,24 +5,24 @@
 
 /*@ "mkError.dpvm": compose error message */
 (const char mess[], const char func[]) -> (const char err[])
-	mkError = H3L6NKJbowU_K8og6sXAfzL_HPRq7FJWpKv_YQwtk5X36NJ /* digital_airwave_denounced */;
+	mkError = ayhq55dVGBF_KBWcQxBke9K_NRw5GbNSwe6_GPNXeazyDZs /* extolled_shawl_ranchers */;
 /* @*/
 
 /*@ "convertObjToImpl.dpvm": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
 (volatile stateful bootfloppyImpl impl, const stateful any bootfloppyObj, const char func[]) -> (const char error[])
-	convertObjToImpl = jii3qREHU3u_YtNnSkesPxm_ghWxQqyzf1A_aZCdEBGejPA /* slavish_verified_pseudopod */;
+	convertObjToImpl = mnNJMBuWF7N_EDcWgpHRXxz_inBRt9suDDX_kbpKuCPWC5n /* save_especially_adaptive */;
 /* @*/
 
 /*@ "dump.dpvm": dump internal content of bootfloppyObj object */
 (volatile stateful char out[], volatile stateful any bootfloppyObj) -> (const char error[])
-	dump = TCWvZtrmYUM_Vc1JeToEYby_kf5xNcLhhc2_FXvex4V5E4U /* waveforms_mayhem_loiter */;
+	dump = na6FcweuFhB_r6S5J3Faq4h_SG8rM7RF84o_Z2WxQGcmMj8 /* whippet_metrication_caller */;
 /* @*/
 
 /*@ "addSection.dpvm": add code/data part to output file */
 (volatile stateful any bootfloppyObj, const char data[], int flags) -> (const char error[])
-	addSection = RSye4KankLs_XrihsonKXnB_C8TpRQtdGfK_MyRUw4fNiQQ /* duchy_savagery_obsidian */;
+	addSection = ddqo3YURtZ2_k3byKSd2faU_QCJXggHuFPf_RY4La9tibhR /* testifying_osmotic_nation */;
 /* @*/
 
 /*@ "methods.dpvm": public methods implementation */
-bootfloppyMethods bootfloppyMethodsImpl = WVxH4B9WyJp_hUdshYFBBhm_FQpU2aT1M2J_Uk7mvTCcy7Y /* cerise_axial_accentuates */;
-/* @*/        
+bootfloppyMethods bootfloppyMethodsImpl = BXL2NpvBKny_s62Seh9KXEN_jqV717S8vWa_gKmecYeqFd7 /* pamper_casseroles_neediness */;
+/* @*/       

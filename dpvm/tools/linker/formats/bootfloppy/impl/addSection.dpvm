@@ -1,4 +1,4 @@
-/* bootfloppy class, addSection method implementation, T20.362-T20.366; $DVS:time$ */
+/* bootfloppy class, addSection method implementation, T20.362-T20.377; $DVS:time$ */
 
 #include "../../../../../lib/stdlib/stdlib.dpvmake"
 #include "../../../../../lib/utils/utils.dpvmake"
@@ -276,66 +276,70 @@ int header[] = {
 	0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
 	0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
 /* 0x12-?: file dpvm */
-	0x13,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,    0,0,0,0,0,0,0,0,    0,0,0,0,0,0,0,0,
+	0x13,0x14,0x15,0,0,0,0,0, 0,0,0,0,0,0,0,0,    0,0,0,0,0,0,0,0,    0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,    0,0,0,0,0,0,0,0,    0,0,0,0,0,0,0,0,    0,0,0,0,0,0,0,0,
 	/* start code:
 		use64
 
 		; run-time objects allocation
-		lea r8, [rsp-4800h]		; thread
-		lea r10,[r8+0xb0]		; task
-		lea r11,[r10+0xb0]		; stack
+		mov r8, 0x40080			; thread
+		lea r9, [rsp-0x6000]		; new rsp
+		lea r10,[r8+0xc0]		; task
+		lea r11,[r10+0xc0]		; stack
 
 		; thread object initialization
-		lea rax,[r8+800h]		; thread links
-		mov [r8],rax
-		mov [rax],r11			; thread link to stack
-		mov [rax+18h],r10		; thread link to task
-		lea rax,[r8+1000h]		; thread ints
+		mov [r8],r9			; thread links
+		mov [r9],r11			; thread link to stack
+		mov [r9+18h],r10		; thread link to task
+		lea rax,[r9+1000h]		; thread ints
 		mov [r8+8],rax
 
-		; task object initialization
-		lea rax,[r8+1800h]		; task links
-		mov [r10],rax
-		lea rax,[r8+2000h]		; task ints
-		mov [r10+8h],rax
-		mov qword [rax], 0		; task flags
-
 		; stack object initialization
-		lea rdi,[r8+2800h]		; links stack
+		lea rdi,[r9+2000h]		; links stack
 		mov [r11],rdi
-		lea rsi,[r8+3000h]		; ints stack
+		lea rsi,[r9+3000h]		; ints stack
 		mov [r11+8],rsi
-		mov qword [rsi],5		; push argc to ints stack
-		lea rsi,[rsi+8]
-		lea rdx,[r8+3800h]		; floats stack
+		push 7
+		pop qword [rsi]			; push argc to ints stack
+		add rsi,8
+		lea rdx,[r9+4000h]		; floats stack
 		mov [r11+10h],rdx
-		lea rcx,[r8+4000h]		; chars stack
+		lea rcx,[r9+5000h]		; chars stack
 		mov [r11+18h],rcx
 
 		; call main function
-		push rsp
-		pop rbp
+		nop
 		mov rax, 123456789abcdefh	; entry point
-		mov rsp,r8
+		xchg rsp,r9
 		call rax			; call
 
 		; exit the program
 		mov rax,[rsi-8]
-		mov rsp, rbp
+		mov rsp, r9
 		ret
 	*/
-	0xffffb80024848d4c, 0x4d000000b0908d4d, 0x8d49000000b09a8d, 0x0089490000080080,
-	0x491850894c18894c, 0x894900001000808d, 0x001800808d490840, 0x00808d4902894900,
-	0x4808428949000020, 0x8d490000000000c7, 0x3b894900002800b8, 0x4900003000b08d49,
-	0x000506c748087389, 0x8d4908768d480000, 0x5389490000380090, 0x00004000888d4910,
-	0xb8485d54184b8949, 0x0123456789abcdef, 0x468b48d0ffc4894c, 0x000000c3ec8948f8
+/* 0x40000: start code */
+	0x4c00040080c0c749, 0x4dffffa000248c8d, 0x8d4d000000c0908d, 0x08894d000000c09a,
+	0x491851894d19894d, 0x894900001000818d, 0x002000b98d490840, 0x00b18d493b894900,
+	0x6a08738949000030, 0x4908c68348068f07, 0x894900004000918d, 0x005000898d491053,
+	0xb84890184b894900, 0x0123456789abcdef, 0x468b48d0ffe18749, 0x000000c3cc894cf8,
+/* 0x40080: thread object */
+	0,0,0,0, 8,8,0,0, 0x200,0x200,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0,
+/* 0x40140: task object */
+	0x402C0,0x40300,0,0, 6,46,0,0, 8,48,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0,
+/* 0x40200: stack object */
+	0,0,0,0, 0,1,0,0, 0x200,0x200,0x200,0x1000, 0,0,0,1, 0,0,0,0, 0,0,0,0,
+/* 0x402C0: task links array */
+	0x40140,0x40140,0x40140,0x40140, 0x40140,0x40140,0,0,
+/* 0x40300: task ints array */
+	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
+/* 0x40480: start address for sections */
 };
 
 int lastSectorPos		= 0x4f;
 int dpvmFileSizePos		= 0x335;
 int dpvmFileIndexPos		= 0x480;
-int entryPointPos		= 0x4d1;
+int entryPointPos		= 0x4cd;
 int dpvmFileStart		= 0x2600;
 
 (volatile stateful any bootfloppyObj, const char data[], int flags) -> (const char error[]) addSection = {
@@ -361,7 +365,7 @@ int dpvmFileStart		= 0x2600;
 		int size = impl.data.outputFilePos - dpvmFileStart, i;
 		if (size > 0x8000)
 			return mkError("too large file dpvm not supported", "addSection");
-		for (i = 0; i < size; i += 0x200) {
+		for (i = 0; i <= (size - 1) >> 9; i++) {
 			h[dpvmFileIndexPos + i] = (dpvmFileStart >> 9) + i;
 		}
 		h[lastSectorPos] = (impl.data.outputFilePos - 1) >> 9;

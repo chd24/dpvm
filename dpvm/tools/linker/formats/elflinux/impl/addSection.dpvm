@@ -1,57 +1,59 @@
-/* elflinux class, addSection method implementation, T20.362-T20.363; $DVS:time$ */
+/* elflinux class, addSection method implementation, T20.362-T20.377; $DVS:time$ */
 
 #include "../../../../../lib/stdlib/stdlib.dpvmake"
 #include "../../../../../lib/utils/utils.dpvmake"
 #include "elflinux.dpvmake"
 
 int header[] = {
-	/* ELF header */
-	0x00010102464c457f, 0x0000000000000000, 0x00000001003e0002, 0x0000000000400080,
+/* 0x400000: ELF header */
+	0x00010102464c457f, 0x0000000000000000, 0x00000001003e0002, 0x0000000000400480,
 	0x0000000000000040, 0x0000000000000000, 0x0038004000000000, 0x0000000000000001,
-	/* program header */
+/* 0x400040: program header */
 	0x0000000700000001, 0x0000000000000080, 0x0000000000400080, 0x0000000000000000,
 	0x0000000000000040, 0x0000000000000040, 0x0000000000001000, 0x0000000000000000,
-	/* start code:
+/* 0x400080: thread object */
+	0,0,0,0, 8,8,0,0, 0x2000,0x2000,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0,
+/* 0x400140: task object */
+	0x4002C0,0x400300,0,0, 6,46,0,0, 8,48,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0,
+/* 0x400200: stack object */
+	0,0,0,0, 0,1,0,0, 0x2000,0x2000,0x2000,0x10000, 0,0,0,1, 0,0,0,0, 0,0,0,0,
+/* 0x4002C0: task links array */
+	0x400140,0x400140,0x400140,0x400140, 0x400140,0x400140,0,0,
+/* 0x400300: task ints array */
+	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+/* 0x400480: start code:
 		use64
 
 		; run-time objects allocation
-		lea r8, [rsp-90000h]		; thread
-		lea r10,[r8+0xb0]		; task
-		lea r11,[r10+0xb0]		; stack
+		mov r8, 0x400080		; thread
+		lea r9, [rsp-0x60000]		; new rsp
+		lea r10,[r8+0xc0]		; task
+		lea r11,[r10+0xc0]		; stack
 
 		; thread object initialization
-		lea rax,[r8+10000h]		; thread links
-		mov [r8],rax
-		mov [rax],r11			; thread link to stack
-		mov [rax+18h],r10		; thread link to task
-		lea rax,[r8+20000h]		; thread ints
+		mov [r8],r9			; thread links
+		mov [r9],r11			; thread link to stack
+		mov [r9+18h],r10		; thread link to task
+		lea rax,[r9+10000h]		; thread ints
 		mov [r8+8],rax
 
-		; task object initialization
-		lea rax,[r8+30000h]		; task links
-		mov [r10],rax
-		lea rax,[r8+40000h]		; task ints
-		mov [r10+8h],rax
-		mov qword [rax], 0		; task flags
-
 		; stack object initialization
-		lea rdi,[r8+50000h]		; links stack
+		lea rdi,[r9+20000h]		; links stack
 		mov [r11],rdi
-		lea rsi,[r8+60000h]		; ints stack
+		lea rsi,[r9+30000h]		; ints stack
 		mov [r11+8],rsi
 		pop rax				; argc
 		mov [rsi],rax			; push argc to ints stack
 		add rsi,8
-		lea rdx,[r8+70000h]		; floats stack
+		lea rdx,[r9+40000h]		; floats stack
 		mov [r11+10h],rdx
-		lea rcx,[r8+80000h]		; chars stack
+		lea rcx,[r9+50000h]		; chars stack
 		mov [r11+18h],rcx
 
 		; call main function
-		mov rsp,r8
-		nop
 		nop
 		mov rax, 123456789abcdefh	; entry point
+		mov rsp,r9
 		call rax			; call
 
 		; exit the program
@@ -60,11 +62,11 @@ int header[] = {
 		mov rdi,[rsi-8]			; int return value as exit parameter
 		db 0fh, 05h			; syscall
 	*/
-	0xfff7000024848d4c, 0x4d000000b0908d4d, 0x8d49000000b09a8d, 0x0089490001000080,
-	0x491850894c18894c, 0x894900020000808d, 0x030000808d490840, 0x00808d4902894900,
-	0x4808428949000400, 0x8d490000000000c7, 0x3b894900050000b8, 0x4900060000b08d49,
-	0x4806894858087389, 0x0000908d4908c683, 0x8d49105389490007, 0x4b89490008000088,
-	0xb8489090c4894c18, 0x0123456789abcdef, 0x7e8b48583c6ad0ff, 0x0000000000050ff8
+	0x4c00400080c0c749, 0x4dfffa0000248c8d, 0x8d4d000000c0908d, 0x08894d000000c09a,
+	0x491851894d19894d, 0x894900010000818d, 0x020000b98d490840, 0x00b18d493b894900,
+	0x5808738949000300, 0x4908c68348068948, 0x894900040000918d, 0x050000898d491053,
+	0xb84890184b894900, 0x0123456789abcdef, 0x583c6ad0ffcc894c, 0x0000050ff87e8b48
+/* 0x400500: start address for sections */
 };
 
 int sectionStart		= 0x80;
@@ -72,7 +74,7 @@ int sectionFlagsPos		= 0x08;
 int sectionFlagsOffset		= 32;
 int sectionLengthFilePos	= 0x0c;
 int sectionLengthMemPos		= 0x0d;
-int entryPointPos		= 0x21;
+int entryPointPos		= 0x9d;
 
 (volatile stateful any elflinuxObj, const char data[], int flags) -> (const char error[]) addSection = {
 	elflinuxImpl impl;
@@ -94,8 +96,10 @@ int entryPointPos		= 0x21;
 	if (flags == -1) {
 		int h[];
 		objcopyto(h, header);
+/*
 		h[sectionFlagsPos] &= ~(-1 << sectionFlagsOffset);
 		h[sectionFlagsPos] |= impl.data.sectionFlags << sectionFlagsOffset;
+*/
 		h[sectionLengthFilePos] = impl.data.outputFilePos - sectionStart;
 		h[sectionLengthMemPos] = impl.data.outputFilePos - sectionStart;
 		h[entryPointPos] = impl.data.entryPoint;

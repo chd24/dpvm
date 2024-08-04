@@ -5,24 +5,24 @@
 
 /*@ "mkError.dpvm": compose error message */
 (const char mess[], const char func[]) -> (const char err[])
-	mkError = s67orymFg9U_hRbPnVUUDJE_mYFKWRbHVpC_GkmkaTTTt64 /* hose_backyard_appointees */;
+	mkError = YY3wHh4ERnG_Tm3SyUQJoKW_neVpkhapn3f_Y9L3KdLeM7H /* desktop_poncho_realpolitik */;
 /* @*/
 
 /*@ "convertObjToImpl.dpvm": convert obj from type any to type dfsImpl and check correctness (func - name of function which call this) */
 (volatile stateful elflinuxImpl impl, const stateful any elflinuxObj, const char func[]) -> (const char error[])
-	convertObjToImpl = CqrghR8MM3r_Ssa3oXS5JYd_Z2dqNe5EchP_FkBxwCzWtKM /* stagnancy_rind_locomotives */;
+	convertObjToImpl = T8Bc4tLznnb_WqriBuYjSAW_b6q6t124jft_LF8zGAbx2XE /* dissipation_complains_shinned */;
 /* @*/
 
 /*@ "dump.dpvm": dump internal content of elflinuxObj object */
 (volatile stateful char out[], volatile stateful any elflinuxObj) -> (const char error[])
-	dump = QRhYPjmd4u5_YhWaBZxpYQz_QkiT8KkfeiN_AnadrpvZ95k /* propulsion_phenols_conjure */;
+	dump = iKBRDigpJun_J3kq5W2ZMme_KzX2GuvjvY5_aLQunSBiMgK /* coca_anchoring_swivels */;
 /* @*/
 
 /*@ "addSection.dpvm": add code/data part to output file */
 (volatile stateful any elflinuxObj, const char data[], int flags) -> (const char error[])
-	addSection = njoaa3JKXre_b77y5kNuHcn_oKrtBtAwSwv_FaSn9vXgPXb /* strewing_compressive_pieces */;
+	addSection = ajyNJmSnUke_YD8BTbm36Wg_ScPqRPhnmNV_M68jfn32ei3 /* bastion_vulva_aurally */;
 /* @*/
 
 /*@ "methods.dpvm": public methods implementation */
-elflinuxMethods elflinuxMethodsImpl = fdiwpTgoNXM_DxzhQfwtV9J_b7mHpW7SPY1_pu7971uJbTk /* danced_marshal_inherently */;
-/* @*/            
+elflinuxMethods elflinuxMethodsImpl = jmgSeLQwt33_ftHPt1nwvgL_poWQxbisnDP_tLcLCsH7wF1 /* cagiest_pestered_muddling */;
+/* @*/                 
