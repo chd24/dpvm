@@ -79,11 +79,13 @@ Znak            https://www.znak.com/rss
 Важные-Истории  https://istories.media/rss/all.xml
 Венедиктов      https://t.me/s/aavst2022
 Вёрстка         https://t.me/s/svobodnieslova
+Говорит-НеМосква  https://t.me/s/Govorit_NeMoskva
 Голос           https://www.golos-ameriki.ru/z/1953
 Грани           https://graniru.org/export/articles-rss2.xml
 Дождь           https://tvrain.ru/export/rss/all.xml
 Досье           https://t.me/s/dossiercenter
 ЕЖ              http://www.ej.ru/xml/
+Ёшкин-Крот      https://t.me/s/eshkinkrot
 Живой-Гвоздь    https://t.me/s/livegvozd
 Идите-Лесом     https://t.me/s/iditelesom_help
 Каспаров        http://www.kasparov.ru/rss/
