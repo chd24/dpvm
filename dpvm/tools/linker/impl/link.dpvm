@@ -1,17 +1,261 @@
-/* linker class, dump method implementation, T20.363-T20.363; $DVS:time$ */
+/* linker class, dump method implementation, T20.363-T20.385; $DVS:time$ */
 
 #include "../../../lib/stdlib/stdlib.dpvmake"
+#include "../../../lib/utils/utils.dpvmake"
+#include "../../../lib/algorithms/hashtable/hash.dpvmake"
 #include "linker.dpvmake"
+
+int INT_MIN				= 0x8000000000000000;
+int INT_MAX				= 0x7fffffffffffffff;
+int DPVM_OBJECT_FLAG_CHECKED		= 1;
+int DPVM_OBJECT_FLAG_LARGE_STACK	= 0x10;
+int HASH_SIZE				= 0x1000;
+
+type objValue = {
+	int objAddr;
+	int objFlags;
+	int translatedAddr;
+	int linksStack;
+	int intsStack;
+	int floatsStack;
+	int charsStack;
+};
 
 type linkData = {
 	const linkerImpl impl;
 	volatile stateful formatClass formatObj;
+	volatile stateful hashData hash;
+	int sectionAddr;
 };
 
-(volatile stateful linkData data, const any obj) -> (const char error[]) linkObject = {
-	char res[] = data.impl.data.registry.translator.translatorTest(data.impl.data.registry, obj, data.impl.data.arch, -1);
-	char err[] = data.formatObj.methods.addSection(data.formatObj, res, FORMAT_FLAG_READ | FORMAT_FLAG_EXEC);
-	return err;
+(volatile stateful char db[], int n) -> () pushInt = {
+	int i;
+	for (i = 0; i < 8; i++)
+		db.cpush(n), n >>= 8;
+	return;
+};
+
+(volatile stateful char db[], float f) -> () pushFloat = {
+	int mantissa, exponent, ieee;
+	(mantissa, exponent) = fsplit(f);
+
+	if (mantissa < 0) {
+		mantissa = -mantissa;
+		ieee = INT_MIN;
+	}
+
+	if (exponent > INT_MIN && exponent < INT_MAX)
+		exponent += 1023 + 52;
+
+	pushInt(db, ieee | mantissa & 0xfffffffffffff | (exponent & 0x7ff) << 52);
+	return;
+};
+
+(volatile stateful linkData data, const any obj) -> (const objValue value, const char error[]) linkObject = {
+	/* if object already processed */
+	any val;
+	int found;
+	(val, found) = hashObj.findGetValue(data.hash, obj);
+	if (found) {
+		objValue arr[];
+		pushObject(val, arr);
+		return (arr[0], "");
+	}
+
+	/* object structure in memory */
+	int objData[] = intsArray(0xb0 >> 3);
+	objData[14] = -2;								/* hash_mark */
+	objData[15] = 1 << 48;								/* nrefs */
+	(objData[16], objData[17], objData[18], objData[19]) = getfullhash(obj);	/* hash */
+
+	char error[];
+	objValue res, value;
+
+	/* object type */
+	if (obj != obj.type) {
+		(value, error) = code(data, obj.type);
+		if (error.csize) return (res, error);
+		objData[12] = value.objAddr;
+	}
+
+	any funcs[];
+	checker_data checkerData;
+	int flags, funcsAddr[];
+	(funcs, checkerData, error, flags) = data.impl.data.registry.checker(obj);
+
+	if (!(flags & CHECKER_ILLEGAL)) {
+		(value, error) = code(data, mach_code);
+		if (error.csize) return (res, error);
+
+		res.objFlags |= DPVM_OBJECT_FLAG_CHECKED;
+		if (flags & CHECKER_FUNC)
+			res.objFlags |= DPVM_OBJECT_FLAG_LARGE_STACK;
+		int i;
+		for (i = 0; i < funcs.lsize; i++) {
+			(value, error) = code(data, funcs.l[i]);
+			if (error.csize) return (res, error);
+			if (!(value.objFlags & DPVM_OBJECT_FLAG_CHECKED))
+				return (res, mkError("function required to be translated", "link"));
+			funcsAddr.ipush(res.translatedAddr);
+			if (value.objFlags & DPVM_OBJECT_FLAG_LARGE_STACK)
+				res.objFlags |= DPVM_OBJECT_FLAG_LARGE_STACK;
+			if (value.linksStack > res.linksStack)
+				res.linksStack = value.linksStack;
+			if (value.intsStack > res.intsStack)
+				res.intsStack = value.intsStack;
+			if (value.floatsStack > res.floatsStack)
+				res.floatsStack = value.floatsStack;
+			if (value.charsStack > res.charsStack)
+				res.charsStack = value.charsStack;
+		}
+	}
+
+	int addr = data.sectionAddr + 0xb0;
+
+	/* object links: preliminary step */
+	if (obj.lsize) {
+		int i, size = obj.lsize;
+		for (i = 0; i < size; i++) {
+			if (obj.l[i] != obj) {
+				(value, error) = code(data, obj.l[i]);
+				if (error.csize) return (res, error);
+			}
+		}
+		addr = data.sectionAddr + 0xb0;
+		objData[0] = addr;
+		addr += size << 3;
+		objData[4] = size;
+		objData[8] = size;
+	}
+
+	/* object ints: preliminary step */
+	if (obj.isize) {
+		int size = obj.isize;
+		objData[1] = addr;
+		addr += size << 3;
+		objData[5] = size;
+		objData[9] = size;
+	}
+
+	/* object floats: preliminary step */
+	if (obj.fsize) {
+		int size = obj.fsize;
+		objData[2] = addr;
+		addr += size << 3;
+		objData[6] = size;
+		objData[10] = size;
+	}
+
+	/* object chars: preliminary step */
+	if (obj.csize) {
+		int size = obj.csize;
+		objData[3] = addr;
+		objData[7] = size;
+		objData[11] = -(-size & -8);
+		addr += objData[11];
+	}
+
+	res.objAddr = data.sectionAddr;
+	if (obj == obj.type)
+		objData[12] = res.objAddr;							/* object type */
+	if (flags & CHECKER_ILLEGAL)
+		objData[13] = res.objAddr;							/* object machcode */
+	else
+		objData[13] = addr;
+	objData[20] = res.objFlags;								/* object flags */
+
+	error = data.formatObj.methods.addSection(data.formatObj, ints2chars(objData, 0, objData.isize),
+			FORMAT_FLAG_READ | FORMAT_FLAG_WRITE);
+	if (error.csize) return (res, error);
+	data.sectionAddr += 0xb0;
+
+	/* object links */
+	if (obj.lsize) {
+		char db[];
+		int i, size = obj.lsize;
+		for (i = 0; i < size; i++) {
+			if (obj.l[i] != obj) {
+				(value, error) = code(data, obj.l[i]);
+				if (error.csize) return (res, error);
+				pushInt(db, value.objAddr);
+			} else
+				pushInt(db, res.objAddr);
+		}
+		error = data.formatObj.methods.addSection(data.formatObj, db, FORMAT_FLAG_READ | FORMAT_FLAG_WRITE);
+		if (error.csize) return (res, error);
+		data.sectionAddr += db.csize;
+	}
+
+	/* object ints */
+	if (obj.isize) {
+		char db[];
+		int i, size = obj.isize;
+		for (i = 0; i < size; i++)
+			pushInt(db, obj.i[i]);
+		error = data.formatObj.methods.addSection(data.formatObj, db, FORMAT_FLAG_READ | FORMAT_FLAG_WRITE);
+		if (error.csize) return (res, error);
+		data.sectionAddr += db.csize;
+	}
+
+	/* object floats */
+	if (obj.fsize) {
+		char db[];
+		int i, size = obj.fsize;
+		for (i = 0; i < size; i++)
+			pushFloat(db, obj.f[i]);
+		error = data.formatObj.methods.addSection(data.formatObj, db, FORMAT_FLAG_READ | FORMAT_FLAG_WRITE);
+		if (error.csize) return (res, error);
+		data.sectionAddr += db.csize;
+	}
+
+	/* object chars */
+	if (obj.csize) {
+		char db[];
+		int i, size = obj.csize;
+		for (i = 0; i < size; i++)
+			db.cpush(obj.c[i]);
+		while (db.csize & 7)
+			db.cpush(0);
+		error = data.formatObj.methods.addSection(data.formatObj, db, FORMAT_FLAG_READ | FORMAT_FLAG_WRITE | FORMAT_FLAG_EXEC);
+		if (error.csize) return (res, error);
+		data.sectionAddr += db.csize;
+	}
+
+	/* translation of object and putting machine code */
+	if (!(flags & CHECKER_ILLEGAL)) {
+		addrs_list addrs;
+
+		addrs.lpush("code"); addrs.ipush(res.objAddr);
+		addrs.lpush("stack0"); addrs.ipush(res.linksStack);
+		addrs.lpush("stack1"); addrs.ipush(res.intsStack);
+		addrs.lpush("stack2"); addrs.ipush(res.floatsStack);
+		addrs.lpush("stack3"); addrs.ipush(res.charsStack);
+
+		int i, r;
+		for (i = 0; i < funcs.lsize; i++) {
+			addrs.lpush(funcs[i]);
+			addrs.ipush(funcsAddr[i]);
+		}
+
+		mach_code m;
+		(m, r) = data.impl.data.registry.translator.translator(obj, addrs, checkerData, data.impl.data.arch);
+		if (r)
+			return (res, mkError("function required to be translated", "link"));
+
+		res.linksStack  = m.i[0];
+		res.intsStack   = m.i[1];
+		res.floatsStack = m.i[2];
+		res.charsStack  = m.i[3];
+		res.translatedAddr = addr + 0xb0 + (m.isize << 3);
+
+		(value, error) = code(data, m);
+		if (error.csize) return (res, error);
+
+		if (value.objAddr != objData[13])
+			return (res, mkError("machine code address not matches the prediction", "link"));
+	}
+
+	return (res, "");
 };
 
 (const stateful any linkerObj, const (int) -> (int) main, const char outputFile[]) -> (const char error[]) link = {
@@ -36,12 +280,19 @@ type linkData = {
 	err = formatObj.methods.setOutputFile(formatObj, outputFile);
 	if (err.csize) return err;
 
-	err = formatObj.methods.setEntryPoint(formatObj, impl.data.format.startAddress);
+	linkData data = {impl, formatObj, (volatile hashData){}, impl.data.format.startAddress};
+
+	int error = hashObj.initExt(data.hash, HASH_SIZE, hashFlagKeyValue);
+	if (error) return mkError("hash initialization error", "link");
+
+	objValue value;
+	(value, err) = linkObject(data, main);
 	if (err.csize) return err;
 
-	linkData data = {impl, formatObj};
+	if (!(value.objFlags & DPVM_OBJECT_FLAG_CHECKED))
+		return mkError("main() translation error", "link");
 
-	err = linkObject(data, main);
+	err = formatObj.methods.setEntryPoint(formatObj, value.translatedAddr);
 	if (err.csize) return err;
 
 	err = formatObj.methods.finish(formatObj);
