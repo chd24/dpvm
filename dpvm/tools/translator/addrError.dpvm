@@ -1,0 +1,17 @@
+/* dpvm byte code translator; put not found object to machcode; T20.387-T20.387; $DVS:time$ */
+
+#include "../../lib/stdlib/stdlib.dpvmake"
+#include "translator.dpvmh"
+
+(volatile stateful mach_code machcode, const stateful any obj) -> (int error) addrError = {
+	if (obj.type != "".type) {
+		char err[];
+		printf(err, "%p", {obj});
+		obj = err;
+	}
+	machcode.cpop(machcode.csize);
+	int i;
+	for (i = 0; i < obj.csize; i++)
+		machcode.cpush(obj.c[i]);
+	return -1;
+};

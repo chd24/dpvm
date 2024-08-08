@@ -5,7 +5,7 @@
 /*@ "translator.dpvmake": translator symbol for external usage */
 (const stateful any func, const stateful addrs_list addrs, const stateful checker_data cdata, const stateful char arch[])
 		-> (volatile mach_code machcode, int res)
-	translator = HffyS39HhpT_oAouuwheuP2_g38GZnVZa4o_jZz4TWJjt1B /* tartly_bonneted_dwindling */;
+	translator = J7WM4JjLfdN_bPdEfk7jWgm_Q8ZXyj49PtH_mdesZCym92K /* regards_belonging_polemicist */;
 /* @*/
 
 /*@ "registry.dpvm": copy and check registry */
@@ -14,5 +14,5 @@
 /* @*/
 
 /*@ "translatorObj.dpvm": all public translator methods */
-translatorClass translatorObj = t5dAXC6aYyT_K7tgxaQGs7N_ZbhKpyxALBC_YDbjxLQrYY9 /* virginity_define_altarpieces */;
-/* @*/           
+translatorClass translatorObj = RK2GWPXpbYC_UurHzjc9KZL_NrTpFPS5GBv_ZFHfRf77VqA /* persistently_tribute_ripoff */;
+/* @*/         

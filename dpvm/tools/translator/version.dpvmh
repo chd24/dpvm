@@ -1,8 +1,10 @@
 /* translator, version */
 
-char version[] = "translator 0.6.4, T16.070-T20.344"; /* $DVS:time$
+char version[] = "translator 0.6.5, T16.070-T20.387"; /* $DVS:time$
 
 History:
+
+T20.387 ver 0.6.5 - added addrError() utils method to put not found obj name to returned machcode
 
 T20.344 ver 0.6.4 - fixed bug in graphs translation method
 

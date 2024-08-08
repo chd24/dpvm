@@ -52,7 +52,7 @@
 /*@ "unlink.dpvm": unlinks an object from links stack */
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int n) -> (int res)
-	amd64_unlink = BouyZwudrFc_rs8Rwmxsiyz_kSWstTmQ2AU_c1pNk312Zc3 /* moreover_defeater_subtitling */;
+	amd64_unlink = eyNYpMxwxyw_YHumLbhPjQR_kBU3cM37CoC_QYusUzsraqs /* partner_foresail_griped */;
 /* @*/
 
 /*@ "stack_top.dpvm": set stack pointers to the top */
@@ -78,20 +78,20 @@
 (volatile stateful translator_data data, volatile stateful asm_instr list[], 
 		volatile stateful asm_instr endlist[], int datatype, int i, int n) 
 		-> (int res)
-	amd64_type_match = CvqMhhae99p_pDfh6XsBcTo_A9h4Nx1bbgX_drAjrZBzupy /* costive_sowed_dense */;
+	amd64_type_match = NcMmc4kByEY_rri5dnDPVXD_XHDj35HgBd3_kCjVNURRFQJ /* zoom_bathers_necks */;
 /* @*/
 
 /*@ "info.dpvm": code/info/hash/fix bytecodes */
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int c)
 		-> (int res, int i)
-	amd64_info = qazcar8c4ru_TWNp9LeHnyU_dKZBgSr5joa_WBhJzi7n2tC /* quark_ostentatious_smoke */;
+	amd64_info = L2gFT3dudGj_naPawGdLX9h_TDBrozrarrp_jdiUz1tpCbF /* snail_intents_streetwise */;
 /* @*/
 
 /*@ "funcs.dpvm": ret/call bytecodes */
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
-	amd64_funcs = TLX6C2zkRoN_PXgh6cii5NW_iBsF5mjLf78_bjB3WK8wW5K /* specifiers_diagnostic_spyings */;
+	amd64_funcs = sjc8YQaRQ5M_DSLDxLp7jgS_gBLvSyBCgfS_X3ZDQoThc2s /* likelihood_subsidiaries_kindnesses */;
 /* @*/
 
 /*@ "jumps.dpvm": l*, j* bytecodes */
@@ -103,19 +103,19 @@
 /*@ "stack.dpvm": *load, *store, *pops, *popn bytecodes */
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
-	amd64_stack = TJD8pbxZyps_jGELqiPhzc6_tSRB7z98aqc_PvcyyzegQE1 /* streamline_landing_attention */;
+	amd64_stack = kht2snZVhXP_LqLNGb32cpF_UtYipxpmAvA_rrEhes2nbx1 /* prescribed_droughts_cadge */;
 /* @*/
 
 /*@ "getset.dpvm": *get, *set bytecodes */
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
-	amd64_getset = eXmHKNbHEt7_J2URYt2f8Gf_kwavWabMUst_rZiUxeS7Qxj /* shadows_haddock_sooty */;
+	amd64_getset = LbDAcmxYNum_D6WRP9LaJde_Y7ABFasL3Vw_ogFQQPcmFix /* compacted_callousness_standby */;
 /* @*/
 
 /*@ "pushpop.dpvm": *push, *pop bytecodes */
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
-	amd64_pushpop = SXLJ6JEbR1m_mcGUYMuDYN7_m1Jj4haWkMo_Eg5pAV4nrzi /* promulgated_curl_mileage */;
+	amd64_pushpop = VUXauJEuosa_HkX3LHBhNJ6_f3NsPuaboM2_XFyYTsvhiom /* aerofoils_wilfully_paten */;
 /* @*/
 
 /*@ "imath.dpvm": integer math bytecodes */
@@ -127,16 +127,16 @@
 /*@ "fmath.dpvm": floating-point math bytecodes */
 (const stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
-	amd64_fmath = LurM83WTUp7_K3utiyikBCj_hWWaqPaY4yS_jw9Y2HPegUj /* quarrel_dielectric_professions */;
+	amd64_fmath = ANC477iEJjZ_Zxu2jyyi581_hbFCvru7tAD_ciJ1Hf2n7Nh /* redaction_snowier_fancier */;
 /* @*/
 
 /*@ "io.dpvm": input-output bytecodes */
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int c) -> (int res)
-	amd64_io = gcnwyPrJkBe_ADcJoXavPtg_Pp5473rm2Xs_TF1jiLLpkKx /* starchy_polysyllabic_glow */;
+	amd64_io = nrfCZt8NviU_U2YykuogsrP_CgsKHzv7jux_UBANXkQKgAK /* doggerel_bawdier_jested */;
 /* @*/
 
 /*@ "main.dpvm": main function of translator for amd64 */
 (volatile stateful translator_data data, volatile stateful asm_instr list[]) -> (int res)
-	amd64 = Dad8zTatyXu_ULucYszXfSq_VKG6YijtbEe_A2cRvdWCm4V /* scull_cannel_nearsighted */;
-/* @*/
+	amd64 = W3zBBxdWJWL_HMvpir29MuR_fabiJactd1a_rWiMgVdkJHk /* rainout_switchable_isms */;
+/* @*/    

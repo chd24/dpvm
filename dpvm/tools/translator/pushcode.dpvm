@@ -1,6 +1,6 @@
 /* push codes given in hex; T16.070-T19.643; $DVS:time$ */
 
-#include "../../stdlib/stdlib.dpvmake"
+#include "../../lib/stdlib/stdlib.dpvmake"
 #include "translator_utils.dpvmake"
 
 (volatile stateful mach_code machcode, const stateful char hex[],

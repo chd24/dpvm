@@ -1,5 +1,7 @@
 /* translator, external header; T19.643-T19.643; $DVS:time$ */
 
+#include "../checker/checker.dpvmh"
+
 type addrs_list = heap_interfaces_feasts;
 type mach_code = audience_trigs_modelling;
 

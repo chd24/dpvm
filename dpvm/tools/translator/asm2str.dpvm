@@ -1,6 +1,6 @@
 /* output list of asm instructions to str; T16.083-T19.643; $DVS:time$ */
 
-#include "../../stdlib/stdlib.dpvmake"
+#include "../../lib/stdlib/stdlib.dpvmake"
 #include "translator_utils.dpvmake"
 
 (volatile stateful char dst[], const stateful char src[]) -> () outstr {

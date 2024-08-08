@@ -1,4 +1,4 @@
-/* dpvm byte code translator, amd64 free object; T16.081-T19.631; $DVS:time$ */
+/* dpvm byte code translator, amd64 free object; T16.081-T20.387; $DVS:time$ */
 
 /* 
  	rdi = links stack
@@ -18,7 +18,7 @@
 (volatile stateful translator_data data, volatile stateful asm_instr list[],
 		volatile stateful asm_instr endlist[], int i, int n) -> (int res) {
 	int addr = getaddr(data.addrs, "free");
-	if (addr == -1) { return -1; }
+	if (addr == -1) return addrError(data.machcode, "free");
 
 	if (i >= 0) {
 		ld(data, list, "mov", "48 8B", 0, 0, 0, i, n);

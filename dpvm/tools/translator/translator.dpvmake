@@ -3,11 +3,11 @@
 #include "translator_utils.dpvmake"
 
 /*@ "amd64_old.dpvm": old method for x86-64 */
-translator_method amd64_old = jaSZQbKjW9C_kCKinYS7DAJ_pC22FLQtkMh_tBDaKxx3Rd4 /* agio_communing_helplines */;
+translator_method amd64_old = kFrD5cuD5kb_JvzDiHhMgRw_B2zBjZxPGmc_QuXe6zR8uiG /* hauler_clownish_disarranging */;
 /* @*/
 
 /*@ "amd64_graphs.dpvm": new graphs-based method for x86-64 */
-translator_method amd64_graphs = T5HTErpiSTn_Lri6sUMWjNu_caVjKQ4eyN6_LcwPExpiPX1 /* apparatchik_mutinous_sequentially */;
+translator_method amd64_graphs = dJYQphQGBbv_k69e49G3v8Y_RMhVkoSXn8k_odNZLWtPtGc /* stumbling_attention_bawls */;
 /* @*/
 
 /*@ "amd64_floats.dpvm": method for float computations on x86-64 */
@@ -15,12 +15,12 @@ translator_method amd64_floats = ZEAVBtoA4hn_jvLjvoqusch_GqgmmVJTsiG_sE5ReMrArQX
 /* @*/
 
 /*@ "methods.dpvm": array of all translator methods */
-translator_method translator_methods[] = cm3h6t6ZMgE_iwcveoLmK5Z_N74Em3Kppu3_tdxrvkVoNRq /* atoll_heterologous_sap */;
+translator_method translator_methods[] = TREKafDyQpg_CCH8HNULab9_caAdePLkXwa_VabkfBp598W /* patrimony_shavings_lido */;
 /* @*/
 
 /*@ "main.dpvm": main function of translator */
 (const stateful any func, const stateful addrs_list addrs, 
 		const stateful checker_data cdata, const stateful char arch[]) -> 
 		(volatile mach_code machcode, int res)
-	translator = HffyS39HhpT_oAouuwheuP2_g38GZnVZa4o_jZz4TWJjt1B /* tartly_bonneted_dwindling */;
+	translator = J7WM4JjLfdN_bPdEfk7jWgm_Q8ZXyj49PtH_mdesZCym92K /* regards_belonging_polemicist */;
 /* @*/          

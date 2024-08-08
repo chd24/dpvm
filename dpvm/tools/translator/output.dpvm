@@ -1,6 +1,6 @@
 /* output list of instructions; T16.083-T19.643; $DVS:time$ */
 
-#include "../../stdlib/stdlib.dpvmake"
+#include "../../lib/stdlib/stdlib.dpvmake"
 #include "translator_utils.dpvmake"
 
 (volatile stateful mach_code machcode, const stateful asm_instr list[]) -> () {

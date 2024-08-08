@@ -1,4 +1,4 @@
-/* translator, makefile for utility functions; T17.648-T19.643; $DVS:time$ */
+/* translator, makefile for utility functions; T17.648-T20.387; $DVS:time$ */
 
 #include "../checker/checker.dpvmh"
 #include "translator.dpvmh"
@@ -36,72 +36,77 @@ type translator_method = {
 (volatile stateful asm_instr list[],
                 const char mnem[], const char hex[],
 		int paramA, int paramB, int paramC, int paramD, int next) -> ()
-	asm_add = sported_stranding_err;
+	asm_add = t17xR2qnrDF_jfyPbVNk9NX_hiRSD7wvdto_NVkKsS34ekC /* sported_stranding_err */;
 /* @*/
 
 /*@ "asm_del.dpvm": deletes assembler instruction from list */
 (volatile stateful asm_instr list[], int next) -> (int newnext)
-	asm_del = adjudicates_chairs_laughing;
+	asm_del = t3EBgacjytx_J7bqX5az7Kj_LVLWD8PCaez_rQ9xd4b2ipP /* adjudicates_chairs_laughing */;
 /* @*/
 
 /*@ "getaddr.dpvm": returns address of given object in addresses database */
 (const stateful addrs_list addrs, const stateful any obj) -> (int addr)
-	getaddr = horseless_difference_rusts;
+	getaddr = U2AYg4HVnFR_CJ64TbPTsa3_qYbcahdacwX_L32YroJrgrV /* innate_rebuild_embodiments */;
+/* @*/
+
+/*@ "addrError.dpvm": put name of object which address is not found to machcode chars array */
+(volatile stateful mach_code machcode, const stateful any obj) -> (int error)
+	addrError = ehnJd6XzTdT_QwM6RcwDyKA_hUPr8JBUERk_cuRktNm5Kvb /* tideway_terminator_mixtures */;
 /* @*/
 
 /*@ "new_rule.dpvm": create new rule or instructions list */
 () -> (volatile asm_instr rule[])
-	new_rule = demo_simulating_brutal;
+	new_rule = corctU3oW4p_rGv6Pgkm68J_Gf4RCTXo5CL_ChEyu7zAPNn /* demo_simulating_brutal */;
 /* @*/
 
 /*@ "cmp_rules.dpvm": compare two rules */
 (const stateful asm_instr l[], const stateful asm_instr r[]) -> (int res)
-	cmp_rules = resonances_buses_etched;
+	cmp_rules = GtDWdKaZ5qX_oVXM8TgiyEm_nvpAY8necJk_cCc3ZnEqSxE /* immobilise_screamers_discharged */;
 /* @*/
 
 /*@ "add_rule.dpvm": add rule to list in sorted order */
 (volatile stateful asm_instr list[][], const stateful asm_instr rule[]) -> ()
-	add_rule = mortise_bigger_bonn;
+	add_rule = j6nnJmZNjEN_FsgNVi6h73C_ZeGaaFSVBQe_r4NJcLDhWGY /* tenacity_typographer_brunts */;
 /* @*/
 
 /*@ "count_param.dpvm": count output parameter using input parameters and pseudocode */
 (const stateful int params[], int pseudocode) -> (int param)
-	count_param = belles_uncommitted_spouts;
+	count_param = BW2WsvoRDPy_XdPGt2ENvmU_CQnLMvWZyv8_kGUexSf3S84 /* belles_uncommitted_spouts */;
 /* @*/
 
 /*@ "match_rule.dpvm": compare rule with part of instructions list */
 (const stateful asm_instr l[], const stateful asm_instr r[], int index) -> (int res)
-	match_rule = thermostatic_tercentenary_duckpond;
+	match_rule = gsmLzQuesJG_ksrxG42UWcb_Z7fpFPWfAnZ_h3hnY4pQ5bd /* volumes_tinniest_milder */;
 /* @*/
 
 /*@ "find_rule.dpvm": match one of rules with part of instructions list */
 (const stateful asm_instr list[], const stateful asm_instr rules[][], int index) -> (int res)
-	find_rule = engaged_been_diggers;
+	find_rule = UswSkNaEKG8_c7e6Z2WZiHA_LL7LrGGJTsu_oD8e4iC1Bx9 /* pistons_vortices_customised */;
 /* @*/
 
 /*@ "apply_rule.dpvm": apply rule to part of instructions list */
 (volatile stateful asm_instr list[], const stateful asm_instr rule[], int index) 
 		-> (int res, int next)
-	apply_rule = load_evasive_courthouse;
+	apply_rule = LQtbYxjcxk9_CDNFH1sU9cn_B64otQWk1fP_RyK9J3gQszB /* disinfected_royally_distractedly */;
 /* @*/
 
 /*@ "optimize.dpvm": optimize list of instructions */
 (volatile stateful asm_instr list[], const stateful asm_instr rules[][]) -> ()
-	optimize = mouthtomouth_teapot_castiron;
+	optimize = YwNcA5k8t5X_doUkKo5QXSw_TZB8JBfeyMy_Gatc16qQ8uN /* pitches_ripper_navigated */;
 /* @*/
 
 /*@ "asm2str.dpvm": output list of instructions as text */
 (const stateful asm_instr list[]) -> (volatile char str[])
-	asm2str = ditto_restricts_repaid;
+	asm2str = FCWizecBcgh_paz2RpmCnWd_hxXpNbZdsQd_T4kxNS9zR9L /* ditto_restricts_repaid */;
 /* @*/
 
 /*@ "pushcode.dpvm": push hex code of instruction to machcode */
 (volatile stateful mach_code machcode, const stateful char hex[],
 		const stateful int params[]) -> (int res)
-	pushcode = impertinence_highness_idiopathic;
+	pushcode = cU2kNANK7zK_AN3WHNUSPzA_Erp6dC8qqzX_RMTSiiF27SW /* sleuths_bringing_rechargeable */;
 /* @*/
 
 /*@ "output.dpvm": output list of instructions as binary code to machcode */
 (volatile stateful mach_code machcode, const stateful asm_instr list[]) -> ()
-	output = apples_shelled_meet;
-/* @*/                                                          
+	output = Bgha1GwndEP_RPN5h2kQQ13_f5HN3pQkKfC_c173HbAFtnZ /* enhancer_cached_defection */;
+/* @*/
