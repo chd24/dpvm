@@ -97,6 +97,7 @@ Znak            https://www.znak.com/rss
 Осторожно-Москва   https://t.me/s/ostorozhno_moskva
 Осторожно-Новости  https://t.me/s/ostorozhno_novosti
 Пастухов        https://t.me/s/v_pastukhov
+Первый-Отдел    https://t.me/s/deptone
 Плющев          https://t.me/s/PlushevChannel
 Погода-Мск      https://meteoinfo.ru/rss/forecasts/index.php?s=27612
 Погода-Клин     https://meteoinfo.ru/rss/forecasts/index.php?s=27417
